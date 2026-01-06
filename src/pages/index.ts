@@ -1,0 +1,8 @@
+export { HomePage } from './HomePage'
+export { ProductListPage } from './ProductListPage'
+export { ProductDetailPage } from './ProductDetailPage'
+export { QuickOrderPage } from './QuickOrderPage'
+export { QuotePage } from './QuotePage'
+export { CartPage } from './CartPage'
+export { DashboardPage } from './DashboardPage'
+export { AnalyticsPage } from './AnalyticsPage'
