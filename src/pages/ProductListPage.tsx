@@ -6,6 +6,7 @@ import { products, categories } from '../data'
 import { ProductCard, ProductTable } from '../components/product'
 import { Button, Select, Badge, Card, CardContent } from '../components/ui'
 import { cn } from '../lib/utils'
+import { Animated } from '../hooks'
 
 export function ProductListPage() {
   const { categoryId } = useParams()
@@ -72,32 +73,35 @@ export function ProductListPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
-      <nav className="text-sm text-neutral-500 mb-6">
-        <span>홈</span>
-        <span className="mx-2">/</span>
-        {category ? (
-          <span className="text-neutral-900 font-medium">{category.name}</span>
-        ) : (
-          <span className="text-neutral-900 font-medium">전체 상품</span>
-        )}
-        {selectedFilters.subcategory !== 'all' && (
-          <>
-            <span className="mx-2">/</span>
-            <span className="text-neutral-900 font-medium">{selectedFilters.subcategory}</span>
-          </>
-        )}
-      </nav>
+      <Animated animation="fade" duration={300}>
+        <nav className="text-sm text-neutral-500 mb-6">
+          <span>홈</span>
+          <span className="mx-2">/</span>
+          {category ? (
+            <span className="text-neutral-900 font-medium">{category.name}</span>
+          ) : (
+            <span className="text-neutral-900 font-medium">전체 상품</span>
+          )}
+          {selectedFilters.subcategory !== 'all' && (
+            <>
+              <span className="mx-2">/</span>
+              <span className="text-neutral-900 font-medium">{selectedFilters.subcategory}</span>
+            </>
+          )}
+        </nav>
+      </Animated>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">
-            {category ? category.name : '전체 상품'}
-          </h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            총 {sortedProducts.length}개의 상품
-          </p>
-        </div>
+      <Animated animation="fade-up" delay={100}>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-900">
+              {category ? category.name : '전체 상품'}
+            </h1>
+            <p className="text-sm text-neutral-500 mt-1">
+              총 {sortedProducts.length}개의 상품
+            </p>
+          </div>
 
         {/* View Mode Toggle */}
         <div className="flex items-center gap-4">
@@ -128,11 +132,12 @@ export function ProductListPage() {
             </button>
           </div>
         </div>
-      </div>
+        </div>
+      </Animated>
 
       <div className="flex gap-6">
         {/* Sidebar Filters */}
-        <aside className="w-64 flex-shrink-0 hidden lg:block">
+        <Animated animation="fade-left" delay={200} className="w-64 flex-shrink-0 hidden lg:block">
           <Card>
             <CardContent className="p-4">
               <h3 className="font-medium text-neutral-900 mb-4">필터</h3>
@@ -213,10 +218,10 @@ export function ProductListPage() {
               </Button>
             </CardContent>
           </Card>
-        </aside>
+        </Animated>
 
         {/* Main Content */}
-        <div className="flex-1">
+        <Animated animation="fade-up" delay={200} className="flex-1">
           {/* Toolbar */}
           <div className="flex items-center justify-between mb-4 p-4 bg-white rounded-lg border border-neutral-200">
             {/* Mobile Filter Toggle */}
@@ -269,8 +274,14 @@ export function ProductListPage() {
           {/* Products */}
           {viewMode === 'normal' ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {sortedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {sortedProducts.map((product, index) => (
+                <div
+                  key={product.id}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
+                >
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
           ) : (
@@ -282,7 +293,7 @@ export function ProductListPage() {
               <p className="text-neutral-500">조건에 맞는 상품이 없습니다.</p>
             </div>
           )}
-        </div>
+        </Animated>
       </div>
     </div>
   )

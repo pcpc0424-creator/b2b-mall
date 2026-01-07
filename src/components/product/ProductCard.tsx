@@ -28,22 +28,23 @@ export function ProductCard({ product }: ProductCardProps) {
   const stockConfig = stockStatusConfig[product.stockStatus]
 
   return (
-    <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden hover:shadow-lg transition-shadow duration-200 flex flex-col">
+    <div className="group bg-white rounded-lg border border-neutral-200 overflow-hidden hover:shadow-xl hover:border-neutral-300 hover:-translate-y-1 transition-all duration-300 flex flex-col">
       {/* Image */}
-      <Link to={`/product/${product.id}`} className="block relative aspect-square bg-neutral-100">
+      <Link to={`/product/${product.id}`} className="block relative aspect-square bg-neutral-100 overflow-hidden">
         <img
           src={product.images[0]}
           alt={product.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
         <div className="absolute top-2 left-2 flex flex-col gap-1">
-          <Badge variant={stockConfig.variant} size="sm">
+          <Badge variant={stockConfig.variant} size="sm" className="animate-fade-in">
             {stockConfig.label}
           </Badge>
         </div>
         {currentPrice < retailPrice && (
           <div className="absolute top-2 right-2">
-            <span className="bg-error text-white text-xs font-bold px-2 py-1 rounded">
+            <span className="bg-error text-white text-xs font-bold px-2 py-1 rounded animate-pulse-soft">
               {Math.round((1 - currentPrice / retailPrice) * 100)}% OFF
             </span>
           </div>
@@ -105,9 +106,9 @@ export function ProductCard({ product }: ProductCardProps) {
               size="sm"
               onClick={() => addToCart(product, quantity)}
               disabled={product.stockStatus === 'out_of_stock'}
-              className="flex-1"
+              className="flex-1 btn-hover"
             >
-              <ShoppingCart className="w-4 h-4 mr-1" />
+              <ShoppingCart className="w-4 h-4 mr-1 transition-transform group-hover:scale-110" />
               장바구니
             </Button>
             <Button
@@ -115,8 +116,9 @@ export function ProductCard({ product }: ProductCardProps) {
               variant="outline"
               onClick={() => addToQuote(product, quantity)}
               disabled={product.stockStatus === 'out_of_stock'}
+              className="btn-hover"
             >
-              <FileText className="w-4 h-4" />
+              <FileText className="w-4 h-4 transition-transform hover:scale-110" />
             </Button>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { useStore } from '../store'
 import { mockSalesData, products, categories } from '../data'
 import { Button, Card, CardContent, Select, Badge, Tabs } from '../components/ui'
 import { formatPrice, formatNumber, cn } from '../lib/utils'
+import { Animated } from '../hooks'
 
 export function AnalyticsPage() {
   const { user } = useStore()
@@ -52,6 +53,7 @@ export function AnalyticsPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
+      <Animated animation="fade-up">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">매출 분석</h1>
@@ -75,8 +77,10 @@ export function AnalyticsPage() {
           </Button>
         </div>
       </div>
+      </Animated>
 
       {/* Summary Cards */}
+      <Animated animation="fade-up" delay={100}>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardContent className="p-6">
@@ -116,7 +120,9 @@ export function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+      </Animated>
 
+      <Animated animation="fade-up" delay={200}>
       <Tabs
         tabs={[
           {
@@ -369,6 +375,7 @@ export function AnalyticsPage() {
           },
         ]}
       />
+      </Animated>
     </div>
   )
 }

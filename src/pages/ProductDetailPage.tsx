@@ -7,6 +7,7 @@ import { ProductCard } from '../components/product'
 import { Button, Badge, NumberStepper, Card, CardContent } from '../components/ui'
 import { formatPrice, cn } from '../lib/utils'
 import { UserTier } from '../types'
+import { Animated } from '../hooks'
 
 export function ProductDetailPage() {
   const { productId } = useParams()
@@ -58,22 +59,24 @@ export function ProductDetailPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
-      <nav className="text-sm text-neutral-500 mb-6">
-        <Link to="/" className="hover:text-primary-600">홈</Link>
-        <span className="mx-2">/</span>
-        {category && (
-          <>
-            <Link to={`/category/${category.id}`} className="hover:text-primary-600">{category.name}</Link>
-            <span className="mx-2">/</span>
-          </>
-        )}
-        <span className="text-neutral-900">{product.name}</span>
-      </nav>
+      <Animated animation="fade" duration={300}>
+        <nav className="text-sm text-neutral-500 mb-6">
+          <Link to="/" className="hover:text-primary-600">홈</Link>
+          <span className="mx-2">/</span>
+          {category && (
+            <>
+              <Link to={`/category/${category.id}`} className="hover:text-primary-600">{category.name}</Link>
+              <span className="mx-2">/</span>
+            </>
+          )}
+          <span className="text-neutral-900">{product.name}</span>
+        </nav>
+      </Animated>
 
       {/* Product Info */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
         {/* Images */}
-        <div>
+        <Animated animation="fade-left" delay={100}>
           <div className="relative aspect-square bg-neutral-100 rounded-lg overflow-hidden mb-4">
             <img
               src={product.images[currentImageIndex]}
@@ -114,7 +117,7 @@ export function ProductDetailPage() {
                   key={idx}
                   onClick={() => setCurrentImageIndex(idx)}
                   className={cn(
-                    'w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors',
+                    'w-20 h-20 rounded-lg overflow-hidden border-2 transition-all duration-200 hover:scale-105',
                     idx === currentImageIndex ? 'border-primary-600' : 'border-transparent hover:border-neutral-300'
                   )}
                 >
@@ -123,10 +126,10 @@ export function ProductDetailPage() {
               ))}
             </div>
           )}
-        </div>
+        </Animated>
 
         {/* Info */}
-        <div>
+        <Animated animation="fade-right" delay={200}>
           <div className="mb-4">
             <span className="text-sm text-neutral-500">{product.brand}</span>
             <span className="text-sm text-neutral-400 ml-3">SKU: {product.sku}</span>
@@ -262,23 +265,24 @@ export function ProductDetailPage() {
 
           {/* Benefits */}
           <div className="mt-8 grid grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-neutral-50 rounded-lg">
+            <div className="text-center p-4 bg-neutral-50 rounded-lg hover:bg-primary-50 hover:scale-105 transition-all duration-300 cursor-pointer">
               <Truck className="w-6 h-6 mx-auto text-primary-600 mb-2" />
               <p className="text-xs text-neutral-600">100개 이상<br />무료배송</p>
             </div>
-            <div className="text-center p-4 bg-neutral-50 rounded-lg">
+            <div className="text-center p-4 bg-neutral-50 rounded-lg hover:bg-primary-50 hover:scale-105 transition-all duration-300 cursor-pointer">
               <Package className="w-6 h-6 mx-auto text-primary-600 mb-2" />
               <p className="text-xs text-neutral-600">안전포장<br />출고</p>
             </div>
-            <div className="text-center p-4 bg-neutral-50 rounded-lg">
+            <div className="text-center p-4 bg-neutral-50 rounded-lg hover:bg-primary-50 hover:scale-105 transition-all duration-300 cursor-pointer">
               <Shield className="w-6 h-6 mx-auto text-primary-600 mb-2" />
               <p className="text-xs text-neutral-600">정품보증<br />A/S</p>
             </div>
           </div>
-        </div>
+        </Animated>
       </div>
 
       {/* Bulk Order Table */}
+      <Animated animation="fade-up" delay={300}>
       <Card className="mb-12">
         <CardContent className="p-6">
           <h2 className="text-lg font-bold text-neutral-900 mb-4">대량 주문 단가표</h2>
@@ -315,17 +319,22 @@ export function ProductDetailPage() {
           </p>
         </CardContent>
       </Card>
+      </Animated>
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (
-        <section>
-          <h2 className="text-xl font-bold text-neutral-900 mb-6">관련 상품</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {relatedProducts.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        </section>
+        <Animated animation="fade-up" delay={400}>
+          <section>
+            <h2 className="text-xl font-bold text-neutral-900 mb-6">관련 상품</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {relatedProducts.map((p, index) => (
+                <div key={p.id} className="animate-fade-in" style={{ animationDelay: `${index * 80}ms` }}>
+                  <ProductCard product={p} />
+                </div>
+              ))}
+            </div>
+          </section>
+        </Animated>
       )}
     </div>
   )

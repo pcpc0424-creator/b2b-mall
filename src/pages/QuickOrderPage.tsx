@@ -5,6 +5,7 @@ import { products } from '../data'
 import { Product } from '../types'
 import { Button, Tabs, Badge, Card, CardContent, NumberStepper } from '../components/ui'
 import { formatPrice, cn } from '../lib/utils'
+import { Animated } from '../hooks'
 
 interface QuickOrderItem {
   sku: string
@@ -149,11 +150,14 @@ export function QuickOrderPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-neutral-900">빠른 주문</h1>
-        <p className="text-neutral-500 mt-1">SKU 코드로 대량 주문을 빠르게 처리하세요</p>
-      </div>
+      <Animated animation="fade-up">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-neutral-900">빠른 주문</h1>
+          <p className="text-neutral-500 mt-1">SKU 코드로 대량 주문을 빠르게 처리하세요</p>
+        </div>
+      </Animated>
 
+      <Animated animation="fade-up" delay={100}>
       <Tabs
         tabs={[
           {
@@ -517,6 +521,7 @@ export function QuickOrderPage() {
           },
         ]}
       />
+      </Animated>
     </div>
   )
 }

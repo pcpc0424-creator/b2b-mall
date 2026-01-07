@@ -13,7 +13,7 @@ import {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/b2b-mall">
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />

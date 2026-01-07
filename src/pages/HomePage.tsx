@@ -6,6 +6,7 @@ import { categories, products, promotions, mockSalesData } from '../data'
 import { ProductCard } from '../components/product'
 import { Button, Badge, Tabs, Card, CardContent } from '../components/ui'
 import { formatPrice, cn } from '../lib/utils'
+import { Animated, Stagger } from '../hooks'
 
 export function HomePage() {
   const { user, isLoggedIn } = useStore()
@@ -60,28 +61,33 @@ export function HomePage() {
                 <div className="absolute inset-0 bg-gradient-to-r from-neutral-900/90 via-neutral-900/70 to-transparent" />
               </div>
               <div className="relative max-w-7xl mx-auto px-4 h-full flex items-center">
-                <div className="max-w-xl">
+                <div className={cn(
+                  "max-w-xl transition-all duration-700",
+                  index === currentSlide ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"
+                )}>
                   {promo.type === 'exclusive' && (
-                    <Badge variant="warning" className="mb-4">
+                    <Badge variant="warning" className="mb-4 animate-bounce-in">
                       {getTierLabel(tier)} 전용
                     </Badge>
                   )}
                   {promo.type === 'timesale' && (
-                    <Badge variant="error" className="mb-4">
+                    <Badge variant="error" className="mb-4 animate-bounce-in">
                       <Clock className="w-3 h-3 mr-1" />
                       타임특가
                     </Badge>
                   )}
                   <h2 className="text-4xl font-bold text-white mb-4">{promo.title}</h2>
                   <p className="text-lg text-neutral-300 mb-6">{promo.description}</p>
-                  <div className="flex gap-3">
-                    <Button size="lg">
-                      <Zap className="w-5 h-5 mr-2" />
-                      대량 주문 바로가기
+                  <div className="flex gap-2 sm:gap-3">
+                    <Button size="lg" className="btn-hover whitespace-nowrap text-sm sm:text-base px-6 sm:px-4">
+                      <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 flex-shrink-0" />
+                      <span className="hidden sm:inline">대량 주문 바로가기</span>
+                      <span className="sm:hidden">대량주문</span>
                     </Button>
-                    <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-neutral-900">
-                      <Download className="w-5 h-5 mr-2" />
-                      단가표 다운로드
+                    <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-neutral-900 btn-hover whitespace-nowrap text-sm sm:text-base px-6 sm:px-4">
+                      <Download className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 flex-shrink-0" />
+                      <span className="hidden sm:inline">단가표 다운로드</span>
+                      <span className="sm:hidden">단가표</span>
                     </Button>
                   </div>
                 </div>
@@ -122,6 +128,7 @@ export function HomePage() {
       {/* Promotions Section */}
       <section className="py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4">
+          <Animated animation="fade-up">
           <Tabs
             tabs={[
               {
@@ -202,6 +209,7 @@ export function HomePage() {
               },
             ]}
           />
+          </Animated>
         </div>
       </section>
 
@@ -209,21 +217,25 @@ export function HomePage() {
       <section className="py-12 bg-neutral-50">
         <div className="max-w-7xl mx-auto px-4">
           {isLoggedIn && user && (
-            <div className="mb-6 p-4 bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg text-white">
-              <p className="text-lg font-medium">
-                {user.name}님, {getTierLabel(user.tier)} 고객님 전용 혜택을 확인하세요!
-              </p>
-            </div>
+            <Animated animation="fade-up">
+              <div className="mb-6 p-4 bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg text-white">
+                <p className="text-lg font-medium">
+                  {user.name}님, {getTierLabel(user.tier)} 고객님 전용 혜택을 확인하세요!
+                </p>
+              </div>
+            </Animated>
           )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {benefits.map((benefit, index) => (
-              <Card key={index} className="text-center p-6">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary-100 flex items-center justify-center">
-                  <benefit.icon className="w-6 h-6 text-primary-600" />
-                </div>
-                <h3 className="font-medium text-neutral-900 mb-1">{benefit.title}</h3>
-                <p className="text-sm text-neutral-500">{benefit.desc}</p>
-              </Card>
+              <Animated key={index} animation="fade-up" delay={index * 100}>
+                <Card className="text-center p-6 card-hover group">
+                  <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary-100 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary-200 transition-all duration-300">
+                    <benefit.icon className="w-6 h-6 text-primary-600" />
+                  </div>
+                  <h3 className="font-medium text-neutral-900 mb-1">{benefit.title}</h3>
+                  <p className="text-sm text-neutral-500">{benefit.desc}</p>
+                </Card>
+              </Animated>
             ))}
           </div>
         </div>
@@ -232,42 +244,46 @@ export function HomePage() {
       {/* Category Hub */}
       <section className="py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-neutral-900">카테고리</h2>
-            <Link to="/categories" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
-              전체보기 <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+          <Animated animation="fade-up">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold text-neutral-900">카테고리</h2>
+              <Link to="/categories" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1 link-hover">
+                전체보기 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </div>
+          </Animated>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {categories.map((category) => {
+            {categories.map((category, index) => {
               const bestProducts = getCategoryBestProducts(category.id)
               return (
-                <div key={category.id} className="bg-white rounded-lg border border-neutral-200 overflow-hidden hover:shadow-lg hover:border-neutral-300 cursor-pointer transition-all duration-200" style={{ height: '280px', display: 'flex', flexDirection: 'column' }}>
-                  <div className="relative h-32 flex-shrink-0">
-                    <img
-                      src={category.image}
-                      alt={category.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/70 to-transparent" />
-                    <h3 className="absolute bottom-3 left-3 text-white font-medium">{category.name}</h3>
-                  </div>
-                  <div className="p-3 flex flex-col" style={{ flex: 1 }}>
-                    <div className="space-y-1 overflow-hidden" style={{ flex: 1 }}>
-                      {bestProducts.map((p) => (
-                        <div key={p.id} className="text-xs text-neutral-600 truncate">
-                          {p.sku} - {p.name}
-                        </div>
-                      ))}
+                <Animated key={category.id} animation="fade-up" delay={index * 80}>
+                  <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden card-hover cursor-pointer img-hover" style={{ height: '280px', display: 'flex', flexDirection: 'column' }}>
+                    <div className="relative h-32 flex-shrink-0 overflow-hidden">
+                      <img
+                        src={category.image}
+                        alt={category.name}
+                        className="w-full h-full object-cover transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/70 to-transparent" />
+                      <h3 className="absolute bottom-3 left-3 text-white font-medium">{category.name}</h3>
                     </div>
-                    <Link to={`/category/${category.id}`} className="mt-auto pt-3">
-                      <Button size="sm" variant="outline" className="w-full">
-                        <Zap className="w-3 h-3 mr-1" />
-                        빠른 주문
-                      </Button>
-                    </Link>
+                    <div className="p-3 flex flex-col" style={{ flex: 1 }}>
+                      <div className="space-y-1 overflow-hidden" style={{ flex: 1 }}>
+                        {bestProducts.map((p) => (
+                          <div key={p.id} className="text-xs text-neutral-600 truncate">
+                            {p.sku} - {p.name}
+                          </div>
+                        ))}
+                      </div>
+                      <Link to={`/category/${category.id}`} className="mt-auto pt-3">
+                        <Button size="sm" variant="outline" className="w-full btn-hover">
+                          <Zap className="w-3 h-3 mr-1" />
+                          빠른 주문
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                </div>
+                </Animated>
               )
             })}
           </div>
@@ -278,43 +294,51 @@ export function HomePage() {
       {isLoggedIn && (
         <section className="py-12 bg-neutral-50">
           <div className="max-w-7xl mx-auto px-4">
-            <Tabs
-              tabs={[
-                {
-                  id: 'recent',
-                  label: '최근 주문 상품',
-                  content: (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {products.slice(0, 5).map((product) => (
-                        <ProductCard key={product.id} product={product} />
-                      ))}
-                    </div>
-                  ),
-                },
-                {
-                  id: 'frequent',
-                  label: '자주 구매한 SKU',
-                  content: (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {products.slice(2, 7).map((product) => (
-                        <ProductCard key={product.id} product={product} />
-                      ))}
-                    </div>
-                  ),
-                },
-                {
-                  id: 'lowstock',
-                  label: '재고 임박 상품',
-                  content: (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {products.filter(p => p.stockStatus === 'low').map((product) => (
-                        <ProductCard key={product.id} product={product} />
-                      ))}
-                    </div>
-                  ),
-                },
-              ]}
-            />
+            <Animated animation="fade-up">
+              <Tabs
+                tabs={[
+                  {
+                    id: 'recent',
+                    label: '최근 주문 상품',
+                    content: (
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {products.slice(0, 5).map((product, index) => (
+                          <div key={product.id} className="animate-fade-in" style={{ animationDelay: `${index * 80}ms` }}>
+                            <ProductCard product={product} />
+                          </div>
+                        ))}
+                      </div>
+                    ),
+                  },
+                  {
+                    id: 'frequent',
+                    label: '자주 구매한 SKU',
+                    content: (
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {products.slice(2, 7).map((product, index) => (
+                          <div key={product.id} className="animate-fade-in" style={{ animationDelay: `${index * 80}ms` }}>
+                            <ProductCard product={product} />
+                          </div>
+                        ))}
+                      </div>
+                    ),
+                  },
+                  {
+                    id: 'lowstock',
+                    label: '재고 임박 상품',
+                    content: (
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {products.filter(p => p.stockStatus === 'low').map((product, index) => (
+                          <div key={product.id} className="animate-fade-in" style={{ animationDelay: `${index * 80}ms` }}>
+                            <ProductCard product={product} />
+                          </div>
+                        ))}
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+            </Animated>
           </div>
         </section>
       )}
@@ -322,15 +346,19 @@ export function HomePage() {
       {/* Best Products */}
       <section className="py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-neutral-900">베스트 상품</h2>
-            <Link to="/products" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
-              전체보기 <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+          <Animated animation="fade-up">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold text-neutral-900">베스트 상품</h2>
+              <Link to="/products" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1 link-hover">
+                전체보기 <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </Animated>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {products.slice(0, 10).map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {products.slice(0, 10).map((product, index) => (
+              <Animated key={product.id} animation="fade-up" delay={index * 60}>
+                <ProductCard product={product} />
+              </Animated>
             ))}
           </div>
         </div>

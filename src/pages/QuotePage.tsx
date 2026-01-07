@@ -3,6 +3,7 @@ import { Download, Save, ShoppingCart, Trash2, FileText, Calendar, Building } fr
 import { useStore, getTierLabel } from '../store'
 import { Button, NumberStepper, Card, CardContent, Input } from '../components/ui'
 import { formatPrice, formatNumber, cn } from '../lib/utils'
+import { Animated } from '../hooks'
 
 export function QuotePage() {
   const { user, quoteItems, updateQuoteQuantity, removeFromQuote, clearQuote, getQuoteTotal, addToCart } = useStore()
@@ -41,11 +42,13 @@ export function QuotePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-neutral-900 mb-8">견적서 생성</h1>
+      <Animated animation="fade-up">
+        <h1 className="text-2xl font-bold text-neutral-900 mb-8">견적서 생성</h1>
+      </Animated>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Quote Editor */}
-        <div className="lg:col-span-2">
+        <Animated animation="fade-up" delay={100} className="lg:col-span-2">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -135,10 +138,10 @@ export function QuotePage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </Animated>
 
         {/* Summary & Actions */}
-        <div className="space-y-6">
+        <Animated animation="fade-up" delay={200} className="space-y-6">
           {/* Summary Card */}
           <Card>
             <CardContent className="p-6">
@@ -189,7 +192,7 @@ export function QuotePage() {
               주문으로 전환
             </Button>
           </div>
-        </div>
+        </Animated>
       </div>
 
       {/* Quote Preview Modal */}

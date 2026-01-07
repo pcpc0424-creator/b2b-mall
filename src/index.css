@@ -55,3 +55,104 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Card hover effects */
+.card-hover {
+  @apply transition-all duration-300 ease-out;
+}
+.card-hover:hover {
+  @apply -translate-y-1 shadow-lg;
+}
+
+/* Button hover effects */
+.btn-hover {
+  @apply transition-all duration-200 ease-out;
+}
+.btn-hover:hover {
+  @apply -translate-y-0.5 shadow-md;
+}
+.btn-hover:active {
+  @apply translate-y-0 shadow-sm;
+}
+
+/* Image hover zoom */
+.img-hover {
+  @apply overflow-hidden;
+}
+.img-hover img {
+  @apply transition-transform duration-500 ease-out;
+}
+.img-hover:hover img {
+  @apply scale-105;
+}
+
+/* Link underline animation */
+.link-hover {
+  @apply relative;
+}
+.link-hover::after {
+  content: '';
+  @apply absolute bottom-0 left-0 w-0 h-0.5 bg-primary-600 transition-all duration-300;
+}
+.link-hover:hover::after {
+  @apply w-full;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-secondary-500;
+}
+
+/* Glass effect */
+.glass {
+  @apply bg-white/80 backdrop-blur-md;
+}
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 50%, #e5e7eb 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Page transition */
+.page-enter {
+  @apply opacity-0 translate-y-4;
+}
+.page-enter-active {
+  @apply opacity-100 translate-y-0 transition-all duration-500 ease-out;
+}
+
+/* Stagger children animation delays */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
+.stagger-6 { animation-delay: 300ms; }
+.stagger-7 { animation-delay: 350ms; }
+.stagger-8 { animation-delay: 400ms; }
+
+/* Focus ring animation */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-shadow duration-200;
+}
+
+/* Hide scrollbar but allow scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

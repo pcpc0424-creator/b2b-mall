@@ -3,6 +3,7 @@ import { Trash2, ShoppingBag, ArrowRight, FileText } from 'lucide-react'
 import { useStore, getPriceByTier, getTierLabel } from '../store'
 import { Button, NumberStepper, Card, CardContent, Badge } from '../components/ui'
 import { formatPrice, formatNumber, cn } from '../lib/utils'
+import { Animated } from '../hooks'
 
 export function CartPage() {
   const { user, cart, updateCartQuantity, removeFromCart, clearCart, getCartTotal, addToQuote } = useStore()
@@ -34,17 +35,19 @@ export function CartPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-neutral-900">장바구니</h1>
-        <Button variant="ghost" size="sm" onClick={clearCart} className="text-error hover:text-error hover:bg-red-50">
-          <Trash2 className="w-4 h-4 mr-1" />
-          전체 삭제
-        </Button>
-      </div>
+      <Animated animation="fade-up">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-bold text-neutral-900">장바구니</h1>
+          <Button variant="ghost" size="sm" onClick={clearCart} className="text-error hover:text-error hover:bg-red-50">
+            <Trash2 className="w-4 h-4 mr-1" />
+            전체 삭제
+          </Button>
+        </div>
+      </Animated>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cart Items */}
-        <div className="lg:col-span-2">
+        <Animated animation="fade-up" delay={100} className="lg:col-span-2">
           <Card>
             <CardContent className="p-0">
               <div className="divide-y divide-neutral-100">
@@ -104,10 +107,10 @@ export function CartPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </Animated>
 
         {/* Summary */}
-        <div className="space-y-6">
+        <Animated animation="fade-up" delay={200} className="space-y-6">
           <Card>
             <CardContent className="p-6">
               <h2 className="font-bold text-neutral-900 mb-4">주문 요약</h2>
@@ -171,7 +174,7 @@ export function CartPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </Animated>
       </div>
     </div>
   )

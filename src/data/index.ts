@@ -3,51 +3,73 @@ import { Category, Product, Promotion, User, SalesData } from '../types'
 export const categories: Category[] = [
   {
     id: 1,
-    name: "명절선물세트",
+    name: "가공식품",
+    icon: "Package",
     image: "https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=400&h=300&fit=crop",
-    subcategories: ["건강식품", "가공식품", "과일세트", "농수산물", "기타세트"]
+    subcategories: ["즉석식품", "면/통조림", "양념/소스", "음료/차", "과자/간식"]
   },
   {
     id: 2,
-    name: "생활/주방/잡화",
-    image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop",
-    subcategories: ["생활용품", "주방용품", "잡화류", "바디케어", "메이크업", "키즈"]
+    name: "신선식품",
+    icon: "Leaf",
+    image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop",
+    subcategories: ["과일", "채소", "육류", "수산물", "유제품/계란"]
   },
   {
     id: 3,
-    name: "뷰티",
-    image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=300&fit=crop",
-    subcategories: ["스킨케어", "마스크팩", "헤어케어", "바디케어", "메이크업", "키즈"]
-  },
-  {
-    id: 4,
-    name: "식품",
-    image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop",
-    subcategories: ["가공식품", "과일류", "농산물", "축산물", "수산물"]
-  },
-  {
-    id: 5,
     name: "건강식품",
+    icon: "Pill",
     image: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=400&h=300&fit=crop",
     subcategories: ["홍삼/녹용/인삼", "비타민/미네랄", "영양제", "다이어트/이너뷰티", "건강환/즙/분말/음료"]
   },
   {
+    id: 4,
+    name: "뷰티",
+    icon: "Sparkles",
+    image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=300&fit=crop",
+    subcategories: ["스킨케어", "마스크팩", "헤어케어", "바디케어", "메이크업"]
+  },
+  {
+    id: 5,
+    name: "패션의류/잡화",
+    icon: "Shirt",
+    image: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=400&h=300&fit=crop",
+    subcategories: ["남성의류", "여성의류", "신발", "가방", "액세서리"]
+  },
+  {
     id: 6,
-    name: "유/아동",
-    image: "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=400&h=300&fit=crop",
-    subcategories: ["문구", "완구", "기타용품"]
+    name: "생활/주방",
+    icon: "ChefHat",
+    image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop",
+    subcategories: ["주방용품", "생활용품", "욕실용품", "청소용품", "수납/정리"]
   },
   {
     id: 7,
-    name: "반려동물용품",
-    image: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=300&fit=crop",
-    subcategories: ["강아지용품", "고양이용품", "기타용품"]
+    name: "가전",
+    icon: "Refrigerator",
+    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+    subcategories: ["주방가전", "생활가전", "계절가전", "뷰티가전", "건강가전"]
   },
   {
     id: 8,
-    name: "디지털/가전",
+    name: "디지털/PC",
+    icon: "Monitor",
     image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&h=300&fit=crop",
-    subcategories: ["디지털/PC", "소형가전"]
+    subcategories: ["컴퓨터", "모니터", "주변기기", "저장장치", "네트워크"]
+  },
+  {
+    id: 9,
+    name: "스포츠/레저",
+    icon: "Dumbbell",
+    image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=300&fit=crop",
+    subcategories: ["운동용품", "등산/캠핑", "수영/수상", "자전거", "골프"]
+  },
+  {
+    id: 10,
+    name: "반려동물용품",
+    icon: "PawPrint",
+    image: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=300&fit=crop",
+    subcategories: ["강아지용품", "고양이용품", "사료/간식", "위생용품", "장난감"]
   }
 ]
 

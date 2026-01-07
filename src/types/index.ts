@@ -11,6 +11,7 @@ export interface User {
 export interface Category {
   id: number
   name: string
+  icon?: string
   image?: string
   subcategories: string[]
 }

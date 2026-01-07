@@ -9,6 +9,7 @@ import { useStore, getTierLabel, getTierColor } from '../store'
 import { mockSalesData, products, promotions } from '../data'
 import { Button, Card, CardContent, Badge, Select, Tabs } from '../components/ui'
 import { formatPrice, formatNumber, cn } from '../lib/utils'
+import { Animated } from '../hooks'
 
 export function DashboardPage() {
   const { user } = useStore()
@@ -50,16 +51,18 @@ export function DashboardPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">마이페이지</h1>
-          <p className="text-neutral-500 mt-1">{user.company && `${user.company} · `}{user.name}님</p>
+      <Animated animation="fade-up">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-900">마이페이지</h1>
+            <p className="text-neutral-500 mt-1">{user.company && `${user.company} · `}{user.name}님</p>
+          </div>
+          <div className={cn('px-4 py-2 rounded-lg', getTierColor(tier))}>
+            <span className="font-bold">{getTierLabel(tier)}</span>
+            <span className="ml-2 text-sm">회원</span>
+          </div>
         </div>
-        <div className={cn('px-4 py-2 rounded-lg', getTierColor(tier))}>
-          <span className="font-bold">{getTierLabel(tier)}</span>
-          <span className="ml-2 text-sm">회원</span>
-        </div>
-      </div>
+      </Animated>
 
       {/* VIP+ Banner */}
       {(tier === 'vip' || tier === 'wholesale' || tier === 'partner') && (
@@ -86,8 +89,9 @@ export function DashboardPage() {
       )}
 
       {/* Stats Cards */}
+      <Animated animation="fade-up" delay={100}>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card>
+        <Card className="card-hover">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
@@ -106,7 +110,7 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-hover">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="w-10 h-10 rounded-full bg-secondary-100 flex items-center justify-center">
@@ -118,7 +122,7 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-hover">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="w-10 h-10 rounded-full bg-accent-100 flex items-center justify-center">
@@ -130,7 +134,7 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-hover">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
@@ -142,7 +146,9 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      </Animated>
 
+      <Animated animation="fade-up" delay={200}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Chart */}
         <div className="lg:col-span-2">
@@ -237,8 +243,10 @@ export function DashboardPage() {
           )}
         </div>
       </div>
+      </Animated>
 
       {/* Top Products & Recent Orders */}
+      <Animated animation="fade-up" delay={300}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
         {/* Top Products */}
         <Card>
@@ -309,6 +317,7 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      </Animated>
     </div>
   )
 }
