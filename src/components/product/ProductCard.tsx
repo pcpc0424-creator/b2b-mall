@@ -58,14 +58,14 @@ export function ProductCard({ product }: ProductCardProps) {
           <span className="text-xs text-neutral-400 ml-2">SKU: {product.sku}</span>
         </div>
 
-        <Link to={`/product/${product.id}`}>
+        <Link to={`/product/${product.id}`} className="h-10">
           <h3 className="text-sm font-medium text-neutral-900 line-clamp-2 hover:text-primary-600 transition-colors">
             {product.name}
           </h3>
         </Link>
 
         {/* Price */}
-        <div className="mt-3 flex-1">
+        <div className="mt-3 h-16">
           {tier !== 'guest' && currentPrice < retailPrice && (
             <p className="text-xs text-neutral-400 line-through">
               {formatPrice(retailPrice)}
@@ -89,7 +89,7 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Actions */}
-        <div className="mt-4 space-y-2">
+        <div className="mt-auto pt-4 space-y-2">
           <div className="flex items-center gap-2">
             <NumberStepper
               value={quantity}

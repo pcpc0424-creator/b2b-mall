@@ -359,7 +359,7 @@ export function Header() {
 
               {/* Mobile Dropdown Menu - 햄버거 버튼 아래로 */}
               <div className={cn(
-                "absolute right-0 top-full mt-2 z-50 bg-white shadow-xl border border-neutral-200 rounded-lg transition-all duration-300 origin-top-right w-[calc(100vw-2rem)]",
+                "absolute right-0 top-full mt-2 z-50 bg-white shadow-xl border border-neutral-200 rounded-lg transition-all duration-300 origin-top-right w-[calc(100vw-1rem)] max-w-sm",
                 isMegaMenuOpen
                   ? "opacity-100 scale-100 visible"
                   : "opacity-0 scale-95 invisible"

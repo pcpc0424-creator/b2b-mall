@@ -83,8 +83,8 @@ export function CartPage() {
                           </button>
                         </div>
 
-                        <div className="flex items-center justify-between mt-4">
-                          <div className="flex items-center gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-4 gap-2">
+                          <div className="flex items-center gap-2 sm:gap-4">
                             <NumberStepper
                               value={item.quantity}
                               onChange={(q) => updateCartQuantity(item.product.id, q)}
@@ -92,11 +92,11 @@ export function CartPage() {
                               max={item.product.stock}
                               size="sm"
                             />
-                            <span className="text-sm text-neutral-500">
+                            <span className="text-xs sm:text-sm text-neutral-500">
                               × {formatPrice(price)}
                             </span>
                           </div>
-                          <p className="text-lg font-bold text-primary-600">
+                          <p className="text-base sm:text-lg font-bold text-primary-600">
                             {formatPrice(subtotal)}
                           </p>
                         </div>

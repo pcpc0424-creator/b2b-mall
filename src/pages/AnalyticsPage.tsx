@@ -54,12 +54,12 @@ export function AnalyticsPage() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <Animated animation="fade-up">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">매출 분석</h1>
           <p className="text-neutral-500 mt-1">주문 데이터 기반 매출 분석 리포트</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <Select
             options={[
               { value: 'week', label: '최근 1주' },
@@ -69,9 +69,12 @@ export function AnalyticsPage() {
             ]}
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="w-32"
+            className="w-28 md:w-32"
           />
-          <Button variant="outline">
+          <Button variant="outline" size="sm" className="md:hidden">
+            <Download className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" className="hidden md:flex">
             <Download className="w-4 h-4 mr-2" />
             리포트 다운로드
           </Button>

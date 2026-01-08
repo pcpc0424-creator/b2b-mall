@@ -187,37 +187,39 @@ export function ProductTable({ products }: ProductTableProps) {
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="sticky bottom-0 bg-neutral-900 text-white px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-8">
+      <div className="sticky bottom-0 bg-neutral-900 text-white px-3 md:px-6 py-3 md:py-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-0">
+          <div className="flex items-center gap-3 md:gap-8 flex-wrap">
             <div>
-              <span className="text-neutral-400 text-sm">선택 상품</span>
-              <span className="ml-2 text-lg font-bold">{selectedItems.size}개</span>
+              <span className="text-neutral-400 text-xs md:text-sm">선택</span>
+              <span className="ml-1 md:ml-2 text-sm md:text-lg font-bold">{selectedItems.size}개</span>
             </div>
             <div>
-              <span className="text-neutral-400 text-sm">총 수량</span>
-              <span className="ml-2 text-lg font-bold">{formatNumber(getTotalQuantity())}개</span>
+              <span className="text-neutral-400 text-xs md:text-sm">수량</span>
+              <span className="ml-1 md:ml-2 text-sm md:text-lg font-bold">{formatNumber(getTotalQuantity())}개</span>
             </div>
             <div>
-              <span className="text-neutral-400 text-sm">총 금액</span>
-              <span className="ml-2 text-xl font-bold text-primary-400">{formatPrice(getTotalAmount())}</span>
+              <span className="text-neutral-400 text-xs md:text-sm">금액</span>
+              <span className="ml-1 md:ml-2 text-base md:text-xl font-bold text-primary-400">{formatPrice(getTotalAmount())}</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto">
             <Button
               variant="outline"
+              size="sm"
               onClick={handleAddToQuote}
               disabled={selectedItems.size === 0}
-              className="border-white text-white hover:bg-white hover:text-neutral-900"
+              className="flex-1 md:flex-none border-white text-white hover:bg-white hover:text-neutral-900 text-xs md:text-sm"
             >
-              견적서 생성
+              견적서
             </Button>
             <Button
+              size="sm"
               onClick={handleAddToCart}
               disabled={selectedItems.size === 0}
-              className="bg-primary-500 hover:bg-primary-600"
+              className="flex-1 md:flex-none bg-primary-500 hover:bg-primary-600 text-xs md:text-sm"
             >
-              장바구니 담기
+              장바구니
             </Button>
           </div>
         </div>

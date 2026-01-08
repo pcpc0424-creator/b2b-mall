@@ -66,8 +66,8 @@ export function DashboardPage() {
 
       {/* VIP+ Banner */}
       {(tier === 'vip' || tier === 'wholesale' || tier === 'partner') && (
-        <div className="mb-8 p-6 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg text-white">
-          <div className="flex items-start justify-between">
+        <div className="mb-8 p-4 md:p-6 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg text-white">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Star className="w-5 h-5" />
@@ -79,8 +79,8 @@ export function DashboardPage() {
                 ))}
               </ul>
             </div>
-            <Link to="/exclusive">
-              <Button className="bg-white text-amber-600 hover:bg-amber-50">
+            <Link to="/exclusive" className="flex-shrink-0">
+              <Button className="w-full md:w-auto bg-white text-amber-600 hover:bg-amber-50">
                 전용 혜택 보기
               </Button>
             </Link>
