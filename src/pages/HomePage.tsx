@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Zap, Download, Truck, Award, FileText, Gift, Clock, ArrowRight, RotateCcw, TrendingUp, AlertTriangle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Zap, Truck, Award, FileText, Gift, ArrowRight, Clock } from 'lucide-react'
 import { useStore, getTierLabel } from '../store'
-import { categories, products, promotions, mockSalesData } from '../data'
+import { categories, products, promotions } from '../data'
 import { ProductCard } from '../components/product'
-import { Button, Badge, Tabs, Card, CardContent } from '../components/ui'
-import { formatPrice, cn } from '../lib/utils'
-import { Animated, Stagger } from '../hooks'
+import { Button, Badge, Card, CardContent } from '../components/ui'
+import { cn } from '../lib/utils'
+import { Animated } from '../hooks'
 
 export function HomePage() {
   const { user, isLoggedIn } = useStore()
@@ -43,81 +43,94 @@ export function HomePage() {
 
   return (
     <div>
-      {/* Hero Section */}
-      <section className="relative bg-neutral-900 overflow-hidden">
-        <div className="relative h-[400px]">
-          {heroPromotions.map((promo, index) => (
-            <div
-              key={promo.id}
-              className={cn(
-                'absolute inset-0 transition-opacity duration-500',
-                index === currentSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'
-              )}
-            >
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(${promo.image})` }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-neutral-900/90 via-neutral-900/70 to-transparent" />
-              </div>
-              <div className="relative max-w-7xl mx-auto px-4 h-full flex items-center">
-                <div className={cn(
-                  "max-w-xl transition-all duration-700",
-                  index === currentSlide ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"
-                )}>
-                  {promo.type === 'exclusive' && (
-                    <Badge variant="warning" className="mb-4 animate-bounce-in">
-                      {getTierLabel(tier)} 전용
-                    </Badge>
-                  )}
-                  {promo.type === 'timesale' && (
-                    <Badge variant="error" className="mb-4 animate-bounce-in">
-                      <Clock className="w-3 h-3 mr-1" />
-                      타임특가
-                    </Badge>
-                  )}
-                  <h2 className="text-4xl font-bold text-white mb-4">{promo.title}</h2>
-                  <p className="text-lg text-neutral-300 mb-6">{promo.description}</p>
-                  <div className="flex gap-2 sm:gap-3">
-                    <Button size="lg" className="btn-hover whitespace-nowrap text-sm sm:text-base px-6 sm:px-4">
-                      <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 flex-shrink-0" />
-                      <span className="hidden sm:inline">대량 주문 바로가기</span>
-                      <span className="sm:hidden">대량주문</span>
-                    </Button>
-                    <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-neutral-900 btn-hover whitespace-nowrap text-sm sm:text-base px-6 sm:px-4">
-                      <Download className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2 flex-shrink-0" />
-                      <span className="hidden sm:inline">단가표 다운로드</span>
-                      <span className="sm:hidden">단가표</span>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+      {/* Hero Section - 캐러셀 스타일 */}
+      <section className="relative bg-neutral-100 py-4 md:py-6 overflow-hidden">
+        <div className="relative max-w-7xl mx-auto px-2 md:px-4">
+          <div className="relative h-[280px] md:h-[400px]">
+            {/* 슬라이드 컨테이너 */}
+            <div className="flex items-center justify-center h-full">
+              {heroPromotions.map((promo, index) => {
+                const isActive = index === currentSlide
+                const isPrev = index === (currentSlide - 1 + heroPromotions.length) % heroPromotions.length
+                const isNext = index === (currentSlide + 1) % heroPromotions.length
 
-          {/* Slide Controls */}
-          <button
-            onClick={prevSlide}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <button
-            onClick={nextSlide}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
+                return (
+                  <div
+                    key={promo.id}
+                    className={cn(
+                      'absolute transition-all duration-500 ease-in-out rounded-xl md:rounded-2xl overflow-hidden shadow-xl',
+                      isActive && 'z-20 scale-100 opacity-100',
+                      isPrev && 'z-10 -translate-x-[90%] md:-translate-x-[85%] scale-[0.85] md:scale-90 opacity-40 md:opacity-50',
+                      isNext && 'z-10 translate-x-[90%] md:translate-x-[85%] scale-[0.85] md:scale-90 opacity-40 md:opacity-50',
+                      !isActive && !isPrev && !isNext && 'z-0 scale-75 opacity-0'
+                    )}
+                    style={{
+                      width: 'calc(100% - 32px)',
+                      maxWidth: '900px',
+                      height: '100%'
+                    }}
+                  >
+                    <div
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ backgroundImage: `url(${promo.image})` }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-neutral-900/90 via-neutral-900/60 to-neutral-900/30 md:from-neutral-900/80 md:via-neutral-900/50 md:to-transparent" />
+                    </div>
+                    <div className="relative h-full flex items-center p-4 md:p-10">
+                      <div className={cn(
+                        "w-full md:max-w-md transition-all duration-500",
+                        isActive ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
+                      )}>
+                        {promo.type === 'exclusive' && (
+                          <Badge variant="warning" className="mb-2 md:mb-3 text-[10px] md:text-xs">
+                            {getTierLabel(tier)} 전용
+                          </Badge>
+                        )}
+                        {promo.type === 'timesale' && (
+                          <Badge variant="error" className="mb-2 md:mb-3 text-[10px] md:text-xs">
+                            <Clock className="w-3 h-3 mr-1" />
+                            타임특가
+                          </Badge>
+                        )}
+                        <h2 className="text-lg md:text-3xl font-bold text-white mb-2 md:mb-3 line-clamp-2">{promo.title}</h2>
+                        <p className="text-xs md:text-base text-neutral-200 mb-3 md:mb-5 line-clamp-2">{promo.description}</p>
+                        <div className="flex gap-2">
+                          <Button size="sm" className="btn-hover text-[10px] md:text-sm px-3 py-1.5 md:px-4 md:py-2">
+                            <Zap className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                            자세히 보기
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Slide Controls */}
+            <button
+              onClick={prevSlide}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-30 w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/90 shadow-lg hover:bg-white flex items-center justify-center text-neutral-700 transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={nextSlide}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-30 w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/90 shadow-lg hover:bg-white flex items-center justify-center text-neutral-700 transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
 
           {/* Slide Indicators */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+          <div className="flex justify-center gap-2 mt-4">
             {heroPromotions.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
                 className={cn(
-                  'w-2 h-2 rounded-full transition-all',
-                  index === currentSlide ? 'w-8 bg-white' : 'bg-white/50'
+                  'h-2 rounded-full transition-all',
+                  index === currentSlide ? 'w-8 bg-primary-600' : 'w-2 bg-neutral-300 hover:bg-neutral-400'
                 )}
               />
             ))}
@@ -125,123 +138,190 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Promotions Section */}
-      <section className="py-12 bg-white">
+      {/* 베스트연구소 */}
+      <section className="py-10 bg-neutral-50">
         <div className="max-w-7xl mx-auto px-4">
           <Animated animation="fade-up">
-          <Tabs
-            tabs={[
-              {
-                id: 'all',
-                label: '전체 기획전',
-                badge: visiblePromotions.length,
-                content: (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {visiblePromotions.map((promo) => (
-                      <Card key={promo.id} hover className="overflow-hidden">
-                        <img src={promo.image} alt={promo.title} className="w-full h-32 object-cover" />
-                        <CardContent>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant={promo.discount >= 30 ? 'error' : 'primary'} size="sm">
-                              {promo.discount}% OFF
-                            </Badge>
-                            {promo.type === 'exclusive' && (
-                              <Badge variant="warning" size="sm">등급전용</Badge>
-                            )}
-                          </div>
-                          <h3 className="font-medium text-neutral-900">{promo.title}</h3>
-                          <p className="text-sm text-neutral-500 mt-1">{promo.description}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ),
-              },
-              {
-                id: 'timesale',
-                label: '타임특가',
-                content: (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {visiblePromotions.filter(p => p.type === 'timesale').map((promo) => (
-                      <Card key={promo.id} hover className="overflow-hidden border-error">
-                        <img src={promo.image} alt={promo.title} className="w-full h-32 object-cover" />
-                        <CardContent>
-                          <Badge variant="error" size="sm" className="mb-2">
-                            <Clock className="w-3 h-3 mr-1" />
-                            오늘만!
-                          </Badge>
-                          <h3 className="font-medium text-neutral-900">{promo.title}</h3>
-                          <p className="text-sm text-neutral-500 mt-1">{promo.description}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                    {visiblePromotions.filter(p => p.type === 'timesale').length === 0 && (
-                      <p className="col-span-4 text-center text-neutral-500 py-8">현재 진행 중인 타임특가가 없습니다.</p>
-                    )}
-                  </div>
-                ),
-              },
-              {
-                id: 'exclusive',
-                label: '등급 전용',
-                content: (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {visiblePromotions.filter(p => p.type === 'exclusive').map((promo) => (
-                      <Card key={promo.id} hover className="overflow-hidden border-amber-300">
-                        <img src={promo.image} alt={promo.title} className="w-full h-32 object-cover" />
-                        <CardContent>
-                          <Badge variant="warning" size="sm" className="mb-2">
-                            {getTierLabel(tier)} 전용
-                          </Badge>
-                          <h3 className="font-medium text-neutral-900">{promo.title}</h3>
-                          <p className="text-sm text-neutral-500 mt-1">{promo.description}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                    {!isLoggedIn && (
-                      <div className="col-span-4 text-center py-8 bg-neutral-50 rounded-lg">
-                        <p className="text-neutral-500 mb-3">로그인 후 등급 전용 혜택을 확인하세요</p>
-                        <Button>로그인</Button>
+            <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
+              {/* 왼쪽 타이틀 영역 */}
+              <div className="md:w-48 flex-shrink-0">
+                <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 leading-tight">
+                  베스트연구소
+                </h2>
+                <p className="text-sm text-neutral-500 mt-2">
+                  가장 인기있는 상품을<br />
+                  한 번에 확인해 보세요!
+                </p>
+                <Link to="/products?sort=best" className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 mt-3 link-hover">
+                  전체보기 <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+              {/* 오른쪽 원형 상품 이미지 영역 */}
+              <div className="flex-1 overflow-x-auto scrollbar-hide">
+                <div className="flex justify-start md:justify-end gap-4 md:gap-6 pb-2">
+                  {products.slice(0, 6).map((product, index) => (
+                    <Link
+                      key={product.id}
+                      to={`/product/${product.id}`}
+                      className="flex-shrink-0 text-center group"
+                    >
+                      <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-2 border-neutral-200 group-hover:border-primary-400 transition-all shadow-md group-hover:shadow-lg">
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
                       </div>
-                    )}
-                  </div>
-                ),
-              },
-            ]}
-          />
+                      <p className="mt-2 text-xs md:text-sm font-medium text-neutral-800 truncate max-w-[96px] md:max-w-[112px]">
+                        {product.name}
+                      </p>
+                      <p className="text-xs text-neutral-500 truncate max-w-[96px] md:max-w-[112px]">
+                        {product.brand}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
           </Animated>
         </div>
       </section>
 
-      {/* Benefits Section */}
+      {/* 신상품 연구실 */}
+      <section className="py-10 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <Animated animation="fade-up">
+            <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
+              {/* 왼쪽 타이틀 영역 */}
+              <div className="md:w-48 flex-shrink-0">
+                <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 leading-tight">
+                  신상품 연구실
+                </h2>
+                <p className="text-sm text-neutral-500 mt-2">
+                  새로 입고된 상품을<br />
+                  한 번에 확인해 보세요!
+                </p>
+                <Link to="/products?sort=new" className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 mt-3 link-hover">
+                  전체보기 <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+              {/* 오른쪽 원형 상품 이미지 영역 */}
+              <div className="flex-1 overflow-x-auto scrollbar-hide">
+                <div className="flex justify-start md:justify-end gap-4 md:gap-6 pb-2">
+                  {products.slice(5, 11).map((product, index) => (
+                    <Link
+                      key={product.id}
+                      to={`/product/${product.id}`}
+                      className="flex-shrink-0 text-center group"
+                    >
+                      <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-2 border-neutral-200 group-hover:border-primary-400 transition-all shadow-md group-hover:shadow-lg">
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                      </div>
+                      <p className="mt-2 text-xs md:text-sm font-medium text-neutral-800 truncate max-w-[96px] md:max-w-[112px]">
+                        {product.name}
+                      </p>
+                      <p className="text-xs text-neutral-500 truncate max-w-[96px] md:max-w-[112px]">
+                        {product.brand}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Animated>
+        </div>
+      </section>
+
+      {/* 초특가연구실 */}
+      <section className="py-10 bg-neutral-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <Animated animation="fade-up">
+            <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
+              {/* 왼쪽 타이틀 영역 */}
+              <div className="md:w-48 flex-shrink-0">
+                <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 leading-tight">
+                  초특가연구실
+                </h2>
+                <p className="text-sm text-neutral-500 mt-2">
+                  특별 할인 상품을<br />
+                  한 번에 확인해 보세요!
+                </p>
+                <Link to="/products?sort=sale" className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 mt-3 link-hover">
+                  전체보기 <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+              {/* 오른쪽 원형 상품 이미지 영역 */}
+              <div className="flex-1 overflow-x-auto scrollbar-hide">
+                <div className="flex justify-start md:justify-end gap-4 md:gap-6 pb-2">
+                  {products.slice(10, 16).map((product, index) => (
+                    <Link
+                      key={product.id}
+                      to={`/product/${product.id}`}
+                      className="flex-shrink-0 text-center group"
+                    >
+                      <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-2 border-neutral-200 group-hover:border-primary-400 transition-all shadow-md group-hover:shadow-lg">
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                      </div>
+                      <p className="mt-2 text-xs md:text-sm font-medium text-neutral-800 truncate max-w-[96px] md:max-w-[112px]">
+                        {product.name}
+                      </p>
+                      <p className="text-xs text-neutral-500 truncate max-w-[96px] md:max-w-[112px]">
+                        {product.brand}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Animated>
+        </div>
+      </section>
+
+      {/* 기획전 연구실 */}
       <section className="py-12 bg-neutral-50">
         <div className="max-w-7xl mx-auto px-4">
-          {isLoggedIn && user && (
-            <Animated animation="fade-up">
-              <div className="mb-6 p-4 bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg text-white">
-                <p className="text-lg font-medium">
-                  {user.name}님, {getTierLabel(user.tier)} 고객님 전용 혜택을 확인하세요!
-                </p>
+          <Animated animation="fade-up">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-neutral-900">기획전 연구실</h2>
+                <Badge variant="primary" size="sm">EVENT</Badge>
               </div>
-            </Animated>
-          )}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {benefits.map((benefit, index) => (
-              <Animated key={index} animation="fade-up" delay={index * 100}>
-                <Card className="text-center p-6 card-hover group">
-                  <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary-100 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary-200 transition-all duration-300">
-                    <benefit.icon className="w-6 h-6 text-primary-600" />
+              <Link to="/promotions" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1 link-hover">
+                전체보기 <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </Animated>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {visiblePromotions.slice(0, 4).map((promo) => (
+              <Card key={promo.id} hover className="overflow-hidden">
+                <img src={promo.image} alt={promo.title} className="w-full h-32 object-cover" />
+                <CardContent>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant={promo.discount >= 30 ? 'error' : 'primary'} size="sm">
+                      {promo.discount}% OFF
+                    </Badge>
+                    {promo.type === 'exclusive' && (
+                      <Badge variant="warning" size="sm">등급전용</Badge>
+                    )}
                   </div>
-                  <h3 className="font-medium text-neutral-900 mb-1">{benefit.title}</h3>
-                  <p className="text-sm text-neutral-500">{benefit.desc}</p>
-                </Card>
-              </Animated>
+                  <h3 className="font-medium text-neutral-900">{promo.title}</h3>
+                  <p className="text-sm text-neutral-500 mt-1">{promo.description}</p>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Category Hub */}
+      {/* 카테고리 */}
       <section className="py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4">
           <Animated animation="fade-up">
@@ -290,74 +370,28 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Data-driven Recommendations (Logged in users) */}
-      {isLoggedIn && (
-        <section className="py-12 bg-neutral-50">
-          <div className="max-w-7xl mx-auto px-4">
-            <Animated animation="fade-up">
-              <Tabs
-                tabs={[
-                  {
-                    id: 'recent',
-                    label: '최근 주문 상품',
-                    content: (
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {products.slice(0, 5).map((product, index) => (
-                          <div key={product.id} className="animate-fade-in" style={{ animationDelay: `${index * 80}ms` }}>
-                            <ProductCard product={product} />
-                          </div>
-                        ))}
-                      </div>
-                    ),
-                  },
-                  {
-                    id: 'frequent',
-                    label: '자주 구매한 SKU',
-                    content: (
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {products.slice(2, 7).map((product, index) => (
-                          <div key={product.id} className="animate-fade-in" style={{ animationDelay: `${index * 80}ms` }}>
-                            <ProductCard product={product} />
-                          </div>
-                        ))}
-                      </div>
-                    ),
-                  },
-                  {
-                    id: 'lowstock',
-                    label: '재고 임박 상품',
-                    content: (
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {products.filter(p => p.stockStatus === 'low').map((product, index) => (
-                          <div key={product.id} className="animate-fade-in" style={{ animationDelay: `${index * 80}ms` }}>
-                            <ProductCard product={product} />
-                          </div>
-                        ))}
-                      </div>
-                    ),
-                  },
-                ]}
-              />
-            </Animated>
-          </div>
-        </section>
-      )}
-
-      {/* Best Products */}
-      <section className="py-12 bg-white">
+      {/* 혜택 안내 */}
+      <section className="py-12 bg-neutral-50">
         <div className="max-w-7xl mx-auto px-4">
-          <Animated animation="fade-up">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-neutral-900">베스트 상품</h2>
-              <Link to="/products" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1 link-hover">
-                전체보기 <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </Animated>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {products.slice(0, 10).map((product, index) => (
-              <Animated key={product.id} animation="fade-up" delay={index * 60}>
-                <ProductCard product={product} />
+          {isLoggedIn && user && (
+            <Animated animation="fade-up">
+              <div className="mb-6 p-4 bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg text-white">
+                <p className="text-lg font-medium">
+                  {user.name}님, {getTierLabel(user.tier)} 고객님 전용 혜택을 확인하세요!
+                </p>
+              </div>
+            </Animated>
+          )}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {benefits.map((benefit, index) => (
+              <Animated key={index} animation="fade-up" delay={index * 100}>
+                <Card className="text-center p-6 card-hover group">
+                  <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary-100 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary-200 transition-all duration-300">
+                    <benefit.icon className="w-6 h-6 text-primary-600" />
+                  </div>
+                  <h3 className="font-medium text-neutral-900 mb-1">{benefit.title}</h3>
+                  <p className="text-sm text-neutral-500">{benefit.desc}</p>
+                </Card>
               </Animated>
             ))}
           </div>
