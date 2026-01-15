@@ -17,7 +17,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 }
 
 export function Header() {
-  const { user, isLoggedIn, cart, isMegaMenuOpen, setMegaMenuOpen } = useStore()
+  const { user, isLoggedIn, logout, cart, isMegaMenuOpen, setMegaMenuOpen } = useStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [hoveredCategory, setHoveredCategory] = useState<number | null>(null)
   const [expandedCategory, setExpandedCategory] = useState<number | null>(null)
@@ -47,7 +47,7 @@ export function Header() {
                 </span>
                 <div className="flex items-center gap-2 md:gap-4">
                   <Link to="/dashboard" className="hover:text-primary-400">마이페이지</Link>
-                  <button className="hover:text-primary-400">로그아웃</button>
+                  <button onClick={logout} className="hover:text-primary-400">로그아웃</button>
                 </div>
               </>
             ) : (
@@ -245,36 +245,42 @@ export function Header() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center h-12">
             {/* Mobile Quick Navigation */}
-            <nav className="md:hidden flex items-center flex-1 gap-4 overflow-x-auto scrollbar-hide">
+            <nav className="md:hidden flex items-center justify-center flex-1 gap-4">
+              <Link
+                to="/products"
+                className="text-xs font-medium text-neutral-700 hover:text-primary-600 transition-colors"
+              >
+                전체상품
+              </Link>
               <Link
                 to="/products?sort=best"
-                className="text-[11px] font-medium text-neutral-700 hover:text-primary-600 transition-colors whitespace-nowrap"
+                className="text-xs font-medium text-neutral-700 hover:text-primary-600 transition-colors"
               >
-                베스트연구실
+                베스트
               </Link>
               <Link
                 to="/products?sort=new"
-                className="text-[11px] font-medium text-neutral-700 hover:text-primary-600 transition-colors whitespace-nowrap"
+                className="text-xs font-medium text-neutral-700 hover:text-primary-600 transition-colors"
               >
-                신상품연구실
+                신상품
               </Link>
               <Link
                 to="/products?sort=sale"
-                className="text-[11px] font-medium text-neutral-700 hover:text-primary-600 transition-colors whitespace-nowrap"
+                className="text-xs font-medium text-neutral-700 hover:text-primary-600 transition-colors"
               >
-                초특가연구실
+                초특가
               </Link>
               <Link
                 to="/promotions"
-                className="text-[11px] font-medium text-neutral-700 hover:text-primary-600 transition-colors whitespace-nowrap"
+                className="text-xs font-medium text-neutral-700 hover:text-primary-600 transition-colors"
               >
-                기획전연구실
+                기획전
               </Link>
               <button
                 onClick={() => setMobileCommunityOpen(!mobileCommunityOpen)}
-                className="text-[11px] font-medium text-neutral-700 hover:text-primary-600 transition-colors flex items-center gap-0.5 whitespace-nowrap"
+                className="text-xs font-medium text-neutral-700 hover:text-primary-600 transition-colors flex items-center gap-0.5"
               >
-                소통연구실
+                소통
                 <ChevronRight className={cn(
                   "w-3 h-3 transition-transform",
                   mobileCommunityOpen ? "rotate-[270deg]" : "rotate-90"
@@ -395,6 +401,12 @@ export function Header() {
 
             {/* Quick Navigation Links - PC only */}
             <nav className="hidden md:flex items-center justify-center flex-1 gap-8">
+              <Link
+                to="/products"
+                className="text-sm text-neutral-700 hover:text-primary-600 transition-colors"
+              >
+                전체상품연구실
+              </Link>
               <Link
                 to="/products?sort=best"
                 className="text-sm text-neutral-700 hover:text-primary-600 transition-colors"

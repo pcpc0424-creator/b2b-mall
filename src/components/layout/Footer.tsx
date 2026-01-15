@@ -7,9 +7,9 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="col-span-1 md:col-span-2">
-            <h2 className="text-xl font-bold text-white mb-4">정담B2B</h2>
+            <h2 className="text-xl font-bold text-white mb-4">가성비연구소</h2>
             <p className="text-sm text-neutral-400 mb-4">
-              B2B 전문 도매 쇼핑몰<br />
+              전문 도매 쇼핑몰<br />
               대량 주문, 견적서 발행, 등급별 할인 혜택
             </p>
             <div className="space-y-2 text-sm">
@@ -67,7 +67,7 @@ export function Footer() {
             </div>
           </div>
           <p className="text-center text-xs text-neutral-600 mt-4">
-            © 2024 정담B2B. All rights reserved.
+            © 2024 가성비연구소. All rights reserved.
           </p>
         </div>
       </div>

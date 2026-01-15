@@ -84,7 +84,11 @@ export const products: Product[] = [
     prices: { retail: 89000, member: 79000, vip: 71000, wholesale: 62000, partner: 55000 },
     minQuantity: 1,
     stock: 500,
-    stockStatus: 'available'
+    stockStatus: 'available',
+    options: [
+      { id: 'opt-1', name: '구성', values: ['기본구성', '추가구성', '프리미엄구성'] },
+      { id: 'opt-2', name: '수량단위', values: ['개별', '박스(10개입)', '박스(20개입)'] }
+    ]
   },
   {
     id: "p2",
@@ -96,7 +100,11 @@ export const products: Product[] = [
     prices: { retail: 150000, member: 135000, vip: 120000, wholesale: 105000, partner: 90000 },
     minQuantity: 1,
     stock: 320,
-    stockStatus: 'available'
+    stockStatus: 'available',
+    options: [
+      { id: 'opt-1', name: '용량', values: ['30ml x 10포', '30ml x 20포', '30ml x 30포'] },
+      { id: 'opt-2', name: '포장', values: ['일반포장', '선물포장', '프리미엄포장'] }
+    ]
   },
   {
     id: "p3",
@@ -120,7 +128,11 @@ export const products: Product[] = [
     prices: { retail: 128000, member: 115000, vip: 102000, wholesale: 89000, partner: 77000 },
     minQuantity: 3,
     stock: 85,
-    stockStatus: 'low'
+    stockStatus: 'low',
+    options: [
+      { id: 'opt-1', name: '피부타입', values: ['지성', '건성', '복합성', '민감성'] },
+      { id: 'opt-2', name: '사이즈', values: ['기본', '대용량'] }
+    ]
   },
   {
     id: "p5",

@@ -1,0 +1,976 @@
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Save, ArrowLeft, Plus, X, GripVertical, Trash2 } from 'lucide-react'
+import { useAdminStore } from '../store/adminStore'
+import { products as mockProducts, categories } from '../../data'
+import { Button, Card, CardContent, Input, Badge } from '../../components/ui'
+import { formatPrice, cn } from '../../lib/utils'
+import { ProductOptionAdmin, OptionValue, ProductVariant, ProductShipping } from '../types/admin'
+
+export function ProductEditPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { addProduct, updateProduct, products } = useAdminStore()
+  const isNew = !id || id === 'new'
+
+  // 기본 상품 정보
+  const [formData, setFormData] = useState({
+    name: '',
+    sku: '',
+    brand: '',
+    categoryId: 1,
+    retailPrice: 0,
+    memberPrice: 0,
+    vipPrice: 0,
+    wholesalePrice: 0,
+    partnerPrice: 0,
+    stock: 0,
+    minQuantity: 1,
+    isActive: true,
+  })
+
+  // 배송비 설정
+  const [shipping, setShipping] = useState<ProductShipping>({
+    type: 'paid',
+    fee: 3000,
+    freeCondition: 50000,
+  })
+
+  // 옵션 상태
+  const [options, setOptions] = useState<ProductOptionAdmin[]>([])
+  const [variants, setVariants] = useState<ProductVariant[]>([])
+
+  // 기존 상품 로드
+  useEffect(() => {
+    if (!isNew && id) {
+      const adminProduct = products.find(p => p.id === id)
+      const mockProduct = mockProducts.find(p => p.id === id)
+      const existingProduct = adminProduct || mockProduct
+
+      if (existingProduct) {
+        setFormData({
+          name: existingProduct.name,
+          sku: existingProduct.sku,
+          brand: existingProduct.brand,
+          categoryId: existingProduct.categoryId,
+          retailPrice: existingProduct.prices.retail,
+          memberPrice: existingProduct.prices.member,
+          vipPrice: existingProduct.prices.vip,
+          wholesalePrice: existingProduct.prices.wholesale,
+          partnerPrice: existingProduct.prices.partner,
+          stock: existingProduct.stock,
+          minQuantity: existingProduct.minQuantity,
+          isActive: true,
+        })
+
+        // AdminProduct의 shipping 정보 로드
+        if (adminProduct?.shipping) {
+          setShipping(adminProduct.shipping)
+        }
+
+        // 옵션 로드 - adminOptions 우선, 없으면 기본 options 변환
+        if (adminProduct?.adminOptions && adminProduct.adminOptions.length > 0) {
+          setOptions(adminProduct.adminOptions)
+        } else if (existingProduct.options && existingProduct.options.length > 0) {
+          // 기본 options를 ProductOptionAdmin 형식으로 변환
+          const convertedOptions: ProductOptionAdmin[] = existingProduct.options.map((opt, idx) => ({
+            id: opt.id,
+            name: opt.name,
+            values: opt.values.map((val, vidx) => ({
+              id: `val_${opt.id}_${vidx}`,
+              value: val,
+              priceModifier: 0,
+              isDefault: vidx === 0,
+            })),
+            required: true,
+            displayOrder: idx,
+          }))
+          setOptions(convertedOptions)
+        }
+
+        // 변형 로드
+        if (adminProduct?.variants) {
+          setVariants(adminProduct.variants)
+        }
+      }
+    }
+  }, [id, isNew, products])
+
+  // 옵션 추가
+  const handleAddOption = () => {
+    const newOption: ProductOptionAdmin = {
+      id: `opt_${Date.now()}`,
+      name: '',
+      values: [],
+      required: true,
+      displayOrder: options.length,
+    }
+    setOptions([...options, newOption])
+  }
+
+  // 옵션 삭제
+  const handleRemoveOption = (optionId: string) => {
+    setOptions(options.filter(opt => opt.id !== optionId))
+    setVariants([]) // 옵션 변경 시 변형 초기화
+  }
+
+  // 옵션명 변경
+  const handleOptionNameChange = (optionId: string, name: string) => {
+    setOptions(options.map(opt =>
+      opt.id === optionId ? { ...opt, name } : opt
+    ))
+  }
+
+  // 옵션값 추가
+  const handleAddOptionValue = (optionId: string, value: string) => {
+    const trimmedValue = value.trim()
+    if (!trimmedValue) return
+
+    setOptions(prev => {
+      // 최신 state에서 중복 체크
+      const targetOption = prev.find(opt => opt.id === optionId)
+      if (targetOption?.values.some(v => v.value === trimmedValue)) {
+        return prev // 이미 존재하는 값이면 변경 없음
+      }
+
+      const newValue: OptionValue = {
+        id: `val_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        value: trimmedValue,
+        priceModifier: 0,
+        isDefault: false,
+      }
+
+      return prev.map(opt =>
+        opt.id === optionId
+          ? { ...opt, values: [...opt.values, newValue] }
+          : opt
+      )
+    })
+    setVariants([]) // 옵션 변경 시 변형 초기화
+  }
+
+  // 옵션값 삭제
+  const handleRemoveOptionValue = (optionId: string, valueId: string) => {
+    setOptions(options.map(opt =>
+      opt.id === optionId
+        ? { ...opt, values: opt.values.filter(v => v.id !== valueId) }
+        : opt
+    ))
+    setVariants([])
+  }
+
+  // 옵션값 가격 변경
+  const handlePriceModifierChange = (optionId: string, valueId: string, modifier: number) => {
+    setOptions(options.map(opt =>
+      opt.id === optionId
+        ? {
+            ...opt,
+            values: opt.values.map(v =>
+              v.id === valueId ? { ...v, priceModifier: modifier } : v
+            )
+          }
+        : opt
+    ))
+  }
+
+  // 옵션 조합 생성
+  const generateVariants = () => {
+    if (options.length === 0 || options.some(opt => opt.values.length === 0)) {
+      alert('모든 옵션에 최소 1개 이상의 값을 입력해주세요.')
+      return
+    }
+
+    const generateCombinations = (
+      optionIndex: number,
+      current: Record<string, OptionValue>
+    ): Record<string, OptionValue>[] => {
+      if (optionIndex >= options.length) {
+        return [current]
+      }
+
+      const option = options[optionIndex]
+      const combinations: Record<string, OptionValue>[] = []
+
+      for (const value of option.values) {
+        combinations.push(
+          ...generateCombinations(optionIndex + 1, {
+            ...current,
+            [option.name]: value,
+          })
+        )
+      }
+
+      return combinations
+    }
+
+    const combinations = generateCombinations(0, {})
+
+    const newVariants: ProductVariant[] = combinations.map((combo, index) => {
+      const priceModifier = Object.values(combo).reduce(
+        (sum, val) => sum + val.priceModifier,
+        0
+      )
+      const skuSuffix = Object.values(combo)
+        .map(v => v.value.substring(0, 2).toUpperCase())
+        .join('-')
+
+      return {
+        id: `var_${index}`,
+        sku: `${formData.sku || 'NEW'}-${skuSuffix}`,
+        optionCombination: Object.fromEntries(
+          Object.entries(combo).map(([k, v]) => [k, v.value])
+        ),
+        price: formData.retailPrice + priceModifier,
+        stock: 0,
+        isActive: true,
+      }
+    })
+
+    setVariants(newVariants)
+  }
+
+  // 변형 재고 변경
+  const handleVariantStockChange = (variantId: string, stock: number) => {
+    setVariants(variants.map(v =>
+      v.id === variantId ? { ...v, stock } : v
+    ))
+  }
+
+  // 변형 활성화 토글
+  const handleVariantActiveToggle = (variantId: string) => {
+    setVariants(variants.map(v =>
+      v.id === variantId ? { ...v, isActive: !v.isActive } : v
+    ))
+  }
+
+  // 저장
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const productData = {
+      id: isNew ? `p_${Date.now()}` : id!,
+      sku: formData.sku,
+      name: formData.name,
+      brand: formData.brand,
+      categoryId: formData.categoryId,
+      images: ['https://picsum.photos/seed/new/400/400'],
+      prices: {
+        retail: formData.retailPrice,
+        member: formData.memberPrice,
+        vip: formData.vipPrice,
+        wholesale: formData.wholesalePrice,
+        partner: formData.partnerPrice,
+      },
+      minQuantity: formData.minQuantity,
+      stock: formData.stock,
+      stockStatus: (formData.stock > 10 ? 'available' : formData.stock > 0 ? 'low' : 'out_of_stock') as 'available' | 'low' | 'out_of_stock',
+      isActive: formData.isActive,
+      adminOptions: options,
+      variants: variants,
+      shipping: shipping,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    console.log('[ProductEditPage] 저장할 상품:', productData)
+    console.log('[ProductEditPage] 저장할 adminOptions:', options)
+
+    // 1. 먼저 localStorage에서 현재 products 가져오기
+    let currentProducts: any[] = []
+    try {
+      const stored = localStorage.getItem('admin-storage')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        currentProducts = parsed.state?.products || []
+      }
+    } catch (e) {
+      console.error('localStorage 읽기 에러:', e)
+    }
+
+    // 2. products 배열 업데이트
+    console.log('[ProductEditPage] 현재 localStorage products 수:', currentProducts.length)
+    console.log('[ProductEditPage] options 상태:', options)
+
+    if (isNew) {
+      currentProducts = [...currentProducts, productData]
+      console.log('[ProductEditPage] 새 상품 추가')
+    } else {
+      // 기존 상품이 있는지 확인
+      const existingIndex = currentProducts.findIndex(p => p.id === id)
+      if (existingIndex >= 0) {
+        // 기존 상품 업데이트
+        currentProducts[existingIndex] = { ...currentProducts[existingIndex], ...productData }
+        console.log('[ProductEditPage] 기존 상품 업데이트')
+      } else {
+        // 상품이 없으면 추가
+        currentProducts = [...currentProducts, productData]
+        console.log('[ProductEditPage] 상품이 없어서 새로 추가')
+      }
+    }
+
+    // 3. zustand store 업데이트
+    if (isNew) {
+      addProduct(productData)
+    } else {
+      updateProduct(id!, productData)
+    }
+
+    // 4. localStorage에 직접 저장 (zustand persist 완전 우회)
+    try {
+      const stored = localStorage.getItem('admin-storage')
+      const parsed = stored ? JSON.parse(stored) : { state: {}, version: 0 }
+
+      parsed.state = {
+        ...parsed.state,
+        products: currentProducts,
+      }
+
+      localStorage.setItem('admin-storage', JSON.stringify(parsed))
+      console.log('[ProductEditPage] ✅ localStorage 직접 저장 완료!')
+      console.log('[ProductEditPage] 저장된 products:', currentProducts.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        adminOptions: p.adminOptions?.length || 0
+      })))
+
+      // 저장 확인
+      const verify = JSON.parse(localStorage.getItem('admin-storage') || '{}')
+      const savedProduct = verify.state?.products?.find((p: any) => p.id === (isNew ? productData.id : id))
+      console.log('[ProductEditPage] 저장 확인 - 해당 상품:', savedProduct?.name, 'adminOptions:', savedProduct?.adminOptions)
+    } catch (e) {
+      console.error('[ProductEditPage] localStorage 저장 에러:', e)
+    }
+
+    // 5. 페이지 이동
+    navigate('/admin/products')
+  }
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3 sm:gap-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/admin/products')} className="p-2">
+          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg sm:text-2xl font-bold text-neutral-900 truncate">
+            {isNew ? '상품 등록' : '상품 수정'}
+          </h1>
+          <p className="text-xs sm:text-sm text-neutral-500 mt-0.5 sm:mt-1 truncate">
+            {isNew ? '새로운 상품을 등록합니다' : formData.name}
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        {/* 기본 정보 */}
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-bold text-neutral-900 mb-3 sm:mb-4">기본 정보</h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  상품명 *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  SKU *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  브랜드
+                </label>
+                <input
+                  type="text"
+                  value={formData.brand}
+                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  카테고리 *
+                </label>
+                <select
+                  value={formData.categoryId}
+                  onChange={(e) => setFormData({ ...formData, categoryId: parseInt(e.target.value) })}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 가격 정보 */}
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-bold text-neutral-900 mb-3 sm:mb-4">가격 정보</h2>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  정상가 *
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={formData.retailPrice}
+                  onChange={(e) => setFormData({ ...formData, retailPrice: parseInt(e.target.value) || 0 })}
+                  onFocus={(e) => e.target.select()}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  회원가
+                </label>
+                <input
+                  type="number"
+                  value={formData.memberPrice}
+                  onChange={(e) => setFormData({ ...formData, memberPrice: parseInt(e.target.value) || 0 })}
+                  onFocus={(e) => e.target.select()}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  VIP가
+                </label>
+                <input
+                  type="number"
+                  value={formData.vipPrice}
+                  onChange={(e) => setFormData({ ...formData, vipPrice: parseInt(e.target.value) || 0 })}
+                  onFocus={(e) => e.target.select()}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  도매가
+                </label>
+                <input
+                  type="number"
+                  value={formData.wholesalePrice}
+                  onChange={(e) => setFormData({ ...formData, wholesalePrice: parseInt(e.target.value) || 0 })}
+                  onFocus={(e) => e.target.select()}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  파트너가
+                </label>
+                <input
+                  type="number"
+                  value={formData.partnerPrice}
+                  onChange={(e) => setFormData({ ...formData, partnerPrice: parseInt(e.target.value) || 0 })}
+                  onFocus={(e) => e.target.select()}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 재고 정보 */}
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-bold text-neutral-900 mb-3 sm:mb-4">재고 정보</h2>
+
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  재고 수량
+                </label>
+                <input
+                  type="number"
+                  value={formData.stock}
+                  onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                  onFocus={(e) => e.target.select()}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  최소 주문수량
+                </label>
+                <input
+                  type="number"
+                  value={formData.minQuantity}
+                  onChange={(e) => setFormData({ ...formData, minQuantity: parseInt(e.target.value) || 1 })}
+                  onFocus={(e) => e.target.select()}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 배송비 설정 */}
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-bold text-neutral-900 mb-3 sm:mb-4">배송비 설정</h2>
+
+            <div className="space-y-4">
+              {/* 배송비 타입 선택 */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShipping({ ...shipping, type: 'free' })}
+                  className={cn(
+                    'px-4 py-2 text-sm rounded-lg border transition-colors',
+                    shipping.type === 'free'
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white text-neutral-700 border-neutral-200 hover:border-primary-300'
+                  )}
+                >
+                  무료배송
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShipping({ ...shipping, type: 'paid' })}
+                  className={cn(
+                    'px-4 py-2 text-sm rounded-lg border transition-colors',
+                    shipping.type === 'paid'
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white text-neutral-700 border-neutral-200 hover:border-primary-300'
+                  )}
+                >
+                  유료배송
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShipping({ ...shipping, type: 'conditional' })}
+                  className={cn(
+                    'px-4 py-2 text-sm rounded-lg border transition-colors',
+                    shipping.type === 'conditional'
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white text-neutral-700 border-neutral-200 hover:border-primary-300'
+                  )}
+                >
+                  조건부 무료
+                </button>
+              </div>
+
+              {/* 유료배송일 때 배송비 입력 */}
+              {shipping.type === 'paid' && (
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-neutral-700">배송비</label>
+                  <input
+                    type="number"
+                    value={shipping.fee || 0}
+                    onChange={(e) => setShipping({ ...shipping, fee: parseInt(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+                    className="w-28 px-3 py-2 text-sm border border-neutral-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-neutral-500">원</span>
+                </div>
+              )}
+
+              {/* 조건부 무료일 때 */}
+              {shipping.type === 'conditional' && (
+                <div className="space-y-3 p-3 bg-neutral-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-neutral-700">기본 배송비</label>
+                    <input
+                      type="number"
+                      value={shipping.fee || 0}
+                      onChange={(e) => setShipping({ ...shipping, fee: parseInt(e.target.value) || 0 })}
+                      onFocus={(e) => e.target.select()}
+                      className="w-28 px-3 py-2 text-sm border border-neutral-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-neutral-500">원</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-neutral-700">무료배송 기준</label>
+                    <input
+                      type="number"
+                      value={shipping.freeCondition || 0}
+                      onChange={(e) => setShipping({ ...shipping, freeCondition: parseInt(e.target.value) || 0 })}
+                      onFocus={(e) => e.target.select()}
+                      className="w-28 px-3 py-2 text-sm border border-neutral-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-neutral-500">원 이상 무료</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 미리보기 */}
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  💡 {shipping.type === 'free' && '이 상품은 무료배송입니다.'}
+                  {shipping.type === 'paid' && `배송비 ${formatPrice(shipping.fee || 0)}이 부과됩니다.`}
+                  {shipping.type === 'conditional' && `${formatPrice(shipping.freeCondition || 0)} 이상 구매 시 무료배송, 미만 시 ${formatPrice(shipping.fee || 0)}`}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 상품 옵션 */}
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-start sm:items-center justify-between gap-2 mb-3 sm:mb-4">
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-lg font-bold text-neutral-900">상품 옵션</h2>
+                <p className="text-xs sm:text-sm text-neutral-500 mt-0.5 sm:mt-1">
+                  사이즈, 색상 등 옵션 설정
+                </p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={handleAddOption} className="flex-shrink-0">
+                <Plus className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">옵션 추가</span>
+              </Button>
+            </div>
+
+            {/* 옵션 목록 */}
+            <div className="space-y-3 sm:space-y-4">
+              {options.map((option, index) => (
+                <OptionItem
+                  key={option.id}
+                  option={option}
+                  index={index}
+                  onNameChange={(name) => handleOptionNameChange(option.id, name)}
+                  onAddValue={(value) => handleAddOptionValue(option.id, value)}
+                  onRemoveValue={(valueId) => handleRemoveOptionValue(option.id, valueId)}
+                  onPriceModifierChange={(valueId, modifier) =>
+                    handlePriceModifierChange(option.id, valueId, modifier)
+                  }
+                  onRemove={() => handleRemoveOption(option.id)}
+                />
+              ))}
+            </div>
+
+            {options.length === 0 && (
+              <div className="text-center py-6 sm:py-8 bg-neutral-50 rounded-lg border-2 border-dashed border-neutral-200">
+                <p className="text-neutral-500 text-sm">등록된 옵션이 없습니다</p>
+                <Button type="button" variant="primary" size="sm" className="mt-3" onClick={handleAddOption}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  첫 옵션 추가하기
+                </Button>
+              </div>
+            )}
+
+            {/* 옵션 조합 생성 버튼 */}
+            {options.length > 0 && options.every(o => o.name && o.values.length > 0) && (
+              <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-700">옵션 조합</p>
+                    <p className="text-xs text-neutral-500">
+                      총 {options.reduce((acc, opt) => acc * (opt.values.length || 1), 1)}개의 조합이 생성됩니다
+                    </p>
+                  </div>
+                  <Button type="button" size="sm" onClick={generateVariants}>
+                    조합 생성
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* 생성된 변형 - Mobile Cards */}
+            {variants.length > 0 && (
+              <div className="mt-4">
+                <div className="lg:hidden space-y-3">
+                  {variants.map((variant) => (
+                    <div
+                      key={variant.id}
+                      className={cn(
+                        'bg-neutral-50 rounded-lg p-3',
+                        !variant.isActive && 'opacity-50'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={variant.isActive}
+                            onChange={() => handleVariantActiveToggle(variant.id)}
+                            className="w-4 h-4 rounded border-neutral-300"
+                          />
+                          <span className="font-mono text-xs text-neutral-600">{variant.sku}</span>
+                        </div>
+                        <span className="text-sm font-medium text-neutral-900">
+                          {formatPrice(variant.price)}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {Object.entries(variant.optionCombination).map(([key, val]) => (
+                          <Badge key={key} variant="default" size="sm">
+                            {key}: {val}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-neutral-500">재고</span>
+                        <input
+                          type="number"
+                          value={variant.stock}
+                          onChange={(e) => handleVariantStockChange(variant.id, parseInt(e.target.value) || 0)}
+                          className="w-20 px-2 py-1 text-sm border border-neutral-200 rounded text-center"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 생성된 변형 - Desktop Table */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-neutral-200 bg-neutral-50">
+                        <th className="text-left px-4 py-3 font-medium text-neutral-600">활성</th>
+                        <th className="text-left px-4 py-3 font-medium text-neutral-600">SKU</th>
+                        <th className="text-left px-4 py-3 font-medium text-neutral-600">옵션</th>
+                        <th className="text-right px-4 py-3 font-medium text-neutral-600">가격</th>
+                        <th className="text-center px-4 py-3 font-medium text-neutral-600">재고</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {variants.map((variant) => (
+                        <tr
+                          key={variant.id}
+                          className={cn(
+                            'border-b border-neutral-100',
+                            !variant.isActive && 'opacity-50'
+                          )}
+                        >
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={variant.isActive}
+                              onChange={() => handleVariantActiveToggle(variant.id)}
+                              className="w-4 h-4 rounded border-neutral-300"
+                            />
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs text-neutral-600">
+                            {variant.sku}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1">
+                              {Object.entries(variant.optionCombination).map(([key, val]) => (
+                                <Badge key={key} variant="default" size="sm">
+                                  {key}: {val}
+                                </Badge>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium">
+                            {formatPrice(variant.price)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="number"
+                              value={variant.stock}
+                              onChange={(e) => handleVariantStockChange(variant.id, parseInt(e.target.value) || 0)}
+                              className="w-20 px-2 py-1 border border-neutral-200 rounded text-center"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 저장 버튼 */}
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
+          <Button type="button" variant="outline" onClick={() => navigate('/admin/products')} className="w-full sm:w-auto">
+            취소
+          </Button>
+          <Button type="submit" className="w-full sm:w-auto">
+            <Save className="w-4 h-4 mr-2" />
+            {isNew ? '상품 등록' : '변경사항 저장'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+// 옵션 아이템 컴포넌트
+interface OptionItemProps {
+  option: ProductOptionAdmin
+  index: number
+  onNameChange: (name: string) => void
+  onAddValue: (value: string) => void
+  onRemoveValue: (valueId: string) => void
+  onPriceModifierChange: (valueId: string, modifier: number) => void
+  onRemove: () => void
+}
+
+function OptionItem({
+  option,
+  index,
+  onNameChange,
+  onAddValue,
+  onRemoveValue,
+  onPriceModifierChange,
+  onRemove,
+}: OptionItemProps) {
+  const [newValue, setNewValue] = useState('')
+  const lastAddTime = React.useRef(0)
+
+  const handleAddValue = () => {
+    // 300ms 이내 중복 호출 방지
+    const now = Date.now()
+    if (now - lastAddTime.current < 300) {
+      return
+    }
+    lastAddTime.current = now
+
+    const trimmed = newValue.trim()
+    if (!trimmed) return
+
+    onAddValue(trimmed)
+    setNewValue('')
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      e.stopPropagation()
+      handleAddValue()
+    }
+  }
+
+  return (
+    <div className="border border-neutral-200 rounded-lg">
+      {/* 옵션 헤더 */}
+      <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 border-b border-neutral-100 bg-neutral-50">
+        <GripVertical className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-300 cursor-grab flex-shrink-0" />
+        <span className="text-xs sm:text-sm font-medium text-neutral-500 flex-shrink-0">옵션 {index + 1}</span>
+        <input
+          type="text"
+          value={option.name}
+          onChange={(e) => onNameChange(e.target.value)}
+          placeholder="옵션명 (예: 사이즈)"
+          className="flex-1 min-w-0 px-2 sm:px-3 py-1 sm:py-1.5 border border-neutral-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onRemove}
+          className="text-neutral-400 hover:text-error flex-shrink-0 p-1.5"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* 옵션값 */}
+      <div className="p-3 sm:p-4">
+        <div className="flex flex-wrap gap-2 mb-3 sm:mb-4">
+          {option.values.map((value) => (
+            <OptionValueTag
+              key={value.id}
+              value={value}
+              onRemove={() => onRemoveValue(value.id)}
+              onPriceChange={(modifier) => onPriceModifierChange(value.id, modifier)}
+            />
+          ))}
+        </div>
+
+        {/* 옵션값 추가 */}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="옵션값 입력 후 Enter"
+            className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 border border-neutral-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <Button type="button" variant="outline" size="sm" onClick={handleAddValue} className="flex-shrink-0">
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 옵션값 태그 컴포넌트
+interface OptionValueTagProps {
+  value: OptionValue
+  onRemove: () => void
+  onPriceChange: (modifier: number) => void
+}
+
+function OptionValueTag({ value, onRemove, onPriceChange }: OptionValueTagProps) {
+  const [showPriceInput, setShowPriceInput] = useState(false)
+
+  return (
+    <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm bg-primary-50 text-primary-700 border border-primary-200">
+      <span>{value.value}</span>
+
+      {value.priceModifier !== 0 && (
+        <span className={cn(
+          'text-xs font-medium',
+          value.priceModifier > 0 ? 'text-green-600' : 'text-red-600'
+        )}>
+          {value.priceModifier > 0 ? '+' : ''}{formatPrice(value.priceModifier)}
+        </span>
+      )}
+
+      {showPriceInput ? (
+        <input
+          type="number"
+          value={value.priceModifier}
+          onChange={(e) => onPriceChange(parseInt(e.target.value) || 0)}
+          onBlur={() => setShowPriceInput(false)}
+          className="w-16 sm:w-20 text-xs px-1 py-0.5 border rounded"
+          autoFocus
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowPriceInput(true)}
+          className="text-xs text-primary-500 hover:text-primary-700"
+        >
+          가격
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={onRemove}
+        className="text-primary-400 hover:text-error transition-colors"
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  )
+}

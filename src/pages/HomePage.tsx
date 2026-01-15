@@ -1,21 +1,46 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Zap, Truck, Award, FileText, Gift, ArrowRight, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Zap, ArrowRight, Clock, ShoppingCart } from 'lucide-react'
 import { useStore, getTierLabel } from '../store'
-import { categories, products, promotions } from '../data'
+import { useAdminStore } from '../admin/store/adminStore'
+import { categories, products as defaultProducts, promotions } from '../data'
 import { ProductCard } from '../components/product'
 import { Button, Badge, Card, CardContent } from '../components/ui'
 import { cn } from '../lib/utils'
 import { Animated } from '../hooks'
+import { Product } from '../types'
 
 export function HomePage() {
   const { user, isLoggedIn } = useStore()
+  const { products: adminProducts } = useAdminStore()
   const [currentSlide, setCurrentSlide] = useState(0)
+
+  // 관리자 상품과 기본 상품 병합 (관리자 상품 우선)
+  const products = useMemo((): Product[] => {
+    console.log('[HomePage] adminProducts:', adminProducts)
+    console.log('[HomePage] adminProducts.length:', adminProducts.length)
+    const adminProductIds = new Set(adminProducts.map(p => p.id))
+    const mergedProducts = [
+      ...adminProducts.filter(p => p.isActive),
+      ...defaultProducts.filter(p => !adminProductIds.has(p.id))
+    ]
+    console.log('[HomePage] mergedProducts:', mergedProducts.length)
+    return mergedProducts
+  }, [adminProducts])
+
+  // 상품 캐러셀 슬라이드 인덱스
+  const [productSlide1, setProductSlide1] = useState(0)
+  const [productSlide2, setProductSlide2] = useState(0)
+  const [productSlide3, setProductSlide3] = useState(0)
+  const itemsPerView = 5 // 한 번에 보여줄 상품 수
 
   const tier = user?.tier || 'guest'
 
   // Filter promotions based on user tier
-  const visiblePromotions = promotions.filter(p => p.targetTiers.includes(tier))
+  // 비로그인(guest)일 때는 모든 프로모션 표시
+  const visiblePromotions = tier === 'guest'
+    ? promotions
+    : promotions.filter(p => p.targetTiers.includes(tier))
   const heroPromotions = visiblePromotions.slice(0, 3)
 
   // Auto slide
@@ -29,12 +54,6 @@ export function HomePage() {
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % heroPromotions.length)
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + heroPromotions.length) % heroPromotions.length)
 
-  const benefits = [
-    { icon: Award, title: '등급별 할인', desc: '등급에 따라 최대 40% 할인' },
-    { icon: Truck, title: '대량 주문 혜택', desc: '100개 이상 주문 시 무료 배송' },
-    { icon: FileText, title: '견적 자동 생성', desc: '원클릭 견적서 PDF 발행' },
-    { icon: Gift, title: '무료 배송', desc: 'VIP 이상 회원 전 상품 무료 배송' },
-  ]
 
   // Get best products per category
   const getCategoryBestProducts = (categoryId: number) => {
@@ -95,10 +114,12 @@ export function HomePage() {
                         <h2 className="text-lg md:text-3xl font-bold text-white mb-2 md:mb-3 line-clamp-2">{promo.title}</h2>
                         <p className="text-xs md:text-base text-neutral-200 mb-3 md:mb-5 line-clamp-2">{promo.description}</p>
                         <div className="flex gap-2">
-                          <Button size="sm" className="btn-hover text-[10px] md:text-sm px-3 py-1.5 md:px-4 md:py-2">
-                            <Zap className="w-3 h-3 md:w-4 md:h-4 mr-1" />
-                            자세히 보기
-                          </Button>
+                          <Link to={`/promotion/${promo.id}`}>
+                            <Button size="sm" className="btn-hover text-[10px] md:text-sm px-3 py-1.5 md:px-4 md:py-2">
+                              <Zap className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                              자세히 보기
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                     </div>
@@ -138,47 +159,112 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* 베스트연구소 */}
-      <section className="py-10 bg-neutral-50">
-        <div className="max-w-7xl mx-auto px-4">
+      {/* 베스트연구실 */}
+      <section className="py-6 md:py-10 bg-neutral-50">
+        <div className="max-w-7xl mx-auto px-0 md:px-4">
           <Animated animation="fade-up">
-            <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
               {/* 왼쪽 타이틀 영역 */}
-              <div className="md:w-48 flex-shrink-0">
-                <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 leading-tight">
-                  베스트연구소
+              <div className="md:w-44 flex-shrink-0 flex items-center justify-between md:block px-3 md:px-0">
+                <h2 className="text-lg md:text-3xl font-bold text-neutral-900 leading-tight">
+                  베스트연구실
                 </h2>
-                <p className="text-sm text-neutral-500 mt-2">
-                  가장 인기있는 상품을<br />
-                  한 번에 확인해 보세요!
-                </p>
-                <Link to="/products?sort=best" className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 mt-3 link-hover">
+                <Link to="/products?sort=best" className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 md:mt-3 link-hover">
                   전체보기 <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
-              {/* 오른쪽 원형 상품 이미지 영역 */}
-              <div className="flex-1 overflow-x-auto scrollbar-hide">
-                <div className="flex justify-start md:justify-end gap-4 md:gap-6 pb-2">
-                  {products.slice(0, 6).map((product, index) => (
+              {/* 오른쪽 캐러셀 영역 */}
+              <div className="flex-1 min-w-0 relative md:px-12">
+                {/* 좌측 화살표 - 데스크탑만 */}
+                <button
+                  onClick={() => setProductSlide1(Math.max(0, productSlide1 - 1))}
+                  className={cn(
+                    "hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg items-center justify-center transition-all",
+                    productSlide1 === 0 ? "opacity-30 cursor-not-allowed" : "hover:bg-neutral-100"
+                  )}
+                  disabled={productSlide1 === 0}
+                >
+                  <ChevronLeft className="w-6 h-6 text-neutral-600" />
+                </button>
+                {/* 모바일: 터치 스크롤, 데스크탑: 캐러셀 */}
+                {/* 모바일 전용 스크롤 */}
+                <div className="flex md:hidden gap-2 overflow-x-auto scrollbar-hide px-3 snap-x snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  {products.slice(0, 10).map((product) => (
                     <Link
                       key={product.id}
                       to={`/product/${product.id}`}
-                      className="flex-shrink-0 text-center group"
+                      className="flex-shrink-0 w-[calc(50%-4px)] snap-start group"
                     >
-                      <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-2 border-neutral-200 group-hover:border-primary-400 transition-all shadow-md group-hover:shadow-lg">
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
+                      <div className="w-full bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-neutral-100">
+                        <div className="aspect-square flex items-center justify-center p-1 bg-neutral-50">
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                        <div className="px-1.5 py-1 border-t border-neutral-100">
+                          <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
+                          <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
+                        </div>
                       </div>
-                      <p className="mt-2 text-xs md:text-sm font-medium text-neutral-800 truncate max-w-[96px] md:max-w-[112px]">
-                        {product.name}
-                      </p>
-                      <p className="text-xs text-neutral-500 truncate max-w-[96px] md:max-w-[112px]">
-                        {product.brand}
-                      </p>
                     </Link>
+                  ))}
+                </div>
+                {/* 데스크탑 전용 캐러셀 */}
+                <div className="hidden md:block overflow-hidden">
+                  <div
+                    className="flex gap-4 transition-transform duration-300 ease-in-out"
+                    style={{ transform: `translateX(-${productSlide1 * 188}px)` }}
+                  >
+                    {products.slice(0, 10).map((product) => (
+                      <Link
+                        key={`desktop-${product.id}`}
+                        to={`/product/${product.id}`}
+                        className="flex-shrink-0 group"
+                      >
+                        <div className="w-44 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-neutral-100">
+                          <div className="px-3 py-2 text-center border-b border-neutral-100">
+                            <p className="text-xs font-medium text-neutral-600 truncate">{product.brand}</p>
+                          </div>
+                          <div className="h-36 flex items-center justify-center p-3 bg-neutral-50">
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+                          <div className="px-3 py-2 flex items-center justify-between border-t border-neutral-100">
+                            <p className="text-xs font-medium text-neutral-800 truncate flex-1">{product.name}</p>
+                            <ShoppingCart className="w-5 h-5 text-neutral-400 hover:text-primary-600 transition-colors flex-shrink-0 ml-2" />
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+                {/* 우측 화살표 - 데스크탑만 */}
+                <button
+                  onClick={() => setProductSlide1(Math.min(products.slice(0, 10).length - itemsPerView, productSlide1 + 1))}
+                  className={cn(
+                    "hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg items-center justify-center transition-all",
+                    productSlide1 >= products.slice(0, 10).length - itemsPerView ? "opacity-30 cursor-not-allowed" : "hover:bg-neutral-100"
+                  )}
+                  disabled={productSlide1 >= products.slice(0, 10).length - itemsPerView}
+                >
+                  <ChevronRight className="w-6 h-6 text-neutral-600" />
+                </button>
+                {/* 페이지네이션 dots - 데스크탑만 */}
+                <div className="hidden md:flex justify-center gap-2 mt-4">
+                  {Array.from({ length: products.slice(0, 10).length - itemsPerView + 1 }).map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setProductSlide1(index)}
+                      className={cn(
+                        "w-2 h-2 rounded-full transition-all",
+                        index === productSlide1 ? "bg-neutral-800" : "bg-neutral-300 hover:bg-neutral-400"
+                      )}
+                    />
                   ))}
                 </div>
               </div>
@@ -187,47 +273,111 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* 신상품 연구실 */}
-      <section className="py-10 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
+      {/* 신상품연구실 */}
+      <section className="py-6 md:py-10 bg-white">
+        <div className="max-w-7xl mx-auto px-0 md:px-4">
           <Animated animation="fade-up">
-            <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
               {/* 왼쪽 타이틀 영역 */}
-              <div className="md:w-48 flex-shrink-0">
-                <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 leading-tight">
-                  신상품 연구실
+              <div className="md:w-44 flex-shrink-0 flex items-center justify-between md:block px-3 md:px-0">
+                <h2 className="text-lg md:text-3xl font-bold text-neutral-900 leading-tight">
+                  신상품연구실
                 </h2>
-                <p className="text-sm text-neutral-500 mt-2">
-                  새로 입고된 상품을<br />
-                  한 번에 확인해 보세요!
-                </p>
-                <Link to="/products?sort=new" className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 mt-3 link-hover">
+                <Link to="/products?sort=new" className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 md:mt-3 link-hover">
                   전체보기 <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
-              {/* 오른쪽 원형 상품 이미지 영역 */}
-              <div className="flex-1 overflow-x-auto scrollbar-hide">
-                <div className="flex justify-start md:justify-end gap-4 md:gap-6 pb-2">
-                  {products.slice(5, 11).map((product, index) => (
+              {/* 오른쪽 캐러셀 영역 */}
+              <div className="flex-1 min-w-0 relative md:px-12">
+                {/* 좌측 화살표 - 데스크탑만 */}
+                <button
+                  onClick={() => setProductSlide2(Math.max(0, productSlide2 - 1))}
+                  className={cn(
+                    "hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg items-center justify-center transition-all",
+                    productSlide2 === 0 ? "opacity-30 cursor-not-allowed" : "hover:bg-neutral-100"
+                  )}
+                  disabled={productSlide2 === 0}
+                >
+                  <ChevronLeft className="w-6 h-6 text-neutral-600" />
+                </button>
+                {/* 모바일 전용 스크롤 */}
+                <div className="flex md:hidden gap-2 overflow-x-auto scrollbar-hide px-3 snap-x snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  {products.slice(5, 15).map((product) => (
                     <Link
                       key={product.id}
                       to={`/product/${product.id}`}
-                      className="flex-shrink-0 text-center group"
+                      className="flex-shrink-0 w-[calc(50%-4px)] snap-start group"
                     >
-                      <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-2 border-neutral-200 group-hover:border-primary-400 transition-all shadow-md group-hover:shadow-lg">
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
+                      <div className="w-full bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-neutral-100">
+                        <div className="aspect-square flex items-center justify-center p-1 bg-neutral-50">
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                        <div className="px-1.5 py-1 border-t border-neutral-100">
+                          <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
+                          <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
+                        </div>
                       </div>
-                      <p className="mt-2 text-xs md:text-sm font-medium text-neutral-800 truncate max-w-[96px] md:max-w-[112px]">
-                        {product.name}
-                      </p>
-                      <p className="text-xs text-neutral-500 truncate max-w-[96px] md:max-w-[112px]">
-                        {product.brand}
-                      </p>
                     </Link>
+                  ))}
+                </div>
+                {/* 데스크탑 전용 캐러셀 */}
+                <div className="hidden md:block overflow-hidden">
+                  <div
+                    className="flex gap-4 transition-transform duration-300 ease-in-out"
+                    style={{ transform: `translateX(-${productSlide2 * 188}px)` }}
+                  >
+                    {products.slice(5, 15).map((product) => (
+                      <Link
+                        key={`desktop-${product.id}`}
+                        to={`/product/${product.id}`}
+                        className="flex-shrink-0 group"
+                      >
+                        <div className="w-44 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-neutral-100">
+                          <div className="px-3 py-2 text-center border-b border-neutral-100">
+                            <p className="text-xs font-medium text-neutral-600 truncate">{product.brand}</p>
+                          </div>
+                          <div className="h-36 flex items-center justify-center p-3 bg-neutral-50">
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+                          <div className="px-3 py-2 flex items-center justify-between border-t border-neutral-100">
+                            <p className="text-xs font-medium text-neutral-800 truncate flex-1">{product.name}</p>
+                            <ShoppingCart className="w-5 h-5 text-neutral-400 hover:text-primary-600 transition-colors flex-shrink-0 ml-2" />
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+                {/* 우측 화살표 - 데스크탑만 */}
+                <button
+                  onClick={() => setProductSlide2(Math.min(products.slice(5, 15).length - itemsPerView, productSlide2 + 1))}
+                  className={cn(
+                    "hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg items-center justify-center transition-all",
+                    productSlide2 >= products.slice(5, 15).length - itemsPerView ? "opacity-30 cursor-not-allowed" : "hover:bg-neutral-100"
+                  )}
+                  disabled={productSlide2 >= products.slice(5, 15).length - itemsPerView}
+                >
+                  <ChevronRight className="w-6 h-6 text-neutral-600" />
+                </button>
+                {/* 페이지네이션 dots - 데스크탑만 */}
+                <div className="hidden md:flex justify-center gap-2 mt-4">
+                  {Array.from({ length: products.slice(5, 15).length - itemsPerView + 1 }).map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setProductSlide2(index)}
+                      className={cn(
+                        "w-2 h-2 rounded-full transition-all",
+                        index === productSlide2 ? "bg-neutral-800" : "bg-neutral-300 hover:bg-neutral-400"
+                      )}
+                    />
                   ))}
                 </div>
               </div>
@@ -237,46 +387,110 @@ export function HomePage() {
       </section>
 
       {/* 초특가연구실 */}
-      <section className="py-10 bg-neutral-50">
-        <div className="max-w-7xl mx-auto px-4">
+      <section className="py-6 md:py-10 bg-neutral-50">
+        <div className="max-w-7xl mx-auto px-0 md:px-4">
           <Animated animation="fade-up">
-            <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
               {/* 왼쪽 타이틀 영역 */}
-              <div className="md:w-48 flex-shrink-0">
-                <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 leading-tight">
+              <div className="md:w-44 flex-shrink-0 flex items-center justify-between md:block px-3 md:px-0">
+                <h2 className="text-lg md:text-3xl font-bold text-neutral-900 leading-tight">
                   초특가연구실
                 </h2>
-                <p className="text-sm text-neutral-500 mt-2">
-                  특별 할인 상품을<br />
-                  한 번에 확인해 보세요!
-                </p>
-                <Link to="/products?sort=sale" className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 mt-3 link-hover">
+                <Link to="/products?sort=sale" className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 md:mt-3 link-hover">
                   전체보기 <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
-              {/* 오른쪽 원형 상품 이미지 영역 */}
-              <div className="flex-1 overflow-x-auto scrollbar-hide">
-                <div className="flex justify-start md:justify-end gap-4 md:gap-6 pb-2">
-                  {products.slice(10, 16).map((product, index) => (
+              {/* 오른쪽 캐러셀 영역 */}
+              <div className="flex-1 min-w-0 relative md:px-12">
+                {/* 좌측 화살표 - 데스크탑만 */}
+                <button
+                  onClick={() => setProductSlide3(Math.max(0, productSlide3 - 1))}
+                  className={cn(
+                    "hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg items-center justify-center transition-all",
+                    productSlide3 === 0 ? "opacity-30 cursor-not-allowed" : "hover:bg-neutral-100"
+                  )}
+                  disabled={productSlide3 === 0}
+                >
+                  <ChevronLeft className="w-6 h-6 text-neutral-600" />
+                </button>
+                {/* 모바일 전용 스크롤 */}
+                <div className="flex md:hidden gap-2 overflow-x-auto scrollbar-hide px-3 snap-x snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  {products.slice(10, 20).map((product) => (
                     <Link
                       key={product.id}
                       to={`/product/${product.id}`}
-                      className="flex-shrink-0 text-center group"
+                      className="flex-shrink-0 w-[calc(50%-4px)] snap-start group"
                     >
-                      <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-2 border-neutral-200 group-hover:border-primary-400 transition-all shadow-md group-hover:shadow-lg">
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
+                      <div className="w-full bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-neutral-100">
+                        <div className="aspect-square flex items-center justify-center p-1 bg-neutral-50">
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                        <div className="px-1.5 py-1 border-t border-neutral-100">
+                          <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
+                          <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
+                        </div>
                       </div>
-                      <p className="mt-2 text-xs md:text-sm font-medium text-neutral-800 truncate max-w-[96px] md:max-w-[112px]">
-                        {product.name}
-                      </p>
-                      <p className="text-xs text-neutral-500 truncate max-w-[96px] md:max-w-[112px]">
-                        {product.brand}
-                      </p>
                     </Link>
+                  ))}
+                </div>
+                {/* 데스크탑 전용 캐러셀 */}
+                <div className="hidden md:block overflow-hidden">
+                  <div
+                    className="flex gap-4 transition-transform duration-300 ease-in-out"
+                    style={{ transform: `translateX(-${productSlide3 * 188}px)` }}
+                  >
+                    {products.slice(10, 20).map((product) => (
+                      <Link
+                        key={`desktop-${product.id}`}
+                        to={`/product/${product.id}`}
+                        className="flex-shrink-0 group"
+                      >
+                        <div className="w-44 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-neutral-100">
+                          <div className="px-3 py-2 text-center border-b border-neutral-100">
+                            <p className="text-xs font-medium text-neutral-600 truncate">{product.brand}</p>
+                          </div>
+                          <div className="h-36 flex items-center justify-center p-3 bg-neutral-50">
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+                          <div className="px-3 py-2 flex items-center justify-between border-t border-neutral-100">
+                            <p className="text-xs font-medium text-neutral-800 truncate flex-1">{product.name}</p>
+                            <ShoppingCart className="w-5 h-5 text-neutral-400 hover:text-primary-600 transition-colors flex-shrink-0 ml-2" />
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+                {/* 우측 화살표 - 데스크탑만 */}
+                <button
+                  onClick={() => setProductSlide3(Math.min(products.slice(10, 20).length - itemsPerView, productSlide3 + 1))}
+                  className={cn(
+                    "hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg items-center justify-center transition-all",
+                    productSlide3 >= products.slice(10, 20).length - itemsPerView ? "opacity-30 cursor-not-allowed" : "hover:bg-neutral-100"
+                  )}
+                  disabled={productSlide3 >= products.slice(10, 20).length - itemsPerView}
+                >
+                  <ChevronRight className="w-6 h-6 text-neutral-600" />
+                </button>
+                {/* 페이지네이션 dots - 데스크탑만 */}
+                <div className="hidden md:flex justify-center gap-2 mt-4">
+                  {Array.from({ length: products.slice(10, 20).length - itemsPerView + 1 }).map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setProductSlide3(index)}
+                      className={cn(
+                        "w-2 h-2 rounded-full transition-all",
+                        index === productSlide3 ? "bg-neutral-800" : "bg-neutral-300 hover:bg-neutral-400"
+                      )}
+                    />
                   ))}
                 </div>
               </div>
@@ -337,32 +551,28 @@ export function HomePage() {
               const bestProducts = getCategoryBestProducts(category.id)
               return (
                 <Animated key={category.id} animation="fade-up" delay={index * 80}>
-                  <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden card-hover cursor-pointer img-hover" style={{ height: '280px', display: 'flex', flexDirection: 'column' }}>
-                    <div className="relative h-32 flex-shrink-0 overflow-hidden">
-                      <img
-                        src={category.image}
-                        alt={category.name}
-                        className="w-full h-full object-cover transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/70 to-transparent" />
-                      <h3 className="absolute bottom-3 left-3 text-white font-medium">{category.name}</h3>
-                    </div>
-                    <div className="p-3 flex flex-col" style={{ flex: 1 }}>
-                      <div className="space-y-1 overflow-hidden" style={{ flex: 1 }}>
-                        {bestProducts.map((p) => (
-                          <div key={p.id} className="text-xs text-neutral-600 truncate">
-                            {p.sku} - {p.name}
-                          </div>
-                        ))}
+                  <Link to={`/category/${category.id}`} className="block">
+                    <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden card-hover cursor-pointer img-hover" style={{ height: '280px', display: 'flex', flexDirection: 'column' }}>
+                      <div className="relative h-32 flex-shrink-0 overflow-hidden">
+                        <img
+                          src={category.image}
+                          alt={category.name}
+                          className="w-full h-full object-cover transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/70 to-transparent" />
+                        <h3 className="absolute bottom-3 left-3 text-white font-medium">{category.name}</h3>
                       </div>
-                      <Link to={`/category/${category.id}`} className="mt-auto pt-3">
-                        <Button size="sm" variant="outline" className="w-full btn-hover">
-                          <Zap className="w-3 h-3 mr-1" />
-                          빠른 주문
-                        </Button>
-                      </Link>
+                      <div className="p-3 flex flex-col" style={{ flex: 1 }}>
+                        <div className="space-y-1 overflow-hidden" style={{ flex: 1 }}>
+                          {bestProducts.map((p) => (
+                            <div key={p.id} className="text-xs text-neutral-600 truncate">
+                              {p.sku} - {p.name}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 </Animated>
               )
             })}
@@ -370,33 +580,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* 혜택 안내 */}
-      <section className="py-12 bg-neutral-50">
-        <div className="max-w-7xl mx-auto px-4">
-          {isLoggedIn && user && (
-            <Animated animation="fade-up">
-              <div className="mb-6 p-4 bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg text-white">
-                <p className="text-lg font-medium">
-                  {user.name}님, {getTierLabel(user.tier)} 고객님 전용 혜택을 확인하세요!
-                </p>
-              </div>
-            </Animated>
-          )}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {benefits.map((benefit, index) => (
-              <Animated key={index} animation="fade-up" delay={index * 100}>
-                <Card className="text-center p-6 card-hover group">
-                  <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-primary-100 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary-200 transition-all duration-300">
-                    <benefit.icon className="w-6 h-6 text-primary-600" />
-                  </div>
-                  <h3 className="font-medium text-neutral-900 mb-1">{benefit.title}</h3>
-                  <p className="text-sm text-neutral-500">{benefit.desc}</p>
-                </Card>
-              </Animated>
-            ))}
-          </div>
-        </div>
-      </section>
     </div>
   )
 }

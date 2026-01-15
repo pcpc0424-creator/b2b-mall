@@ -94,7 +94,7 @@ export function QuotePage() {
                             <NumberStepper
                               value={item.quantity}
                               onChange={(q) => updateQuoteQuantity(item.product.id, q)}
-                              min={item.product.minQuantity}
+                              min={0}
                               max={item.product.stock}
                               size="sm"
                             />
@@ -236,7 +236,7 @@ export function QuotePage() {
                 <div>
                   <h3 className="text-sm font-bold text-neutral-600 mb-3">발신</h3>
                   <div className="bg-neutral-50 p-4 rounded-lg">
-                    <p className="font-bold text-primary-600 text-lg">정담B2B</p>
+                    <p className="font-bold text-primary-600 text-lg">가성비연구소</p>
                     <p className="text-sm text-neutral-600 mt-1">서울특별시 강남구 테헤란로 123</p>
                     <p className="text-sm text-neutral-600">Tel: 1588-0000</p>
                   </div>

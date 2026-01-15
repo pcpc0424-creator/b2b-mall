@@ -6,6 +6,7 @@ export interface User {
   email: string
   tier: UserTier
   company?: string
+  businessNumber?: string
 }
 
 export interface Category {

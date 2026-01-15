@@ -25,7 +25,7 @@ export function ProductTable({ products }: ProductTableProps) {
     if (newSelected.has(product.id)) {
       newSelected.delete(product.id)
     } else {
-      newSelected.set(product.id, { product, quantity: product.minQuantity })
+      newSelected.set(product.id, { product, quantity: 0 })
     }
     setSelectedItems(newSelected)
   }
@@ -46,7 +46,7 @@ export function ProductTable({ products }: ProductTableProps) {
       const newSelected = new Map<string, SelectedItem>()
       products.forEach(p => {
         if (p.stockStatus !== 'out_of_stock') {
-          newSelected.set(p.id, { product: p, quantity: p.minQuantity })
+          newSelected.set(p.id, { product: p, quantity: 0 })
         }
       })
       setSelectedItems(newSelected)
@@ -166,7 +166,7 @@ export function ProductTable({ products }: ProductTableProps) {
                         <NumberStepper
                           value={selectedItem.quantity}
                           onChange={(q) => updateQuantity(product.id, q)}
-                          min={product.minQuantity}
+                          min={0}
                           max={product.stock}
                           size="sm"
                         />
@@ -246,7 +246,7 @@ export function ProductTable({ products }: ProductTableProps) {
                         <NumberStepper
                           value={selectedItem.quantity}
                           onChange={(q) => updateQuantity(product.id, q)}
-                          min={product.minQuantity}
+                          min={0}
                           max={product.stock}
                           size="sm"
                         />

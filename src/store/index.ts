@@ -12,9 +12,9 @@ interface AppState {
 
   // Cart
   cart: CartItem[]
-  addToCart: (product: Product, quantity: number) => void
-  removeFromCart: (productId: string) => void
-  updateCartQuantity: (productId: string, quantity: number) => void
+  addToCart: (product: Product, quantity: number, selectedOptions?: Record<string, string>) => void
+  removeFromCart: (productId: string, selectedOptions?: Record<string, string>) => void
+  updateCartQuantity: (productId: string, quantity: number, selectedOptions?: Record<string, string>) => void
   clearCart: () => void
   getCartTotal: () => number
 
@@ -35,8 +35,8 @@ interface AppState {
 
 export const useStore = create<AppState>((set, get) => ({
   // User
-  user: mockUser,
-  isLoggedIn: true,
+  user: null,
+  isLoggedIn: false,
 
   login: (user) => set({ user, isLoggedIn: true }),
   logout: () => set({ user: null, isLoggedIn: false }),
@@ -46,27 +46,46 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Cart
   cart: [],
-  addToCart: (product, quantity) => set((state) => {
-    const existing = state.cart.find(item => item.product.id === product.id)
+  addToCart: (product, quantity, selectedOptions) => set((state) => {
+    // 옵션이 있는 경우 옵션 조합으로 구분, 없는 경우 productId로만 구분
+    const optionKey = selectedOptions ? JSON.stringify(selectedOptions) : ''
+    const existing = state.cart.find(item => {
+      const itemOptionKey = item.selectedOptions ? JSON.stringify(item.selectedOptions) : ''
+      return item.product.id === product.id && itemOptionKey === optionKey
+    })
+
     if (existing) {
       return {
-        cart: state.cart.map(item =>
-          item.product.id === product.id
+        cart: state.cart.map(item => {
+          const itemOptionKey = item.selectedOptions ? JSON.stringify(item.selectedOptions) : ''
+          return item.product.id === product.id && itemOptionKey === optionKey
             ? { ...item, quantity: item.quantity + quantity }
             : item
-        )
+        })
       }
     }
-    return { cart: [...state.cart, { product, quantity }] }
+    return { cart: [...state.cart, { product, quantity, selectedOptions }] }
   }),
-  removeFromCart: (productId) => set((state) => ({
-    cart: state.cart.filter(item => item.product.id !== productId)
-  })),
-  updateCartQuantity: (productId, quantity) => set((state) => ({
-    cart: state.cart.map(item =>
-      item.product.id === productId ? { ...item, quantity } : item
-    )
-  })),
+  removeFromCart: (productId, selectedOptions) => set((state) => {
+    const optionKey = selectedOptions ? JSON.stringify(selectedOptions) : ''
+    return {
+      cart: state.cart.filter(item => {
+        const itemOptionKey = item.selectedOptions ? JSON.stringify(item.selectedOptions) : ''
+        return !(item.product.id === productId && itemOptionKey === optionKey)
+      })
+    }
+  }),
+  updateCartQuantity: (productId, quantity, selectedOptions) => set((state) => {
+    const optionKey = selectedOptions ? JSON.stringify(selectedOptions) : ''
+    return {
+      cart: state.cart.map(item => {
+        const itemOptionKey = item.selectedOptions ? JSON.stringify(item.selectedOptions) : ''
+        return item.product.id === productId && itemOptionKey === optionKey
+          ? { ...item, quantity }
+          : item
+      })
+    }
+  }),
   clearCart: () => set({ cart: [] }),
   getCartTotal: () => {
     const state = get()

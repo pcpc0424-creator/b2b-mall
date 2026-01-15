@@ -202,10 +202,6 @@ export function DashboardPage() {
             <CardContent className="p-6">
               <h2 className="font-bold text-neutral-900 mb-4">빠른 메뉴</h2>
               <div className="space-y-2">
-                <Link to="/quick-order" className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg hover:bg-neutral-100 transition-colors">
-                  <span className="text-sm font-medium">빠른 주문</span>
-                  <ArrowRight className="w-4 h-4 text-neutral-400" />
-                </Link>
                 <Link to="/quote" className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg hover:bg-neutral-100 transition-colors">
                   <span className="text-sm font-medium">견적서 관리</span>
                   <ArrowRight className="w-4 h-4 text-neutral-400" />

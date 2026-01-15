@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingCart, FileText, Package } from 'lucide-react'
+import { ShoppingCart, Package } from 'lucide-react'
 import { Product } from '../../types'
 import { useStore, getPriceByTier, getTierLabel } from '../../store'
 import { Button, Badge, NumberStepper } from '../ui'
@@ -12,8 +12,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const { user, addToCart, addToQuote } = useStore()
-  const [quantity, setQuantity] = useState(product.minQuantity)
+  const { user, addToCart } = useStore()
+  const [quantity, setQuantity] = useState(0)
 
   const tier = user?.tier || 'guest'
   const currentPrice = getPriceByTier(product, tier)
@@ -52,75 +52,48 @@ export function ProductCard({ product }: ProductCardProps) {
       </Link>
 
       {/* Content */}
-      <div className="p-4 flex-1 flex flex-col">
-        <div className="mb-2">
-          <span className="text-xs text-neutral-500">{product.brand}</span>
-          <span className="text-xs text-neutral-400 ml-2">SKU: {product.sku}</span>
+      <div className="p-3 md:p-4 flex-1 flex flex-col">
+        <div className="mb-1 md:mb-2 h-4">
+          <span className="text-xs text-neutral-500 truncate">{product.brand}</span>
         </div>
 
-        <Link to={`/product/${product.id}`} className="h-10">
-          <h3 className="text-sm font-medium text-neutral-900 line-clamp-2 hover:text-primary-600 transition-colors">
+        <Link to={`/product/${product.id}`} className="h-8 md:h-10">
+          <h3 className="text-xs md:text-sm font-medium text-neutral-900 line-clamp-2 hover:text-primary-600 transition-colors">
             {product.name}
           </h3>
         </Link>
 
         {/* Price */}
-        <div className="mt-3 h-16">
-          {tier !== 'guest' && currentPrice < retailPrice && (
+        <div className="mt-2 md:mt-3 h-12 md:h-14">
+          {currentPrice < retailPrice && (
             <p className="text-xs text-neutral-400 line-through">
               {formatPrice(retailPrice)}
             </p>
           )}
-          <div className="flex items-baseline gap-2">
-            <p className="text-lg font-bold text-primary-600">
-              {formatPrice(currentPrice)}
-            </p>
-            {tier !== 'guest' && (
-              <span className="text-xs text-secondary-600 font-medium">
-                {getTierLabel(tier)}가
-              </span>
-            )}
-          </div>
-          {product.minQuantity > 1 && (
-            <p className="text-xs text-neutral-500 mt-1">
-              최소주문: {product.minQuantity}개
-            </p>
-          )}
+          <p className="text-sm md:text-lg font-bold text-primary-600">
+            {formatPrice(currentPrice)}
+          </p>
         </div>
 
         {/* Actions */}
-        <div className="mt-auto pt-4 space-y-2">
-          <div className="flex items-center gap-2">
-            <NumberStepper
-              value={quantity}
-              onChange={setQuantity}
-              min={product.minQuantity}
-              max={product.stock}
-              size="sm"
-              className="flex-1"
-              disabled={product.stockStatus === 'out_of_stock'}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() => addToCart(product, quantity)}
-              disabled={product.stockStatus === 'out_of_stock'}
-              className="flex-1 btn-hover"
-            >
-              <ShoppingCart className="w-4 h-4 mr-1 transition-transform group-hover:scale-110" />
-              장바구니
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => addToQuote(product, quantity)}
-              disabled={product.stockStatus === 'out_of_stock'}
-              className="btn-hover"
-            >
-              <FileText className="w-4 h-4 transition-transform hover:scale-110" />
-            </Button>
-          </div>
+        <div className="mt-auto pt-2 md:pt-4 space-y-2">
+          <NumberStepper
+            value={quantity}
+            onChange={setQuantity}
+            min={0}
+            max={product.stock}
+            size="sm"
+            disabled={product.stockStatus === 'out_of_stock'}
+          />
+          <Button
+            size="sm"
+            onClick={() => addToCart(product, quantity)}
+            disabled={product.stockStatus === 'out_of_stock'}
+            className="w-full btn-hover text-xs md:text-sm"
+          >
+            <ShoppingCart className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+            장바구니
+          </Button>
         </div>
       </div>
     </div>

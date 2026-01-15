@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom'
-import { Trash2, ShoppingBag, ArrowRight, FileText } from 'lucide-react'
+import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 import { useStore, getPriceByTier, getTierLabel } from '../store'
 import { Button, NumberStepper, Card, CardContent, Badge } from '../components/ui'
 import { formatPrice, formatNumber, cn } from '../lib/utils'
 import { Animated } from '../hooks'
 
 export function CartPage() {
-  const { user, cart, updateCartQuantity, removeFromCart, clearCart, getCartTotal, addToQuote } = useStore()
+  const { user, cart, updateCartQuantity, removeFromCart, clearCart, getCartTotal } = useStore()
 
   const tier = user?.tier || 'guest'
   const totalAmount = getCartTotal()
@@ -27,12 +27,6 @@ export function CartPage() {
     )
   }
 
-  const handleConvertToQuote = () => {
-    cart.forEach(item => {
-      addToQuote(item.product, item.quantity)
-    })
-  }
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <Animated animation="fade-up">
@@ -51,12 +45,16 @@ export function CartPage() {
           <Card>
             <CardContent className="p-0">
               <div className="divide-y divide-neutral-100">
-                {cart.map((item) => {
+                {cart.map((item, index) => {
                   const price = getPriceByTier(item.product, tier)
                   const subtotal = price * item.quantity
+                  // 옵션이 있으면 옵션 키도 포함하여 고유 키 생성
+                  const itemKey = item.selectedOptions
+                    ? `${item.product.id}-${JSON.stringify(item.selectedOptions)}`
+                    : `${item.product.id}-${index}`
 
                   return (
-                    <div key={item.product.id} className="p-4 flex gap-4">
+                    <div key={itemKey} className="p-4 flex gap-4">
                       <Link to={`/product/${item.product.id}`}>
                         <img
                           src={item.product.images[0]}
@@ -74,9 +72,15 @@ export function CartPage() {
                               </h3>
                             </Link>
                             <p className="text-xs text-neutral-400">SKU: {item.product.sku}</p>
+                            {/* 선택된 옵션 표시 */}
+                            {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                              <p className="text-xs text-primary-600 mt-1">
+                                {Object.entries(item.selectedOptions).map(([key, value]) => `${key}: ${value}`).join(' / ')}
+                              </p>
+                            )}
                           </div>
                           <button
-                            onClick={() => removeFromCart(item.product.id)}
+                            onClick={() => removeFromCart(item.product.id, item.selectedOptions)}
                             className="text-neutral-400 hover:text-error transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -87,8 +91,8 @@ export function CartPage() {
                           <div className="flex items-center gap-2 sm:gap-4">
                             <NumberStepper
                               value={item.quantity}
-                              onChange={(q) => updateCartQuantity(item.product.id, q)}
-                              min={item.product.minQuantity}
+                              onChange={(q) => updateCartQuantity(item.product.id, q, item.selectedOptions)}
+                              min={0}
                               max={item.product.stock}
                               size="sm"
                             />
@@ -149,28 +153,11 @@ export function CartPage() {
                 </div>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="mt-6">
                 <Button className="w-full" size="lg">
                   주문하기
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
-                <Link to="/quote">
-                  <Button variant="outline" className="w-full" onClick={handleConvertToQuote}>
-                    <FileText className="w-4 h-4 mr-2" />
-                    견적서로 전환
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Shipping Info */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-sm text-neutral-600 space-y-2">
-                <p>• VIP 이상 회원 무료 배송</p>
-                <p>• 100개 이상 주문 시 무료 배송</p>
-                <p>• 예상 배송일: 영업일 기준 2-3일</p>
               </div>
             </CardContent>
           </Card>
