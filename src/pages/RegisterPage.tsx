@@ -1,16 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Mail, Lock, Eye, EyeOff, User, Building2, Phone, FileText, MapPin, UserPlus } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, User, Phone, UserPlus } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Input, Card, CardContent } from '../components/ui'
 import { cn } from '../lib/utils'
 
-type Step = 1 | 2 | 3
-
 export function RegisterPage() {
   const navigate = useNavigate()
   const { login } = useStore()
-  const [step, setStep] = useState<Step>(1)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [agreedTerms, setAgreedTerms] = useState({
@@ -20,22 +17,11 @@ export function RegisterPage() {
     marketing: false,
   })
   const [formData, setFormData] = useState({
-    // 기본 정보
     email: '',
     password: '',
     confirmPassword: '',
     name: '',
     phone: '',
-    // 사업자 정보
-    companyName: '',
-    businessNumber: '',
-    representative: '',
-    businessType: '',
-    businessCategory: '',
-    // 주소
-    zipCode: '',
-    address: '',
-    addressDetail: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
@@ -63,8 +49,9 @@ export function RegisterPage() {
     setAgreedTerms(newTerms)
   }
 
-  const validateStep1 = () => {
+  const validateForm = () => {
     const newErrors: Record<string, string> = {}
+
     if (!formData.email) {
       newErrors.email = '이메일을 입력해주세요'
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -86,410 +73,278 @@ export function RegisterPage() {
     if (!formData.phone) {
       newErrors.phone = '연락처를 입력해주세요'
     }
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const validateStep2 = () => {
-    const newErrors: Record<string, string> = {}
-    if (!formData.companyName) {
-      newErrors.companyName = '회사명을 입력해주세요'
-    }
-    if (!formData.businessNumber) {
-      newErrors.businessNumber = '사업자등록번호를 입력해주세요'
-    } else if (!/^\d{10}$/.test(formData.businessNumber.replace(/-/g, ''))) {
-      newErrors.businessNumber = '올바른 사업자등록번호 형식이 아닙니다'
-    }
-    if (!formData.representative) {
-      newErrors.representative = '대표자명을 입력해주세요'
-    }
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const validateStep3 = () => {
     if (!agreedTerms.terms || !agreedTerms.privacy) {
-      setErrors({ terms: '필수 약관에 동의해주세요' })
-      return false
+      newErrors.terms = '필수 약관에 동의해주세요'
     }
-    return true
-  }
 
-  const handleNext = () => {
-    if (step === 1 && validateStep1()) {
-      setStep(2)
-    } else if (step === 2 && validateStep2()) {
-      setStep(3)
-    }
-  }
-
-  const handlePrev = () => {
-    if (step > 1) {
-      setStep((step - 1) as Step)
-    }
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validateStep3()) return
+    if (!validateForm()) return
 
     setIsLoading(true)
     // 실제 API 호출 대신 mock 회원가입
     setTimeout(() => {
       login({
-        id: 'new-user',
+        id: 'new-user-' + Date.now(),
         email: formData.email,
         name: formData.name,
-        company: formData.companyName,
         tier: 'member',
-        businessNumber: formData.businessNumber,
       })
       setIsLoading(false)
       navigate('/')
     }, 1500)
   }
 
-  const steps = [
-    { number: 1, title: '기본 정보' },
-    { number: 2, title: '사업자 정보' },
-    { number: 3, title: '약관 동의' },
-  ]
-
   return (
     <div className="min-h-[calc(100vh-200px)] py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-neutral-900 mb-2">회원가입</h1>
-          <p className="text-neutral-500">가성비연구소 사업자 회원가입</p>
-        </div>
-
-        {/* 단계 표시 */}
-        <div className="flex items-center justify-center mb-8">
-          {steps.map((s, index) => (
-            <div key={s.number} className="flex items-center">
-              <div className="flex flex-col items-center">
-                <div
-                  className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors',
-                    step >= s.number
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-neutral-200 text-neutral-500'
-                  )}
-                >
-                  {s.number}
-                </div>
-                <span className={cn(
-                  'text-xs mt-1',
-                  step >= s.number ? 'text-primary-600' : 'text-neutral-500'
-                )}>
-                  {s.title}
-                </span>
-              </div>
-              {index < steps.length - 1 && (
-                <div
-                  className={cn(
-                    'w-16 md:w-24 h-1 mx-2',
-                    step > s.number ? 'bg-primary-600' : 'bg-neutral-200'
-                  )}
-                />
-              )}
-            </div>
-          ))}
+          <p className="text-neutral-500">가성비연구소에 오신 것을 환영합니다</p>
         </div>
 
         <Card>
           <CardContent className="p-6 md:p-8">
+            {/* SNS 간편 가입 */}
+            <div className="space-y-3 mb-6">
+              <p className="text-sm text-neutral-500 text-center mb-4">SNS 계정으로 간편 가입</p>
+
+              {/* 카카오 */}
+              <button
+                type="button"
+                onClick={() => {
+                  // 실제 서비스에서는 카카오 OAuth 연동
+                  alert('카카오 로그인은 실제 서비스에서 구현됩니다.')
+                }}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#FEE500] hover:bg-[#FDD800] text-[#191919] font-medium rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.796 1.859 5.238 4.656 6.618-.145.531-.933 3.413-.966 3.633 0 0-.02.166.088.23.108.064.235.015.235.015.31-.043 3.587-2.345 4.156-2.747.593.087 1.208.134 1.831.134 5.523 0 10-3.463 10-7.883C22 6.463 17.523 3 12 3"/>
+                </svg>
+                카카오로 시작하기
+              </button>
+
+              {/* 네이버 */}
+              <button
+                type="button"
+                onClick={() => {
+                  alert('네이버 로그인은 실제 서비스에서 구현됩니다.')
+                }}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#03C75A] hover:bg-[#02b351] text-white font-medium rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/>
+                </svg>
+                네이버로 시작하기
+              </button>
+
+              {/* 구글 */}
+              <button
+                type="button"
+                onClick={() => {
+                  alert('구글 로그인은 실제 서비스에서 구현됩니다.')
+                }}
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white hover:bg-neutral-50 text-neutral-700 font-medium rounded-lg border border-neutral-300 transition-colors"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Google로 시작하기
+              </button>
+            </div>
+
+            {/* 구분선 */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-neutral-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-neutral-500">또는 이메일로 가입</span>
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit}>
-              {/* Step 1: 기본 정보 */}
-              {step === 1 && (
-                <div className="space-y-5">
+              <div className="space-y-5">
+                <Input
+                  label="이메일 *"
+                  type="email"
+                  name="email"
+                  placeholder="example@email.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  error={errors.email}
+                  icon={<Mail className="w-5 h-5" />}
+                />
+
+                <div className="relative">
                   <Input
-                    label="이메일 *"
-                    type="email"
-                    name="email"
-                    placeholder="example@company.com"
-                    value={formData.email}
+                    label="비밀번호 *"
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    placeholder="8자 이상 입력하세요"
+                    value={formData.password}
                     onChange={handleChange}
-                    error={errors.email}
-                    icon={<Mail className="w-5 h-5" />}
+                    error={errors.password}
+                    icon={<Lock className="w-5 h-5" />}
                   />
-
-                  <div className="relative">
-                    <Input
-                      label="비밀번호 *"
-                      type={showPassword ? 'text' : 'password'}
-                      name="password"
-                      placeholder="8자 이상 입력하세요"
-                      value={formData.password}
-                      onChange={handleChange}
-                      error={errors.password}
-                      icon={<Lock className="w-5 h-5" />}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-[34px] text-neutral-400 hover:text-neutral-600"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-
-                  <div className="relative">
-                    <Input
-                      label="비밀번호 확인 *"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      name="confirmPassword"
-                      placeholder="비밀번호를 다시 입력하세요"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      error={errors.confirmPassword}
-                      icon={<Lock className="w-5 h-5" />}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-[34px] text-neutral-400 hover:text-neutral-600"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      label="이름 *"
-                      type="text"
-                      name="name"
-                      placeholder="홍길동"
-                      value={formData.name}
-                      onChange={handleChange}
-                      error={errors.name}
-                      icon={<User className="w-5 h-5" />}
-                    />
-                    <Input
-                      label="연락처 *"
-                      type="tel"
-                      name="phone"
-                      placeholder="010-0000-0000"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      error={errors.phone}
-                      icon={<Phone className="w-5 h-5" />}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: 사업자 정보 */}
-              {step === 2 && (
-                <div className="space-y-5">
-                  <Input
-                    label="회사명 *"
-                    type="text"
-                    name="companyName"
-                    placeholder="(주)회사명"
-                    value={formData.companyName}
-                    onChange={handleChange}
-                    error={errors.companyName}
-                    icon={<Building2 className="w-5 h-5" />}
-                  />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      label="사업자등록번호 *"
-                      type="text"
-                      name="businessNumber"
-                      placeholder="000-00-00000"
-                      value={formData.businessNumber}
-                      onChange={handleChange}
-                      error={errors.businessNumber}
-                      icon={<FileText className="w-5 h-5" />}
-                    />
-                    <Input
-                      label="대표자명 *"
-                      type="text"
-                      name="representative"
-                      placeholder="대표자 이름"
-                      value={formData.representative}
-                      onChange={handleChange}
-                      error={errors.representative}
-                      icon={<User className="w-5 h-5" />}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      label="업태"
-                      type="text"
-                      name="businessType"
-                      placeholder="제조, 도소매 등"
-                      value={formData.businessType}
-                      onChange={handleChange}
-                    />
-                    <Input
-                      label="업종"
-                      type="text"
-                      name="businessCategory"
-                      placeholder="연구용품 등"
-                      value={formData.businessCategory}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <Input
-                      label="우편번호"
-                      type="text"
-                      name="zipCode"
-                      placeholder="00000"
-                      value={formData.zipCode}
-                      onChange={handleChange}
-                      icon={<MapPin className="w-5 h-5" />}
-                    />
-                    <div className="col-span-2">
-                      <Input
-                        label="주소"
-                        type="text"
-                        name="address"
-                        placeholder="기본 주소"
-                        value={formData.address}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-                  <Input
-                    type="text"
-                    name="addressDetail"
-                    placeholder="상세 주소"
-                    value={formData.addressDetail}
-                    onChange={handleChange}
-                  />
-                </div>
-              )}
-
-              {/* Step 3: 약관 동의 */}
-              {step === 3 && (
-                <div className="space-y-4">
-                  <div className="p-4 bg-neutral-50 rounded-lg border border-neutral-200">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={agreedTerms.all}
-                        onChange={(e) => handleAgreeAll(e.target.checked)}
-                        className="w-5 h-5 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <span className="font-medium text-neutral-900">전체 동의</span>
-                    </label>
-                  </div>
-
-                  <div className="space-y-3 pl-2">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={agreedTerms.terms}
-                        onChange={(e) => handleAgreeItem('terms', e.target.checked)}
-                        className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <span className="text-neutral-700">
-                        <span className="text-error">[필수]</span> 이용약관 동의
-                      </span>
-                      <button type="button" className="ml-auto text-sm text-primary-600 hover:underline">
-                        보기
-                      </button>
-                    </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={agreedTerms.privacy}
-                        onChange={(e) => handleAgreeItem('privacy', e.target.checked)}
-                        className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <span className="text-neutral-700">
-                        <span className="text-error">[필수]</span> 개인정보 수집 및 이용 동의
-                      </span>
-                      <button type="button" className="ml-auto text-sm text-primary-600 hover:underline">
-                        보기
-                      </button>
-                    </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={agreedTerms.marketing}
-                        onChange={(e) => handleAgreeItem('marketing', e.target.checked)}
-                        className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <span className="text-neutral-700">
-                        <span className="text-neutral-400">[선택]</span> 마케팅 정보 수신 동의
-                      </span>
-                      <button type="button" className="ml-auto text-sm text-primary-600 hover:underline">
-                        보기
-                      </button>
-                    </label>
-                  </div>
-
-                  {errors.terms && (
-                    <p className="text-sm text-error">{errors.terms}</p>
-                  )}
-
-                  <div className="mt-6 p-4 bg-primary-50 rounded-lg">
-                    <h3 className="font-medium text-primary-900 mb-2">회원가입 완료 후 혜택</h3>
-                    <ul className="text-sm text-primary-700 space-y-1">
-                      <li>• 일반회원 등급 즉시 적용</li>
-                      <li>• 회원 전용 할인가 제공</li>
-                      <li>• 견적서 발행 및 관리</li>
-                      <li>• 주문 내역 및 배송 조회</li>
-                    </ul>
-                  </div>
-                </div>
-              )}
-
-              {/* 버튼 영역 */}
-              <div className="flex gap-3 mt-8">
-                {step > 1 && (
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    size="lg"
-                    onClick={handlePrev}
-                    className="flex-1"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-[34px] text-neutral-400 hover:text-neutral-600"
                   >
-                    이전
-                  </Button>
-                )}
-                {step < 3 ? (
-                  <Button
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <Input
+                    label="비밀번호 확인 *"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    placeholder="비밀번호를 다시 입력하세요"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    error={errors.confirmPassword}
+                    icon={<Lock className="w-5 h-5" />}
+                  />
+                  <button
                     type="button"
-                    size="lg"
-                    onClick={handleNext}
-                    className="flex-1"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-[34px] text-neutral-400 hover:text-neutral-600"
                   >
-                    다음
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="flex-1"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <span className="flex items-center gap-2">
-                        <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                        가입 처리 중...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        <UserPlus className="w-5 h-5" />
-                        회원가입
-                      </span>
-                    )}
-                  </Button>
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+
+                <Input
+                  label="이름 *"
+                  type="text"
+                  name="name"
+                  placeholder="홍길동"
+                  value={formData.name}
+                  onChange={handleChange}
+                  error={errors.name}
+                  icon={<User className="w-5 h-5" />}
+                />
+
+                <Input
+                  label="연락처 *"
+                  type="tel"
+                  name="phone"
+                  placeholder="010-0000-0000"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  error={errors.phone}
+                  icon={<Phone className="w-5 h-5" />}
+                />
+              </div>
+
+              {/* 약관 동의 */}
+              <div className="mt-8 space-y-4">
+                <div className="p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreedTerms.all}
+                      onChange={(e) => handleAgreeAll(e.target.checked)}
+                      className="w-5 h-5 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="font-medium text-neutral-900">전체 동의</span>
+                  </label>
+                </div>
+
+                <div className="space-y-3 pl-2">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreedTerms.terms}
+                      onChange={(e) => handleAgreeItem('terms', e.target.checked)}
+                      className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-neutral-700">
+                      <span className="text-error">[필수]</span> 이용약관 동의
+                    </span>
+                    <button type="button" className="ml-auto text-sm text-primary-600 hover:underline">
+                      보기
+                    </button>
+                  </label>
+
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreedTerms.privacy}
+                      onChange={(e) => handleAgreeItem('privacy', e.target.checked)}
+                      className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-neutral-700">
+                      <span className="text-error">[필수]</span> 개인정보 수집 및 이용 동의
+                    </span>
+                    <button type="button" className="ml-auto text-sm text-primary-600 hover:underline">
+                      보기
+                    </button>
+                  </label>
+
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreedTerms.marketing}
+                      onChange={(e) => handleAgreeItem('marketing', e.target.checked)}
+                      className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-neutral-700">
+                      <span className="text-neutral-400">[선택]</span> 마케팅 정보 수신 동의
+                    </span>
+                    <button type="button" className="ml-auto text-sm text-primary-600 hover:underline">
+                      보기
+                    </button>
+                  </label>
+                </div>
+
+                {errors.terms && (
+                  <p className="text-sm text-error">{errors.terms}</p>
                 )}
               </div>
+
+              {/* 가입 혜택 안내 */}
+              <div className="mt-6 p-4 bg-primary-50 rounded-lg">
+                <h3 className="font-medium text-primary-900 mb-2">회원가입 혜택</h3>
+                <ul className="text-sm text-primary-700 space-y-1">
+                  <li>• 신규 회원 10% 할인 쿠폰 지급</li>
+                  <li>• 회원 전용 할인가 제공</li>
+                  <li>• 주문 내역 및 배송 조회</li>
+                  <li>• 적립금 혜택</li>
+                </ul>
+              </div>
+
+              {/* 가입 버튼 */}
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full mt-6"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    가입 처리 중...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <UserPlus className="w-5 h-5" />
+                    회원가입
+                  </span>
+                )}
+              </Button>
             </form>
 
             <div className="mt-6 pt-6 border-t border-neutral-200 text-center">

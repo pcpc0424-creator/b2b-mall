@@ -3,6 +3,7 @@ import { persist, createJSONStorage, StateStorage } from 'zustand/middleware'
 import {
   AdminUser,
   AdminProduct,
+  AdminPromotion,
   Order,
   OrderStatus,
   MemberListItem,
@@ -12,15 +13,24 @@ import {
   ProductFilters,
   OrderFilters,
   MemberFilters,
-  PaginationParams
+  PromotionFilters,
+  PaginationParams,
+  TierSettings
 } from '../types/admin'
 import { UserTier } from '../../types'
-import { products as mockProducts } from '../../data'
+import { products as mockProducts, promotions as mockPromotions } from '../../data'
 
 // mockProducts를 AdminProduct로 변환
 const initialProducts: AdminProduct[] = mockProducts.map(p => ({
   ...p,
   isActive: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+}))
+
+// mockPromotions를 AdminPromotion으로 변환
+const initialPromotions: AdminPromotion[] = mockPromotions.map(p => ({
+  ...p,
   createdAt: new Date(),
   updatedAt: new Date(),
 }))
@@ -82,6 +92,16 @@ interface AdminState {
   updateMemberTier: (memberId: string, tier: UserTier) => void
   updateMemberStatus: (memberId: string, status: MemberStatus) => void
 
+  // Promotions
+  promotions: AdminPromotion[]
+  promotionFilters: PromotionFilters
+  setPromotions: (promotions: AdminPromotion[]) => void
+  setPromotionFilters: (filters: PromotionFilters) => void
+  addPromotion: (promotion: AdminPromotion) => void
+  updatePromotion: (id: string, updates: Partial<AdminPromotion>) => void
+  deletePromotion: (id: string) => void
+  togglePromotionActive: (id: string) => void
+
   // Shipping Settings
   shippingSettings: ShippingSettings | null
   setShippingSettings: (settings: ShippingSettings) => void
@@ -90,6 +110,12 @@ interface AdminState {
   // Dashboard
   dashboardStats: AdminDashboardStats | null
   setDashboardStats: (stats: AdminDashboardStats) => void
+
+  // Tier Settings
+  tierSettings: TierSettings
+  setTierSettings: (settings: TierSettings) => void
+  updateTierSettings: (updates: Partial<TierSettings>) => void
+  updateTierThreshold: (tier: UserTier, updates: Partial<TierSettings['thresholds'][0]>) => void
 
   // UI State
   isSidebarCollapsed: boolean
@@ -165,6 +191,24 @@ export const useAdminStore = create<AdminState>()(
         members: state.members.map(m => m.id === memberId ? { ...m, status } : m)
       })),
 
+      // Promotions
+      promotions: initialPromotions,
+      promotionFilters: {},
+      setPromotions: (promotions) => set({ promotions }),
+      setPromotionFilters: (filters) => set({ promotionFilters: filters }),
+      addPromotion: (promotion) => set((state) => ({
+        promotions: [...state.promotions, promotion]
+      })),
+      updatePromotion: (id, updates) => set((state) => ({
+        promotions: state.promotions.map(p => p.id === id ? { ...p, ...updates, updatedAt: new Date() } : p)
+      })),
+      deletePromotion: (id) => set((state) => ({
+        promotions: state.promotions.filter(p => p.id !== id)
+      })),
+      togglePromotionActive: (id) => set((state) => ({
+        promotions: state.promotions.map(p => p.id === id ? { ...p, isActive: !p.isActive, updatedAt: new Date() } : p)
+      })),
+
       // Shipping Settings
       shippingSettings: {
         id: 'default',
@@ -201,6 +245,33 @@ export const useAdminStore = create<AdminState>()(
       dashboardStats: null,
       setDashboardStats: (stats) => set({ dashboardStats: stats }),
 
+      // Tier Settings - 기본값
+      tierSettings: {
+        isEnabled: true,
+        autoUpgrade: true,
+        autoDowngrade: false,
+        evaluationPeriod: 'cumulative',
+        thresholds: [
+          { tier: 'member', minPurchaseAmount: 0, discountRate: 3, pointRate: 1, freeShipping: false },
+          { tier: 'premium', minPurchaseAmount: 300000, discountRate: 7, pointRate: 2, freeShipping: true },
+          { tier: 'vip', minPurchaseAmount: 1000000, discountRate: 15, pointRate: 3, freeShipping: true },
+        ],
+        updatedAt: new Date(),
+      },
+      setTierSettings: (settings) => set({ tierSettings: settings }),
+      updateTierSettings: (updates) => set((state) => ({
+        tierSettings: { ...state.tierSettings, ...updates, updatedAt: new Date() }
+      })),
+      updateTierThreshold: (tier, updates) => set((state) => ({
+        tierSettings: {
+          ...state.tierSettings,
+          thresholds: state.tierSettings.thresholds.map(t =>
+            t.tier === tier ? { ...t, ...updates } : t
+          ),
+          updatedAt: new Date()
+        }
+      })),
+
       // UI State
       isSidebarCollapsed: false,
       toggleSidebar: () => set((state) => ({
@@ -217,7 +288,9 @@ export const useAdminStore = create<AdminState>()(
         isAdminAuthenticated: state.isAdminAuthenticated,
         isSidebarCollapsed: state.isSidebarCollapsed,
         shippingSettings: state.shippingSettings,
+        tierSettings: state.tierSettings,
         products: state.products,
+        promotions: state.promotions,
       }),
       onRehydrateStorage: () => {
         console.log('[adminStore] hydration 시작')

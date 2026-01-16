@@ -12,8 +12,6 @@ const mockMembers: MemberListItem[] = [
     id: 'user-1',
     name: '김철수',
     email: 'kim@example.com',
-    company: '(주)테스트',
-    businessNumber: '123-45-67890',
     tier: 'vip',
     status: 'active',
     totalOrders: 15,
@@ -36,9 +34,7 @@ const mockMembers: MemberListItem[] = [
     id: 'user-3',
     name: '박지민',
     email: 'park@example.com',
-    company: '지민상사',
-    businessNumber: '987-65-43210',
-    tier: 'wholesale',
+    tier: 'premium',
     status: 'active',
     totalOrders: 45,
     totalSpent: 15000000,
@@ -60,8 +56,7 @@ const mockMembers: MemberListItem[] = [
     id: 'user-5',
     name: '정민호',
     email: 'jung@example.com',
-    company: '민호테크',
-    tier: 'partner',
+    tier: 'vip',
     status: 'active',
     totalOrders: 120,
     totalSpent: 85000000,
@@ -71,11 +66,10 @@ const mockMembers: MemberListItem[] = [
 ]
 
 const tierConfig: Record<UserTier, { label: string; color: string }> = {
-  guest: { label: '게스트', color: 'bg-neutral-100 text-neutral-700' },
-  member: { label: '일반', color: 'bg-blue-100 text-blue-700' },
-  vip: { label: 'VIP', color: 'bg-purple-100 text-purple-700' },
-  wholesale: { label: '도매', color: 'bg-amber-100 text-amber-700' },
-  partner: { label: '파트너', color: 'bg-green-100 text-green-700' },
+  guest: { label: '비회원', color: 'bg-neutral-100 text-neutral-700' },
+  member: { label: '일반회원', color: 'bg-green-100 text-green-700' },
+  premium: { label: '우수회원', color: 'bg-blue-100 text-blue-700' },
+  vip: { label: 'VIP회원', color: 'bg-amber-100 text-amber-700' },
 }
 
 const statusConfig: Record<MemberStatus, { label: string; variant: 'success' | 'warning' | 'error' | 'default' }> = {

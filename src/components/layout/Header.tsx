@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   Search, ShoppingCart, User, Menu, ChevronRight, X,
   Package, Leaf, Pill, Sparkles, Shirt, ChefHat,
-  Refrigerator, Monitor, Dumbbell, PawPrint
+  Refrigerator, Monitor, Dumbbell, PawPrint, Ticket
 } from 'lucide-react'
 import { useStore, getTierLabel, getTierColor } from '../../store'
 import { categories } from '../../data'
@@ -19,8 +19,6 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 export function Header() {
   const { user, isLoggedIn, logout, cart, isMegaMenuOpen, setMegaMenuOpen } = useStore()
   const [searchQuery, setSearchQuery] = useState('')
-  const [hoveredCategory, setHoveredCategory] = useState<number | null>(null)
-  const [expandedCategory, setExpandedCategory] = useState<number | null>(null)
   const [mobileCommunityOpen, setMobileCommunityOpen] = useState(false)
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
@@ -30,13 +28,12 @@ export function Header() {
       {/* Top Bar */}
       <div className="bg-neutral-900 text-white text-xs">
         <div className="max-w-7xl mx-auto px-4 py-2 flex justify-between items-center">
-          {/* 고객센터 - PC만 표시 */}
-          <div className="hidden md:flex items-center gap-4">
-            <span>고객센터: 1588-0000</span>
+          {/* 운영시간 - PC만 표시 */}
+          <div className="hidden md:block">
             <span className="text-neutral-400">평일 09:00 - 18:00</span>
           </div>
           {/* 사용자 정보 */}
-          <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto justify-between md:justify-end">
+          <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto justify-end">
             {isLoggedIn && user ? (
               <>
                 <span className="flex items-center gap-1 md:gap-2">
@@ -46,6 +43,7 @@ export function Header() {
                   <span className="truncate max-w-[80px] md:max-w-none">{user.name}님</span>
                 </span>
                 <div className="flex items-center gap-2 md:gap-4">
+                  <Link to="/my/coupons" className="hover:text-primary-400">쿠폰함</Link>
                   <Link to="/dashboard" className="hover:text-primary-400">마이페이지</Link>
                   <button onClick={logout} className="hover:text-primary-400">로그아웃</button>
                 </div>
@@ -87,6 +85,13 @@ export function Header() {
 
           {/* User Actions */}
           <div className="flex items-center gap-1 md:gap-2">
+            <Link
+              to="/my/coupons"
+              className="p-2 text-neutral-600 hover:text-primary-600 hover:bg-neutral-100 rounded-md transition-colors"
+              title="쿠폰함"
+            >
+              <Ticket className="w-5 h-5" />
+            </Link>
             <Link
               to="/dashboard"
               className="p-2 text-neutral-600 hover:text-primary-600 hover:bg-neutral-100 rounded-md transition-colors"
@@ -177,57 +182,18 @@ export function Header() {
                 <ul className="py-2">
                   {categories.map((category) => {
                     const IconComponent = category.icon ? iconMap[category.icon] : null
-                    const isExpanded = expandedCategory === category.id
                     return (
                       <li key={category.id} className="border-b border-neutral-100 last:border-b-0">
-                        <button
-                          onClick={() => setExpandedCategory(isExpanded ? null : category.id)}
-                          className={cn(
-                            'w-full flex items-center justify-between px-4 py-3 text-sm transition-colors',
-                            isExpanded
-                              ? 'bg-primary-50 text-primary-600'
-                              : 'text-neutral-700 active:bg-neutral-50'
-                          )}
+                        <Link
+                          to={`/products?category=${category.id}`}
+                          onClick={() => setMegaMenuOpen(false)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-neutral-700 hover:bg-primary-50 hover:text-primary-600 transition-colors"
                         >
-                          <div className="flex items-center gap-3">
-                            {IconComponent && (
-                              <IconComponent className={cn(
-                                "w-5 h-5",
-                                isExpanded ? "text-primary-500" : "text-neutral-400"
-                              )} />
-                            )}
-                            <span className="font-medium">{category.name}</span>
-                          </div>
-                          <ChevronRight className={cn(
-                            "w-4 h-4 transition-transform duration-200",
-                            isExpanded ? "rotate-90 text-primary-400" : "text-neutral-300"
-                          )} />
-                        </button>
-
-                        <div className={cn(
-                          "overflow-hidden transition-all duration-300",
-                          isExpanded ? "max-h-96" : "max-h-0"
-                        )}>
-                          <div className="bg-neutral-50 px-4 py-2">
-                            <Link
-                              to={`/products?category=${category.id}`}
-                              onClick={() => setMegaMenuOpen(false)}
-                              className="block px-3 py-2 text-sm text-primary-600 font-medium hover:bg-white rounded-md transition-colors"
-                            >
-                              전체보기
-                            </Link>
-                            {category.subcategories.map((sub, idx) => (
-                              <Link
-                                key={idx}
-                                to={`/products?category=${category.id}&sub=${encodeURIComponent(sub)}`}
-                                onClick={() => setMegaMenuOpen(false)}
-                                className="block px-3 py-2 text-sm text-neutral-600 hover:text-primary-600 hover:bg-white rounded-md transition-colors"
-                              >
-                                {sub}
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
+                          {IconComponent && (
+                            <IconComponent className="w-5 h-5 text-neutral-400" />
+                          )}
+                          <span className="font-medium">{category.name}</span>
+                        </Link>
                       </li>
                     )
                   })}
@@ -291,13 +257,7 @@ export function Header() {
             {/* 전체카테고리 Menu Trigger - PC only */}
             <div className="hidden md:block relative mr-6">
               <button
-                onClick={() => {
-                  const nextState = !isMegaMenuOpen
-                  setMegaMenuOpen(nextState)
-                  if (nextState) {
-                    setHoveredCategory(categories[0]?.id || null)
-                  }
-                }}
+                onClick={() => setMegaMenuOpen(!isMegaMenuOpen)}
                 className="flex items-center gap-2 text-primary-600 hover:text-primary-700 transition-colors"
               >
                 {isMegaMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -315,86 +275,34 @@ export function Header() {
                   ? "opacity-100 translate-y-0 visible"
                   : "opacity-0 -translate-y-2 invisible"
               )}>
-                <div className="flex">
-                  {/* Main Categories */}
-                  <div className="w-56 border-r border-neutral-100">
-                    <ul className="py-2">
-                      {categories.map((category, index) => {
-                        const IconComponent = category.icon ? iconMap[category.icon] : null
-                        return (
-                          <li
-                            key={category.id}
-                            className={cn(
-                              "transition-all duration-300",
-                              isMegaMenuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
-                            )}
-                            style={{ transitionDelay: isMegaMenuOpen ? `${index * 30}ms` : '0ms' }}
+                {/* Main Categories */}
+                <div className="w-56">
+                  <ul className="py-2">
+                    {categories.map((category, index) => {
+                      const IconComponent = category.icon ? iconMap[category.icon] : null
+                      return (
+                        <li
+                          key={category.id}
+                          className={cn(
+                            "transition-all duration-300",
+                            isMegaMenuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"
+                          )}
+                          style={{ transitionDelay: isMegaMenuOpen ? `${index * 30}ms` : '0ms' }}
+                        >
+                          <Link
+                            to={`/products?category=${category.id}`}
+                            onClick={() => setMegaMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-primary-50 hover:text-primary-600 transition-all duration-200"
                           >
-                            <Link
-                              to={`/products?category=${category.id}`}
-                              onMouseEnter={() => setHoveredCategory(category.id)}
-                              onClick={() => setMegaMenuOpen(false)}
-                              className={cn(
-                                'flex items-center justify-between px-4 py-2.5 text-sm transition-all duration-200',
-                                hoveredCategory === category.id
-                                  ? 'bg-primary-50 text-primary-600 pl-5'
-                                  : 'text-neutral-700 hover:bg-neutral-50'
-                              )}
-                            >
-                              <div className="flex items-center gap-3">
-                                {IconComponent && (
-                                  <IconComponent className={cn(
-                                    "w-5 h-5 transition-transform duration-200",
-                                    hoveredCategory === category.id ? "text-primary-500 scale-110" : "text-neutral-400"
-                                  )} />
-                                )}
-                                <span>{category.name}</span>
-                              </div>
-                              <ChevronRight className={cn(
-                                "w-4 h-4 transition-transform duration-200",
-                                hoveredCategory === category.id ? "text-primary-400 translate-x-1" : "text-neutral-300"
-                              )} />
-                            </Link>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </div>
-
-                  {/* Subcategories Panel */}
-                  <div className="w-64 bg-neutral-50 min-h-[320px] overflow-hidden">
-                    <div
-                      key={hoveredCategory}
-                      className="p-4 animate-fade-in"
-                    >
-                      {hoveredCategory && (
-                        <>
-                          <h3 className="text-sm font-bold text-neutral-900 mb-3 pb-2 border-b border-neutral-200">
-                            {categories.find(c => c.id === hoveredCategory)?.name}
-                          </h3>
-                          <ul className="space-y-1">
-                            {categories
-                              .find(c => c.id === hoveredCategory)
-                              ?.subcategories.map((sub, idx) => (
-                                <li
-                                  key={idx}
-                                  className="animate-slide-in"
-                                  style={{ animationDelay: `${idx * 50}ms` }}
-                                >
-                                  <Link
-                                    to={`/products?category=${hoveredCategory}&sub=${encodeURIComponent(sub)}`}
-                                    onClick={() => setMegaMenuOpen(false)}
-                                    className="block px-3 py-2 text-sm text-neutral-600 hover:text-primary-600 hover:bg-white hover:pl-4 rounded-md transition-all duration-200"
-                                  >
-                                    {sub}
-                                  </Link>
-                                </li>
-                              ))}
-                          </ul>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                            {IconComponent && (
+                              <IconComponent className="w-5 h-5 text-neutral-400" />
+                            )}
+                            <span>{category.name}</span>
+                          </Link>
+                        </li>
+                      )
+                    })}
+                  </ul>
                 </div>
               </div>
             </div>

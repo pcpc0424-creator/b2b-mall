@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Save, ArrowLeft, Plus, X, GripVertical, Trash2 } from 'lucide-react'
+import { Save, ArrowLeft, Plus, X, GripVertical, Trash2, Upload, Image as ImageIcon, Bold, Italic, List, Link as LinkIcon, AlignLeft, AlignCenter } from 'lucide-react'
 import { useAdminStore } from '../store/adminStore'
 import { products as mockProducts, categories } from '../../data'
 import { Button, Card, CardContent, Input, Badge } from '../../components/ui'
@@ -21,9 +21,8 @@ export function ProductEditPage() {
     categoryId: 1,
     retailPrice: 0,
     memberPrice: 0,
+    premiumPrice: 0,
     vipPrice: 0,
-    wholesalePrice: 0,
-    partnerPrice: 0,
     stock: 0,
     minQuantity: 1,
     isActive: true,
@@ -34,11 +33,22 @@ export function ProductEditPage() {
     type: 'paid',
     fee: 3000,
     freeCondition: 50000,
+    bundleShipping: true,
   })
 
   // 옵션 상태
   const [options, setOptions] = useState<ProductOptionAdmin[]>([])
   const [variants, setVariants] = useState<ProductVariant[]>([])
+
+  // 이미지 상태
+  const [images, setImages] = useState<string[]>([])
+  const [isDraggingImage, setIsDraggingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 상세 설명
+  const [description, setDescription] = useState('')
+  const [detailImages, setDetailImages] = useState<string[]>([])
+  const detailFileInputRef = useRef<HTMLInputElement>(null)
 
   // 기존 상품 로드
   useEffect(() => {
@@ -55,9 +65,8 @@ export function ProductEditPage() {
           categoryId: existingProduct.categoryId,
           retailPrice: existingProduct.prices.retail,
           memberPrice: existingProduct.prices.member,
+          premiumPrice: existingProduct.prices.premium,
           vipPrice: existingProduct.prices.vip,
-          wholesalePrice: existingProduct.prices.wholesale,
-          partnerPrice: existingProduct.prices.partner,
           stock: existingProduct.stock,
           minQuantity: existingProduct.minQuantity,
           isActive: true,
@@ -91,6 +100,19 @@ export function ProductEditPage() {
         // 변형 로드
         if (adminProduct?.variants) {
           setVariants(adminProduct.variants)
+        }
+
+        // 이미지 로드
+        if (existingProduct.images && existingProduct.images.length > 0) {
+          setImages(existingProduct.images)
+        }
+
+        // 상세 설명 로드
+        if (adminProduct?.description) {
+          setDescription(adminProduct.description)
+        }
+        if (adminProduct?.detailImages) {
+          setDetailImages(adminProduct.detailImages)
         }
       }
     }
@@ -243,6 +265,74 @@ export function ProductEditPage() {
     ))
   }
 
+  // 이미지 업로드 핸들러
+  const handleImageUpload = useCallback((files: FileList | null, isDetail: boolean = false) => {
+    if (!files) return
+
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith('image/')) {
+        alert('이미지 파일만 업로드 가능합니다.')
+        return
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        alert('파일 크기는 5MB 이하여야 합니다.')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        if (isDetail) {
+          setDetailImages(prev => [...prev, result])
+        } else {
+          setImages(prev => [...prev, result])
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }, [])
+
+  // 이미지 드래그 앤 드롭
+  const handleImageDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDraggingImage(true)
+  }
+
+  const handleImageDragLeave = () => {
+    setIsDraggingImage(false)
+  }
+
+  const handleImageDrop = (e: React.DragEvent, isDetail: boolean = false) => {
+    e.preventDefault()
+    setIsDraggingImage(false)
+    handleImageUpload(e.dataTransfer.files, isDetail)
+  }
+
+  // 이미지 삭제
+  const handleRemoveImage = (index: number, isDetail: boolean = false) => {
+    if (isDetail) {
+      setDetailImages(prev => prev.filter((_, i) => i !== index))
+    } else {
+      setImages(prev => prev.filter((_, i) => i !== index))
+    }
+  }
+
+  // 이미지 순서 변경
+  const handleMoveImage = (index: number, direction: 'up' | 'down', isDetail: boolean = false) => {
+    const targetImages = isDetail ? detailImages : images
+    const setTargetImages = isDetail ? setDetailImages : setImages
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1
+    if (newIndex < 0 || newIndex >= targetImages.length) return
+
+    const newImages = [...targetImages]
+    const temp = newImages[index]
+    newImages[index] = newImages[newIndex]
+    newImages[newIndex] = temp
+    setTargetImages(newImages)
+  }
+
   // 저장
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -253,13 +343,12 @@ export function ProductEditPage() {
       name: formData.name,
       brand: formData.brand,
       categoryId: formData.categoryId,
-      images: ['https://picsum.photos/seed/new/400/400'],
+      images: images.length > 0 ? images : ['https://picsum.photos/seed/new/400/400'],
       prices: {
         retail: formData.retailPrice,
         member: formData.memberPrice,
+        premium: formData.premiumPrice,
         vip: formData.vipPrice,
-        wholesale: formData.wholesalePrice,
-        partner: formData.partnerPrice,
       },
       minQuantity: formData.minQuantity,
       stock: formData.stock,
@@ -268,6 +357,8 @@ export function ProductEditPage() {
       adminOptions: options,
       variants: variants,
       shipping: shipping,
+      description: description,
+      detailImages: detailImages,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -425,15 +516,89 @@ export function ProductEditPage() {
           </CardContent>
         </Card>
 
+        {/* 상품 이미지 */}
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-bold text-neutral-900 mb-3 sm:mb-4">상품 이미지</h2>
+            <p className="text-xs sm:text-sm text-neutral-500 mb-4">첫 번째 이미지가 대표 이미지로 사용됩니다. 드래그하여 순서를 변경할 수 있습니다.</p>
+
+            {/* 이미지 업로드 영역 */}
+            <div
+              onDragOver={handleImageDragOver}
+              onDragLeave={handleImageDragLeave}
+              onDrop={(e) => handleImageDrop(e, false)}
+              className={cn(
+                'border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer',
+                isDraggingImage ? 'border-primary-500 bg-primary-50' : 'border-neutral-300 hover:border-primary-400'
+              )}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => handleImageUpload(e.target.files, false)}
+                className="hidden"
+              />
+              <Upload className="w-10 h-10 text-neutral-400 mx-auto mb-3" />
+              <p className="text-sm text-neutral-600 mb-1">클릭하여 이미지를 선택하거나</p>
+              <p className="text-sm text-neutral-600">이미지를 이곳에 드래그 앤 드롭하세요</p>
+              <p className="text-xs text-neutral-400 mt-2">PNG, JPG, GIF (최대 5MB)</p>
+            </div>
+
+            {/* 업로드된 이미지 목록 */}
+            {images.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                {images.map((img, index) => (
+                  <div key={index} className="relative group">
+                    <div className={cn(
+                      'aspect-square rounded-lg overflow-hidden border-2',
+                      index === 0 ? 'border-primary-500' : 'border-neutral-200'
+                    )}>
+                      <img src={img} alt={`상품 이미지 ${index + 1}`} className="w-full h-full object-cover" />
+                    </div>
+                    {index === 0 && (
+                      <span className="absolute top-1 left-1 px-2 py-0.5 bg-primary-600 text-white text-xs rounded">
+                        대표
+                      </span>
+                    )}
+                    <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {index > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleMoveImage(index, 'up', false)}
+                          className="p-1 bg-white rounded shadow hover:bg-neutral-100"
+                          title="앞으로 이동"
+                        >
+                          <ArrowLeft className="w-3 h-3" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(index, false)}
+                        className="p-1 bg-red-500 text-white rounded shadow hover:bg-red-600"
+                        title="삭제"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* 가격 정보 */}
         <Card>
           <CardContent className="p-4 sm:p-6">
             <h2 className="text-base sm:text-lg font-bold text-neutral-900 mb-3 sm:mb-4">가격 정보</h2>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
-                  정상가 *
+                  정상가 (비회원) *
                 </label>
                 <input
                   type="number"
@@ -447,7 +612,7 @@ export function ProductEditPage() {
 
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
-                  회원가
+                  일반회원가
                 </label>
                 <input
                   type="number"
@@ -460,38 +625,25 @@ export function ProductEditPage() {
 
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
-                  VIP가
+                  우수회원가
+                </label>
+                <input
+                  type="number"
+                  value={formData.premiumPrice}
+                  onChange={(e) => setFormData({ ...formData, premiumPrice: parseInt(e.target.value) || 0 })}
+                  onFocus={(e) => e.target.select()}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  VIP회원가
                 </label>
                 <input
                   type="number"
                   value={formData.vipPrice}
                   onChange={(e) => setFormData({ ...formData, vipPrice: parseInt(e.target.value) || 0 })}
-                  onFocus={(e) => e.target.select()}
-                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
-                  도매가
-                </label>
-                <input
-                  type="number"
-                  value={formData.wholesalePrice}
-                  onChange={(e) => setFormData({ ...formData, wholesalePrice: parseInt(e.target.value) || 0 })}
-                  onFocus={(e) => e.target.select()}
-                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
-                  파트너가
-                </label>
-                <input
-                  type="number"
-                  value={formData.partnerPrice}
-                  onChange={(e) => setFormData({ ...formData, partnerPrice: parseInt(e.target.value) || 0 })}
                   onFocus={(e) => e.target.select()}
                   className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
@@ -624,15 +776,227 @@ export function ProductEditPage() {
                 </div>
               )}
 
+              {/* 묶음배송 설정 */}
+              {shipping.type !== 'free' && (
+                <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-700">묶음배송</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">같은 묶음배송 상품끼리 배송비 1건으로 합산</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShipping({ ...shipping, bundleShipping: true })}
+                      className={cn(
+                        'px-3 py-1.5 text-sm rounded-lg border transition-colors',
+                        shipping.bundleShipping
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white text-neutral-700 border-neutral-200 hover:border-primary-300'
+                      )}
+                    >
+                      가능
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShipping({ ...shipping, bundleShipping: false })}
+                      className={cn(
+                        'px-3 py-1.5 text-sm rounded-lg border transition-colors',
+                        !shipping.bundleShipping
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white text-neutral-700 border-neutral-200 hover:border-primary-300'
+                      )}
+                    >
+                      불가
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* 미리보기 */}
               <div className="p-3 bg-blue-50 rounded-lg">
                 <p className="text-sm text-blue-700">
                   💡 {shipping.type === 'free' && '이 상품은 무료배송입니다.'}
                   {shipping.type === 'paid' && `배송비 ${formatPrice(shipping.fee || 0)}이 부과됩니다.`}
                   {shipping.type === 'conditional' && `${formatPrice(shipping.freeCondition || 0)} 이상 구매 시 무료배송, 미만 시 ${formatPrice(shipping.fee || 0)}`}
+                  {shipping.type !== 'free' && shipping.bundleShipping && ' (묶음배송 가능)'}
+                  {shipping.type !== 'free' && !shipping.bundleShipping && ' (묶음배송 불가)'}
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* 상품 상세 설명 */}
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-bold text-neutral-900 mb-3 sm:mb-4">상품 상세 설명</h2>
+            <p className="text-xs sm:text-sm text-neutral-500 mb-4">상품 상세 페이지에 표시될 설명을 작성하세요.</p>
+
+            {/* 간단한 툴바 */}
+            <div className="flex flex-wrap gap-1 p-2 bg-neutral-50 border border-neutral-200 rounded-t-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  const textarea = document.getElementById('description-textarea') as HTMLTextAreaElement
+                  const start = textarea.selectionStart
+                  const end = textarea.selectionEnd
+                  const selectedText = description.substring(start, end)
+                  const newText = description.substring(0, start) + `<b>${selectedText}</b>` + description.substring(end)
+                  setDescription(newText)
+                }}
+                className="p-2 hover:bg-neutral-200 rounded"
+                title="굵게"
+              >
+                <Bold className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const textarea = document.getElementById('description-textarea') as HTMLTextAreaElement
+                  const start = textarea.selectionStart
+                  const end = textarea.selectionEnd
+                  const selectedText = description.substring(start, end)
+                  const newText = description.substring(0, start) + `<i>${selectedText}</i>` + description.substring(end)
+                  setDescription(newText)
+                }}
+                className="p-2 hover:bg-neutral-200 rounded"
+                title="기울임"
+              >
+                <Italic className="w-4 h-4" />
+              </button>
+              <div className="w-px h-6 bg-neutral-300 mx-1 self-center" />
+              <button
+                type="button"
+                onClick={() => {
+                  setDescription(prev => prev + '\n<ul>\n  <li>항목 1</li>\n  <li>항목 2</li>\n</ul>')
+                }}
+                className="p-2 hover:bg-neutral-200 rounded"
+                title="목록"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDescription(prev => prev + '\n<p style="text-align: center;">가운데 정렬 텍스트</p>')
+                }}
+                className="p-2 hover:bg-neutral-200 rounded"
+                title="가운데 정렬"
+              >
+                <AlignCenter className="w-4 h-4" />
+              </button>
+              <div className="w-px h-6 bg-neutral-300 mx-1 self-center" />
+              <button
+                type="button"
+                onClick={() => detailFileInputRef.current?.click()}
+                className="p-2 hover:bg-neutral-200 rounded"
+                title="이미지 추가"
+              >
+                <ImageIcon className="w-4 h-4" />
+              </button>
+              <input
+                ref={detailFileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => handleImageUpload(e.target.files, true)}
+                className="hidden"
+              />
+            </div>
+
+            {/* 설명 텍스트 영역 */}
+            <textarea
+              id="description-textarea"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="상품에 대한 상세 설명을 입력하세요. HTML 태그를 사용할 수 있습니다.&#10;&#10;예시:&#10;<h3>상품 특징</h3>&#10;<p>프리미엄 품질의 상품입니다.</p>&#10;<ul>&#10;  <li>특징 1</li>&#10;  <li>특징 2</li>&#10;</ul>"
+              rows={10}
+              className="w-full px-4 py-3 border border-neutral-200 border-t-0 rounded-b-lg text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+
+            {/* 상세 이미지 업로드 */}
+            <div className="mt-6">
+              <h3 className="text-sm font-medium text-neutral-700 mb-3">상세 페이지 이미지</h3>
+              <p className="text-xs text-neutral-500 mb-3">상세 페이지에 순서대로 표시될 이미지를 업로드하세요.</p>
+
+              <div
+                onDragOver={handleImageDragOver}
+                onDragLeave={handleImageDragLeave}
+                onDrop={(e) => handleImageDrop(e, true)}
+                className={cn(
+                  'border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer',
+                  isDraggingImage ? 'border-primary-500 bg-primary-50' : 'border-neutral-300 hover:border-primary-400'
+                )}
+                onClick={() => detailFileInputRef.current?.click()}
+              >
+                <Upload className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
+                <p className="text-sm text-neutral-600">상세 이미지 추가</p>
+              </div>
+
+              {/* 상세 이미지 목록 */}
+              {detailImages.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  {detailImages.map((img, index) => (
+                    <div key={index} className="flex items-start gap-3 p-3 bg-neutral-50 rounded-lg">
+                      <span className="flex-shrink-0 w-6 h-6 bg-neutral-200 rounded-full flex items-center justify-center text-xs font-medium text-neutral-600">
+                        {index + 1}
+                      </span>
+                      <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border border-neutral-200">
+                        <img src={img} alt={`상세 이미지 ${index + 1}`} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-neutral-600 truncate">상세 이미지 {index + 1}</p>
+                        <div className="flex gap-2 mt-2">
+                          {index > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleMoveImage(index, 'up', true)}
+                              className="text-xs text-primary-600 hover:text-primary-700"
+                            >
+                              ↑ 위로
+                            </button>
+                          )}
+                          {index < detailImages.length - 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleMoveImage(index, 'down', true)}
+                              className="text-xs text-primary-600 hover:text-primary-700"
+                            >
+                              ↓ 아래로
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(index, true)}
+                            className="text-xs text-red-600 hover:text-red-700"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 미리보기 */}
+            {(description || detailImages.length > 0) && (
+              <div className="mt-6 pt-6 border-t border-neutral-200">
+                <h3 className="text-sm font-medium text-neutral-700 mb-3">미리보기</h3>
+                <div className="p-4 bg-white border border-neutral-200 rounded-lg max-h-96 overflow-y-auto">
+                  {description && (
+                    <div
+                      className="prose prose-sm max-w-none mb-4"
+                      dangerouslySetInnerHTML={{ __html: description }}
+                    />
+                  )}
+                  {detailImages.map((img, index) => (
+                    <img key={index} src={img} alt={`상세 이미지 ${index + 1}`} className="w-full mb-4 rounded" />
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -841,7 +1205,7 @@ function OptionItem({
   onRemove,
 }: OptionItemProps) {
   const [newValue, setNewValue] = useState('')
-  const lastAddTime = React.useRef(0)
+  const lastAddTime = useRef(0)
 
   const handleAddValue = () => {
     // 300ms 이내 중복 호출 방지

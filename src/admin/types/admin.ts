@@ -1,4 +1,4 @@
-import { Product, UserTier } from '../../types'
+import { Product, UserTier, Promotion } from '../../types'
 
 // 관리자 사용자
 export interface AdminUser {
@@ -50,6 +50,7 @@ export interface ProductShipping {
   type: 'free' | 'paid' | 'conditional'  // 무료배송, 유료배송, 조건부무료
   fee?: number                            // 배송비 (유료일 때)
   freeCondition?: number                  // 조건부무료 기준금액
+  bundleShipping?: boolean                // 묶음배송 가능 여부
 }
 
 // 관리자용 확장 상품
@@ -61,6 +62,8 @@ export interface AdminProduct extends Product {
   adminOptions?: ProductOptionAdmin[]
   variants?: ProductVariant[]
   shipping?: ProductShipping              // 상품별 배송비 설정
+  description?: string                    // 상품 상세 설명 (HTML)
+  detailImages?: string[]                 // 상세 페이지 이미지들
 }
 
 // 배송비 설정
@@ -215,4 +218,35 @@ export interface MemberFilters {
   status?: MemberStatus
   dateFrom?: Date
   dateTo?: Date
+}
+
+// 관리자용 확장 프로모션
+export interface AdminPromotion extends Promotion {
+  createdAt: Date
+  updatedAt: Date
+  createdBy?: string
+}
+
+export interface PromotionFilters {
+  search?: string
+  type?: 'all' | 'timesale' | 'exclusive'
+  isActive?: boolean
+}
+
+// 회원 등급 설정
+export interface TierThreshold {
+  tier: UserTier
+  minPurchaseAmount: number  // 누적 구매 금액 기준
+  discountRate: number       // 할인율 (%)
+  pointRate: number          // 적립률 (%)
+  freeShipping: boolean      // 무료 배송 여부
+}
+
+export interface TierSettings {
+  isEnabled: boolean                    // 자동 등급 시스템 활성화 여부
+  autoUpgrade: boolean                  // 자동 등급 승급 활성화
+  autoDowngrade: boolean                // 자동 등급 강등 활성화
+  evaluationPeriod: 'monthly' | 'quarterly' | 'yearly' | 'cumulative'  // 평가 기간
+  thresholds: TierThreshold[]           // 등급별 기준
+  updatedAt: Date
 }

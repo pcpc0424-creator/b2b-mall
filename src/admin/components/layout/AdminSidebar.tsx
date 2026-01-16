@@ -5,10 +5,12 @@ import {
   ShoppingCart,
   Users,
   Truck,
+  Megaphone,
   ChevronLeft,
   ChevronRight,
   LogOut,
-  X
+  X,
+  Crown
 } from 'lucide-react'
 import { useAdminStore } from '../../store/adminStore'
 import { cn } from '../../../lib/utils'
@@ -16,8 +18,10 @@ import { cn } from '../../../lib/utils'
 const menuItems = [
   { path: '/admin', icon: LayoutDashboard, label: '대시보드', end: true },
   { path: '/admin/products', icon: Package, label: '상품 관리' },
+  { path: '/admin/promotions', icon: Megaphone, label: '프로모션 관리' },
   { path: '/admin/orders', icon: ShoppingCart, label: '주문 관리' },
   { path: '/admin/members', icon: Users, label: '회원 관리' },
+  { path: '/admin/settings/tiers', icon: Crown, label: '등급 설정' },
   { path: '/admin/settings/shipping', icon: Truck, label: '배송비 설정' },
 ]
 

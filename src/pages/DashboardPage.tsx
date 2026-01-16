@@ -39,9 +39,9 @@ export function DashboardPage() {
 
   // User tier benefits
   const tierBenefits = {
-    vip: ['모든 상품 10% 추가 할인', '무료 배송', '전용 기획전 참여', '우선 배송'],
-    wholesale: ['모든 상품 20% 추가 할인', '무료 배송', '전용 단가표', '대량주문 추가할인', '전담 매니저'],
-    partner: ['모든 상품 최대 30% 할인', '무료 배송', '파트너 전용 단가', '매출 리포트', '전담 매니저', 'API 연동'],
+    member: ['기본 회원가 적용', '적립금 1% 지급'],
+    premium: ['모든 상품 5% 추가 할인', '무료 배송', '전용 기획전 참여', '적립금 2% 지급'],
+    vip: ['모든 상품 10% 추가 할인', '무료 배송', 'VIP 전용 혜택', '적립금 3% 지급', '우선 배송'],
   }
 
   const currentBenefits = tierBenefits[tier as keyof typeof tierBenefits] || []
@@ -64,8 +64,8 @@ export function DashboardPage() {
         </div>
       </Animated>
 
-      {/* VIP+ Banner */}
-      {(tier === 'vip' || tier === 'wholesale' || tier === 'partner') && (
+      {/* VIP/Premium Banner */}
+      {(tier === 'vip' || tier === 'premium') && (
         <div className="mb-8 p-4 md:p-6 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg text-white">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>

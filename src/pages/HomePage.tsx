@@ -1,18 +1,18 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Zap, ArrowRight, Clock, ShoppingCart } from 'lucide-react'
-import { useStore, getTierLabel } from '../store'
+import { useStore, getTierLabel, getPriceByTier } from '../store'
 import { useAdminStore } from '../admin/store/adminStore'
-import { categories, products as defaultProducts, promotions } from '../data'
+import { categories, products as defaultProducts } from '../data'
 import { ProductCard } from '../components/product'
 import { Button, Badge, Card, CardContent } from '../components/ui'
-import { cn } from '../lib/utils'
+import { cn, formatPrice } from '../lib/utils'
 import { Animated } from '../hooks'
 import { Product } from '../types'
 
 export function HomePage() {
   const { user, isLoggedIn } = useStore()
-  const { products: adminProducts } = useAdminStore()
+  const { products: adminProducts, promotions } = useAdminStore()
   const [currentSlide, setCurrentSlide] = useState(0)
 
   // 관리자 상품과 기본 상품 병합 (관리자 상품 우선)
@@ -36,11 +36,11 @@ export function HomePage() {
 
   const tier = user?.tier || 'guest'
 
-  // Filter promotions based on user tier
-  // 비로그인(guest)일 때는 모든 프로모션 표시
-  const visiblePromotions = tier === 'guest'
-    ? promotions
-    : promotions.filter(p => p.targetTiers.includes(tier))
+  // Filter promotions based on user tier and active status
+  // isActive가 true인 프로모션만 표시
+  const visiblePromotions = promotions
+    .filter(p => p.isActive)
+    .filter(p => tier === 'guest' || p.targetTiers.includes(tier))
   const heroPromotions = visiblePromotions.slice(0, 3)
 
   // Auto slide
@@ -189,27 +189,41 @@ export function HomePage() {
                 {/* 모바일: 터치 스크롤, 데스크탑: 캐러셀 */}
                 {/* 모바일 전용 스크롤 */}
                 <div className="flex md:hidden gap-2 overflow-x-auto scrollbar-hide px-3 snap-x snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
-                  {products.slice(0, 10).map((product) => (
-                    <Link
-                      key={product.id}
-                      to={`/product/${product.id}`}
-                      className="flex-shrink-0 w-[calc(50%-4px)] snap-start group"
-                    >
-                      <div className="w-full bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-neutral-100">
-                        <div className="aspect-square flex items-center justify-center p-1 bg-neutral-50">
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                          />
+                  {products.slice(0, 10).map((product) => {
+                    const retailPrice = product.prices.retail
+                    const memberPrice = product.prices.member
+                    const currentPrice = getPriceByTier(product, tier)
+                    const salePrice = tier === 'guest' ? memberPrice : currentPrice
+                    const discountRate = Math.round((1 - salePrice / retailPrice) * 100)
+                    return (
+                      <Link
+                        key={product.id}
+                        to={`/product/${product.id}`}
+                        className="flex-shrink-0 w-[calc(50%-4px)] snap-start group"
+                      >
+                        <div className="w-full bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-neutral-100">
+                          <div className="aspect-[4/3] flex items-center justify-center p-1 bg-neutral-50">
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+                          <div className="px-2 py-1.5 border-t border-neutral-100">
+                            <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
+                            <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
+                            <div className="mt-1">
+                              <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                                <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="px-1.5 py-1 border-t border-neutral-100">
-                          <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
-                          <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    )
+                  })}
                 </div>
                 {/* 데스크탑 전용 캐러셀 */}
                 <div className="hidden md:block overflow-hidden">
@@ -217,30 +231,41 @@ export function HomePage() {
                     className="flex gap-4 transition-transform duration-300 ease-in-out"
                     style={{ transform: `translateX(-${productSlide1 * 188}px)` }}
                   >
-                    {products.slice(0, 10).map((product) => (
-                      <Link
-                        key={`desktop-${product.id}`}
-                        to={`/product/${product.id}`}
-                        className="flex-shrink-0 group"
-                      >
-                        <div className="w-44 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-neutral-100">
-                          <div className="px-3 py-2 text-center border-b border-neutral-100">
-                            <p className="text-xs font-medium text-neutral-600 truncate">{product.brand}</p>
+                    {products.slice(0, 10).map((product) => {
+                      const retailPrice = product.prices.retail
+                      const memberPrice = product.prices.member
+                      const currentPrice = getPriceByTier(product, tier)
+                      const salePrice = tier === 'guest' ? memberPrice : currentPrice
+                      const discountRate = Math.round((1 - salePrice / retailPrice) * 100)
+                      return (
+                        <Link
+                          key={`desktop-${product.id}`}
+                          to={`/product/${product.id}`}
+                          className="flex-shrink-0 group"
+                        >
+                          <div className="w-44 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-neutral-100">
+                            <div className="h-28 flex items-center justify-center p-2 bg-neutral-50">
+                              <img
+                                src={product.images[0]}
+                                alt={product.name}
+                                className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                              />
+                            </div>
+                            <div className="px-3 py-2 border-t border-neutral-100">
+                              <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
+                              <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
+                              <div className="mt-1">
+                                <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                                  <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="h-36 flex items-center justify-center p-3 bg-neutral-50">
-                            <img
-                              src={product.images[0]}
-                              alt={product.name}
-                              className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                            />
-                          </div>
-                          <div className="px-3 py-2 flex items-center justify-between border-t border-neutral-100">
-                            <p className="text-xs font-medium text-neutral-800 truncate flex-1">{product.name}</p>
-                            <ShoppingCart className="w-5 h-5 text-neutral-400 hover:text-primary-600 transition-colors flex-shrink-0 ml-2" />
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      )
+                    })}
                   </div>
                 </div>
                 {/* 우측 화살표 - 데스크탑만 */}
@@ -302,27 +327,41 @@ export function HomePage() {
                 </button>
                 {/* 모바일 전용 스크롤 */}
                 <div className="flex md:hidden gap-2 overflow-x-auto scrollbar-hide px-3 snap-x snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
-                  {products.slice(5, 15).map((product) => (
-                    <Link
-                      key={product.id}
-                      to={`/product/${product.id}`}
-                      className="flex-shrink-0 w-[calc(50%-4px)] snap-start group"
-                    >
-                      <div className="w-full bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-neutral-100">
-                        <div className="aspect-square flex items-center justify-center p-1 bg-neutral-50">
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                          />
+                  {products.slice(5, 15).map((product) => {
+                    const retailPrice = product.prices.retail
+                    const memberPrice = product.prices.member
+                    const currentPrice = getPriceByTier(product, tier)
+                    const salePrice = tier === 'guest' ? memberPrice : currentPrice
+                    const discountRate = Math.round((1 - salePrice / retailPrice) * 100)
+                    return (
+                      <Link
+                        key={product.id}
+                        to={`/product/${product.id}`}
+                        className="flex-shrink-0 w-[calc(50%-4px)] snap-start group"
+                      >
+                        <div className="w-full bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-neutral-100">
+                          <div className="aspect-[4/3] flex items-center justify-center p-1 bg-neutral-50">
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+                          <div className="px-2 py-1.5 border-t border-neutral-100">
+                            <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
+                            <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
+                            <div className="mt-1">
+                              <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                                <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="px-1.5 py-1 border-t border-neutral-100">
-                          <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
-                          <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    )
+                  })}
                 </div>
                 {/* 데스크탑 전용 캐러셀 */}
                 <div className="hidden md:block overflow-hidden">
@@ -330,30 +369,41 @@ export function HomePage() {
                     className="flex gap-4 transition-transform duration-300 ease-in-out"
                     style={{ transform: `translateX(-${productSlide2 * 188}px)` }}
                   >
-                    {products.slice(5, 15).map((product) => (
-                      <Link
-                        key={`desktop-${product.id}`}
-                        to={`/product/${product.id}`}
-                        className="flex-shrink-0 group"
-                      >
-                        <div className="w-44 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-neutral-100">
-                          <div className="px-3 py-2 text-center border-b border-neutral-100">
-                            <p className="text-xs font-medium text-neutral-600 truncate">{product.brand}</p>
+                    {products.slice(5, 15).map((product) => {
+                      const retailPrice = product.prices.retail
+                      const memberPrice = product.prices.member
+                      const currentPrice = getPriceByTier(product, tier)
+                      const salePrice = tier === 'guest' ? memberPrice : currentPrice
+                      const discountRate = Math.round((1 - salePrice / retailPrice) * 100)
+                      return (
+                        <Link
+                          key={`desktop-${product.id}`}
+                          to={`/product/${product.id}`}
+                          className="flex-shrink-0 group"
+                        >
+                          <div className="w-44 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-neutral-100">
+                            <div className="h-28 flex items-center justify-center p-2 bg-neutral-50">
+                              <img
+                                src={product.images[0]}
+                                alt={product.name}
+                                className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                              />
+                            </div>
+                            <div className="px-3 py-2 border-t border-neutral-100">
+                              <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
+                              <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
+                              <div className="mt-1">
+                                <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                                  <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="h-36 flex items-center justify-center p-3 bg-neutral-50">
-                            <img
-                              src={product.images[0]}
-                              alt={product.name}
-                              className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                            />
-                          </div>
-                          <div className="px-3 py-2 flex items-center justify-between border-t border-neutral-100">
-                            <p className="text-xs font-medium text-neutral-800 truncate flex-1">{product.name}</p>
-                            <ShoppingCart className="w-5 h-5 text-neutral-400 hover:text-primary-600 transition-colors flex-shrink-0 ml-2" />
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      )
+                    })}
                   </div>
                 </div>
                 {/* 우측 화살표 - 데스크탑만 */}
@@ -415,27 +465,41 @@ export function HomePage() {
                 </button>
                 {/* 모바일 전용 스크롤 */}
                 <div className="flex md:hidden gap-2 overflow-x-auto scrollbar-hide px-3 snap-x snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
-                  {products.slice(10, 20).map((product) => (
-                    <Link
-                      key={product.id}
-                      to={`/product/${product.id}`}
-                      className="flex-shrink-0 w-[calc(50%-4px)] snap-start group"
-                    >
-                      <div className="w-full bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-neutral-100">
-                        <div className="aspect-square flex items-center justify-center p-1 bg-neutral-50">
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                          />
+                  {products.slice(10, 20).map((product) => {
+                    const retailPrice = product.prices.retail
+                    const memberPrice = product.prices.member
+                    const currentPrice = getPriceByTier(product, tier)
+                    const salePrice = tier === 'guest' ? memberPrice : currentPrice
+                    const discountRate = Math.round((1 - salePrice / retailPrice) * 100)
+                    return (
+                      <Link
+                        key={product.id}
+                        to={`/product/${product.id}`}
+                        className="flex-shrink-0 w-[calc(50%-4px)] snap-start group"
+                      >
+                        <div className="w-full bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-neutral-100">
+                          <div className="aspect-[4/3] flex items-center justify-center p-1 bg-neutral-50">
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+                          <div className="px-2 py-1.5 border-t border-neutral-100">
+                            <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
+                            <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
+                            <div className="mt-1">
+                              <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                                <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="px-1.5 py-1 border-t border-neutral-100">
-                          <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
-                          <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    )
+                  })}
                 </div>
                 {/* 데스크탑 전용 캐러셀 */}
                 <div className="hidden md:block overflow-hidden">
@@ -443,30 +507,41 @@ export function HomePage() {
                     className="flex gap-4 transition-transform duration-300 ease-in-out"
                     style={{ transform: `translateX(-${productSlide3 * 188}px)` }}
                   >
-                    {products.slice(10, 20).map((product) => (
-                      <Link
-                        key={`desktop-${product.id}`}
-                        to={`/product/${product.id}`}
-                        className="flex-shrink-0 group"
-                      >
-                        <div className="w-44 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-neutral-100">
-                          <div className="px-3 py-2 text-center border-b border-neutral-100">
-                            <p className="text-xs font-medium text-neutral-600 truncate">{product.brand}</p>
+                    {products.slice(10, 20).map((product) => {
+                      const retailPrice = product.prices.retail
+                      const memberPrice = product.prices.member
+                      const currentPrice = getPriceByTier(product, tier)
+                      const salePrice = tier === 'guest' ? memberPrice : currentPrice
+                      const discountRate = Math.round((1 - salePrice / retailPrice) * 100)
+                      return (
+                        <Link
+                          key={`desktop-${product.id}`}
+                          to={`/product/${product.id}`}
+                          className="flex-shrink-0 group"
+                        >
+                          <div className="w-44 bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-neutral-100">
+                            <div className="h-28 flex items-center justify-center p-2 bg-neutral-50">
+                              <img
+                                src={product.images[0]}
+                                alt={product.name}
+                                className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                              />
+                            </div>
+                            <div className="px-3 py-2 border-t border-neutral-100">
+                              <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
+                              <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
+                              <div className="mt-1">
+                                <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                                  <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="h-36 flex items-center justify-center p-3 bg-neutral-50">
-                            <img
-                              src={product.images[0]}
-                              alt={product.name}
-                              className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                            />
-                          </div>
-                          <div className="px-3 py-2 flex items-center justify-between border-t border-neutral-100">
-                            <p className="text-xs font-medium text-neutral-800 truncate flex-1">{product.name}</p>
-                            <ShoppingCart className="w-5 h-5 text-neutral-400 hover:text-primary-600 transition-colors flex-shrink-0 ml-2" />
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      )
+                    })}
                   </div>
                 </div>
                 {/* 우측 화살표 - 데스크탑만 */}
@@ -505,7 +580,7 @@ export function HomePage() {
           <Animated animation="fade-up">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-neutral-900">기획전 연구실</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-neutral-900">기획전 연구실</h2>
                 <Badge variant="primary" size="sm">EVENT</Badge>
               </div>
               <Link to="/promotions" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1 link-hover">
@@ -540,7 +615,7 @@ export function HomePage() {
         <div className="max-w-7xl mx-auto px-4">
           <Animated animation="fade-up">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-neutral-900">카테고리</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-neutral-900">카테고리</h2>
               <Link to="/categories" className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1 link-hover">
                 전체보기 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Link>

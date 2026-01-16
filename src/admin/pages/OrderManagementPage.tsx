@@ -24,7 +24,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ord-3', orderNumber: 'ORD-2024-003', userId: 'user-3',
-    user: { id: 'user-3', name: '박지민', email: 'park@example.com', company: '지민상사', tier: 'wholesale' },
+    user: { id: 'user-3', name: '박지민', email: 'park@example.com', company: '지민상사', tier: 'premium' },
     items: [{ id: 'item-3', productId: 'p3', productName: '프리미엄 견과류 선물세트', productSku: 'NT-001', quantity: 10, unitPrice: 35000, subtotal: 350000 }],
     subtotal: 350000, shippingFee: 0, totalAmount: 350000, status: 'shipped', paymentStatus: 'paid', paymentMethod: '카드결제',
     shippingAddress: { recipient: '박지민', phone: '010-3456-7890', postalCode: '67890', address1: '대구시 수성구 범어로 789' },

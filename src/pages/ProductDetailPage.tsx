@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ShoppingCart, Zap, ChevronDown, Truck } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ShoppingCart, Zap, ChevronDown, Truck, Package } from 'lucide-react'
 import { useStore, getPriceByTier, getTierLabel, getTierColor } from '../store'
 import { useAdminStore } from '../admin/store/adminStore'
 import { products as defaultProducts, categories } from '../data'
-import { ProductCard } from '../components/product'
+import { ProductCard, ProductReviews } from '../components/product'
 import { Button, Badge, NumberStepper, Card, CardContent } from '../components/ui'
 import { formatPrice, cn } from '../lib/utils'
 import { Animated } from '../hooks'
 import { ProductOption } from '../types'
+import { ProductOptionAdmin, OptionValue } from '../admin/types/admin'
 
 export function ProductDetailPage() {
   const { productId } = useParams()
@@ -88,7 +89,7 @@ export function ProductDetailPage() {
   }, [productId, adminProducts, product])
 
   // 관리자 옵션 원본 (가격 수정자 계산용) - localStorage에서 직접 읽기
-  const adminOptionsMap = useMemo(() => {
+  const adminOptionsMap = useMemo((): ProductOptionAdmin[] => {
     // localStorage에서 직접 읽기
     const localStorageOptions = productId ? getAdminOptionsFromLocalStorage(productId) : []
     if (localStorageOptions && localStorageOptions.length > 0) {
@@ -349,6 +350,23 @@ export function ProductDetailPage() {
               </div>
             </div>
 
+            {/* 묶음배송 표시 */}
+            {shippingInfo.type !== 'free' && (
+              <div className="relative border border-neutral-200 rounded-lg bg-neutral-50">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-neutral-600 pointer-events-none flex items-center gap-1">
+                  <Package className="w-4 h-4" />
+                  묶음배송
+                </span>
+                <div className="w-full px-4 py-3 text-sm text-neutral-900 text-center pr-10">
+                  {shippingInfo.bundleShipping !== false ? (
+                    <span className="text-primary-600 font-medium">가능</span>
+                  ) : (
+                    <span className="text-neutral-500">불가</span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* 옵션 추가금액 표시 */}
             {optionPriceModifier !== 0 && (
               <div className="text-sm text-right">
@@ -452,6 +470,11 @@ export function ProductDetailPage() {
 
         </Animated>
       </div>
+
+      {/* Product Reviews */}
+      <Animated animation="fade-up" delay={300}>
+        <ProductReviews productId={product.id} />
+      </Animated>
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (

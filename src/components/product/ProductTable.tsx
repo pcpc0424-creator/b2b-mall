@@ -59,7 +59,10 @@ export function ProductTable({ products }: ProductTableProps) {
 
   const getTotalAmount = () => {
     return Array.from(selectedItems.values()).reduce((sum, item) => {
-      return sum + getPriceByTier(item.product, tier) * item.quantity
+      const memberPrice = item.product.prices.member
+      const currentPrice = getPriceByTier(item.product, tier)
+      const salePrice = tier === 'guest' ? memberPrice : currentPrice
+      return sum + salePrice * item.quantity
     }, 0)
   }
 
@@ -111,8 +114,12 @@ export function ProductTable({ products }: ProductTableProps) {
             {products.map((product) => {
               const isSelected = selectedItems.has(product.id)
               const selectedItem = selectedItems.get(product.id)
-              const price = getPriceByTier(product, tier)
-              const subtotal = isSelected && selectedItem ? price * selectedItem.quantity : 0
+              const retailPrice = product.prices.retail
+              const memberPrice = product.prices.member
+              const currentPrice = getPriceByTier(product, tier)
+              const salePrice = tier === 'guest' ? memberPrice : currentPrice
+              const discountRate = Math.round((1 - salePrice / retailPrice) * 100)
+              const subtotal = isSelected && selectedItem ? salePrice * selectedItem.quantity : 0
               const stockConfig = stockStatusConfig[product.stockStatus]
 
               return (
@@ -150,7 +157,11 @@ export function ProductTable({ products }: ProductTableProps) {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <span className="text-sm font-medium text-primary-600">{formatPrice(price)}</span>
+                    <p className="text-xs text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                    <div className="flex items-center justify-end gap-1">
+                      <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                      <span className="text-sm font-medium text-primary-600">{formatPrice(salePrice)}</span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className="text-sm text-neutral-600">{product.minQuantity}</span>
@@ -205,8 +216,12 @@ export function ProductTable({ products }: ProductTableProps) {
           {products.map((product) => {
             const isSelected = selectedItems.has(product.id)
             const selectedItem = selectedItems.get(product.id)
-            const price = getPriceByTier(product, tier)
-            const subtotal = isSelected && selectedItem ? price * selectedItem.quantity : 0
+            const retailPrice = product.prices.retail
+            const memberPrice = product.prices.member
+            const currentPrice = getPriceByTier(product, tier)
+            const salePrice = tier === 'guest' ? memberPrice : currentPrice
+            const discountRate = Math.round((1 - salePrice / retailPrice) * 100)
+            const subtotal = isSelected && selectedItem ? salePrice * selectedItem.quantity : 0
             const stockConfig = stockStatusConfig[product.stockStatus]
 
             return (
@@ -235,11 +250,15 @@ export function ProductTable({ products }: ProductTableProps) {
                     <p className="text-xs text-neutral-500 font-mono">{product.sku}</p>
                     <p className="text-sm font-medium text-neutral-900 mt-0.5">{product.name}</p>
                     <p className="text-xs text-neutral-500">{product.brand}</p>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-sm font-bold text-primary-600">{formatPrice(price)}</span>
-                      <span className={cn('text-xs', stockConfig.class)}>
-                        재고: {product.stockStatus === 'out_of_stock' ? stockConfig.label : formatNumber(product.stock)}
-                      </span>
+                    <div className="mt-2">
+                      <p className="text-xs text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                        <span className="text-sm font-bold text-primary-600">{formatPrice(salePrice)}</span>
+                        <span className={cn('text-xs', stockConfig.class)}>
+                          재고: {product.stockStatus === 'out_of_stock' ? stockConfig.label : formatNumber(product.stock)}
+                        </span>
+                      </div>
                     </div>
                     {isSelected && selectedItem && (
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-200">

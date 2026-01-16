@@ -1,4 +1,4 @@
-export type UserTier = 'guest' | 'member' | 'vip' | 'wholesale' | 'partner'
+export type UserTier = 'guest' | 'member' | 'premium' | 'vip'
 
 export interface User {
   id: string
@@ -25,11 +25,10 @@ export interface Product {
   categoryId: number
   images: string[]
   prices: {
-    retail: number
-    member: number
-    vip: number
-    wholesale: number
-    partner: number
+    retail: number    // 비회원가
+    member: number    // 일반회원가
+    premium: number   // 우수회원가
+    vip: number       // VIP회원가
   }
   minQuantity: number
   maxQuantity?: number
@@ -77,6 +76,7 @@ export interface Promotion {
   endDate: Date
   targetTiers: UserTier[]
   type: 'all' | 'timesale' | 'exclusive'
+  isActive: boolean
 }
 
 export interface OrderSummary {
@@ -90,4 +90,42 @@ export interface SalesData {
   date: string
   amount: number
   orders: number
+}
+
+export interface Notice {
+  id: string
+  title: string
+  content: string
+  category: 'notice' | 'event' | 'update' | 'important'
+  isImportant: boolean
+  createdAt: Date
+  viewCount: number
+}
+
+export interface Review {
+  id: string
+  productId: string
+  author: string
+  rating: number
+  title: string
+  content: string
+  images?: string[]
+  createdAt: Date
+  helpful: number
+  verified: boolean
+}
+
+export interface Coupon {
+  id: string
+  code: string
+  name: string
+  description: string
+  discountType: 'percent' | 'fixed'  // 퍼센트 할인 or 정액 할인
+  discountValue: number              // 할인 값 (5 = 5% 또는 5000원)
+  minOrderAmount?: number            // 최소 주문 금액
+  maxDiscountAmount?: number         // 최대 할인 금액 (퍼센트 할인 시)
+  validFrom: Date
+  validUntil: Date
+  isUsed: boolean
+  usedAt?: Date
 }

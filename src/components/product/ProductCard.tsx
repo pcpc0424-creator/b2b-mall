@@ -16,8 +16,11 @@ export function ProductCard({ product }: ProductCardProps) {
   const [quantity, setQuantity] = useState(0)
 
   const tier = user?.tier || 'guest'
-  const currentPrice = getPriceByTier(product, tier)
   const retailPrice = product.prices.retail
+  const memberPrice = product.prices.member
+  const currentPrice = getPriceByTier(product, tier)
+  const salePrice = tier === 'guest' ? memberPrice : currentPrice
+  const discountRate = Math.round((1 - salePrice / retailPrice) * 100)
 
   const stockStatusConfig = {
     available: { label: '재고충분', variant: 'success' as const },
@@ -42,10 +45,10 @@ export function ProductCard({ product }: ProductCardProps) {
             {stockConfig.label}
           </Badge>
         </div>
-        {currentPrice < retailPrice && (
+        {discountRate > 0 && (
           <div className="absolute top-2 right-2">
             <span className="bg-error text-white text-xs font-bold px-2 py-1 rounded animate-pulse-soft">
-              {Math.round((1 - currentPrice / retailPrice) * 100)}% OFF
+              {discountRate}% OFF
             </span>
           </div>
         )}
@@ -64,15 +67,16 @@ export function ProductCard({ product }: ProductCardProps) {
         </Link>
 
         {/* Price */}
-        <div className="mt-2 md:mt-3 h-12 md:h-14">
-          {currentPrice < retailPrice && (
-            <p className="text-xs text-neutral-400 line-through">
-              {formatPrice(retailPrice)}
-            </p>
-          )}
-          <p className="text-sm md:text-lg font-bold text-primary-600">
-            {formatPrice(currentPrice)}
+        <div className="mt-2 md:mt-3 h-14 md:h-16">
+          <p className="text-xs text-neutral-400 line-through">
+            {formatPrice(retailPrice)}
           </p>
+          <div className="flex items-center gap-1">
+            <span className="text-sm font-bold text-red-500">{discountRate}%</span>
+            <span className="text-sm md:text-lg font-bold text-primary-600">
+              {formatPrice(salePrice)}
+            </span>
+          </div>
         </div>
 
         {/* Actions */}

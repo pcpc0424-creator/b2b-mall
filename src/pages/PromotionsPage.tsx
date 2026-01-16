@@ -1,11 +1,22 @@
 import { Link } from 'react-router-dom'
 import { Clock, Tag, ArrowRight } from 'lucide-react'
-import { promotions, products } from '../data'
+import { products } from '../data'
+import { useAdminStore } from '../admin/store/adminStore'
+import { useStore } from '../store'
 import { ProductCard } from '../components/product'
 import { Badge, Card, CardContent } from '../components/ui'
 import { Animated } from '../hooks'
 
 export function PromotionsPage() {
+  const { promotions } = useAdminStore()
+  const { user } = useStore()
+  const tier = user?.tier || 'guest'
+
+  // isActive가 true이고 사용자 등급에 맞는 프로모션만 표시
+  const visiblePromotions = promotions
+    .filter(p => p.isActive)
+    .filter(p => tier === 'guest' || p.targetTiers.includes(tier))
+
   // 프로모션 상품들 (할인율이 높은 상품들)
   const promotionProducts = products.slice(0, 8)
 
@@ -31,7 +42,7 @@ export function PromotionsPage() {
       {/* 프로모션 배너 */}
       <Animated animation="fade-up" delay={200}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          {promotions.map((promo, index) => (
+          {visiblePromotions.map((promo, index) => (
             <Card key={promo.id} className="overflow-hidden hover:shadow-lg transition-shadow">
               <div className="relative h-48">
                 <img
