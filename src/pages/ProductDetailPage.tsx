@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ShoppingCart, Zap, ChevronDown, Truck, Package } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ShoppingCart, Zap, ChevronDown, Truck, Package, X, ZoomIn, ZoomOut } from 'lucide-react'
 import { useStore, getPriceByTier, getTierLabel, getTierColor } from '../store'
 import { useAdminStore } from '../admin/store/adminStore'
 import { products as defaultProducts, categories } from '../data'
@@ -9,7 +9,7 @@ import { Button, Badge, NumberStepper, Card, CardContent } from '../components/u
 import { formatPrice, cn } from '../lib/utils'
 import { Animated } from '../hooks'
 import { ProductOption } from '../types'
-import { ProductOptionAdmin, OptionValue } from '../admin/types/admin'
+import { ProductOptionAdmin, OptionValue, QuantityDiscount } from '../admin/types/admin'
 
 export function ProductDetailPage() {
   const { productId } = useParams()
@@ -19,8 +19,11 @@ export function ProductDetailPage() {
   const { products: adminProducts } = useAdminStore()
   const [quantity, setQuantity] = useState(0)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false)
+  const [zoomLevel, setZoomLevel] = useState(1)
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
   const [optionPriceModifier, setOptionPriceModifier] = useState(0)
+  const [selectedQuantityDiscount, setSelectedQuantityDiscount] = useState<QuantityDiscount | null>(null)
 
   // 관리자 상품 우선, 없으면 기본 상품 사용
   const product = useMemo(() => {
@@ -46,6 +49,36 @@ export function ProductDetailPage() {
     }
     return []
   }
+
+  // localStorage에서 showOptionImages, quantityDiscounts 가져오기
+  const getProductSettingsFromLocalStorage = (pid: string) => {
+    try {
+      const stored = localStorage.getItem('admin-storage')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        const products = parsed.state?.products
+        if (products) {
+          const product = products.find((p: any) => p.id === pid)
+          return {
+            showOptionImages: product?.showOptionImages || false,
+            quantityDiscounts: product?.quantityDiscounts || []
+          }
+        }
+      }
+    } catch (e) {
+      console.error('localStorage 읽기 에러:', e)
+    }
+    return { showOptionImages: false, quantityDiscounts: [] }
+  }
+
+  // 상품 설정 가져오기 - adminProducts에서 직접 읽기
+  const productSettings = useMemo(() => {
+    const adminProduct = adminProducts.find(p => p.id === productId)
+    return {
+      showOptionImages: adminProduct?.showOptionImages || false,
+      quantityDiscounts: adminProduct?.quantityDiscounts || []
+    }
+  }, [productId, adminProducts])
 
   // 관리자 상품에서 옵션 가져오기 (adminOptions -> ProductOption 변환)
   const productOptions = useMemo((): ProductOption[] => {
@@ -209,53 +242,74 @@ export function ProductDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
         {/* Images */}
         <Animated animation="fade-left" delay={100}>
-          <div className="relative aspect-square bg-neutral-100 rounded-lg overflow-hidden mb-4">
-            <img
-              src={product.images[currentImageIndex]}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
-            {product.images.length > 1 && (
-              <>
-                <button
-                  onClick={() => setCurrentImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length)}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white flex items-center justify-center shadow-lg"
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-                <button
-                  onClick={() => setCurrentImageIndex((prev) => (prev + 1) % product.images.length)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 hover:bg-white flex items-center justify-center shadow-lg"
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-              </>
-            )}
+          <div className="relative bg-neutral-50 rounded-lg overflow-hidden mb-3 group">
+            {/* 메인 이미지 */}
+            <div className="aspect-square">
+              <img
+                src={product.images[currentImageIndex]}
+                alt={product.name}
+                className="w-full h-full object-contain cursor-zoom-in"
+                onClick={() => {
+                  setIsLightboxOpen(true)
+                  setZoomLevel(1)
+                }}
+              />
+            </div>
 
             {/* Badges */}
-            <div className="absolute top-4 left-4 flex flex-col gap-2">
+            <div className="absolute top-3 left-3 flex flex-col gap-2">
               <Badge variant={stockConfig.variant}>{stockConfig.label}</Badge>
               {discountPercent > 0 && tier !== 'guest' && (
                 <Badge variant="error">{discountPercent}% OFF</Badge>
               )}
             </div>
+
+            {/* 확대 아이콘 */}
+            <button
+              onClick={() => {
+                setIsLightboxOpen(true)
+                setZoomLevel(1)
+              }}
+              className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <ZoomIn className="w-4 h-4 text-neutral-700" />
+            </button>
           </div>
 
-          {/* Thumbnails */}
+          {/* Thumbnails - 참고 이미지 스타일 */}
           {product.images.length > 1 && (
-            <div className="flex gap-2">
-              {product.images.map((img, idx) => (
+            <div className="flex justify-center gap-2 py-2">
+              {product.images.slice(0, 6).map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentImageIndex(idx)}
+                  onMouseEnter={() => setCurrentImageIndex(idx)}
                   className={cn(
-                    'w-20 h-20 rounded-lg overflow-hidden border-2 transition-all duration-200 hover:scale-105',
-                    idx === currentImageIndex ? 'border-primary-600' : 'border-transparent hover:border-neutral-300'
+                    'flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-md overflow-hidden transition-all duration-150',
+                    idx === currentImageIndex
+                      ? 'ring-2 ring-neutral-900'
+                      : 'ring-1 ring-neutral-200 hover:ring-neutral-400'
                   )}
                 >
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
+              {/* 더보기 표시 */}
+              {product.images.length > 6 && (
+                <button
+                  onClick={() => {
+                    setCurrentImageIndex(6)
+                    setIsLightboxOpen(true)
+                    setZoomLevel(1)
+                  }}
+                  className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-md overflow-hidden ring-1 ring-neutral-200 hover:ring-neutral-400 relative"
+                >
+                  <img src={product.images[6]} alt="" className="w-full h-full object-cover opacity-50" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <span className="text-white text-sm font-medium">+{product.images.length - 6}</span>
+                  </div>
+                </button>
+              )}
             </div>
           )}
         </Animated>
@@ -299,37 +353,138 @@ export function ProductDetailPage() {
 
           </div>
 
-          {/* 옵션 선택 (모든 상품에 표시) */}
-          <div className="mb-6 space-y-3">
+          {/* 옵션 선택 (쿠팡 스타일) */}
+          <div className="mb-6 space-y-4">
             {/* 상품 옵션들 */}
             {productOptions.map((option) => {
               const adminOption = adminOptionsMap.find(ao => ao.id === option.id)
+              const hasImages = productSettings.showOptionImages && adminOption?.values.some(v => v.image)
 
               return (
-                <div key={option.id} className="relative border border-neutral-200 rounded-lg">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-neutral-600 pointer-events-none">
-                    {option.name}
-                  </span>
-                  <select
-                    value={selectedOptions[option.id] || ''}
-                    onChange={(e) => setSelectedOptions(prev => ({ ...prev, [option.id]: e.target.value }))}
-                    className="w-full px-4 py-3 text-sm text-neutral-900 bg-transparent border-none focus:outline-none cursor-pointer appearance-none text-center pr-10"
-                  >
-                    <option value="">선택하세요</option>
-                    {option.values.map((value) => {
-                      const optionValue = adminOption?.values.find(v => v.value === value)
-                      const priceModifier = optionValue?.priceModifier || 0
-                      const priceText = priceModifier > 0 ? ` (+${formatPrice(priceModifier)})` :
-                                       priceModifier < 0 ? ` (${formatPrice(priceModifier)})` : ''
-                      return (
-                        <option key={value} value={value}>{value}{priceText}</option>
-                      )
-                    })}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                <div key={option.id}>
+                  <p className="text-sm font-medium text-neutral-700 mb-2">
+                    {option.name}: <span className="text-neutral-500">{selectedOptions[option.id] || '선택하세요'}</span>
+                  </p>
+
+                  {/* 이미지 옵션 UI */}
+                  {hasImages ? (
+                    <div className="flex flex-wrap gap-2">
+                      {option.values.map((value) => {
+                        const optionValue = adminOption?.values.find(v => v.value === value)
+                        const isSelected = selectedOptions[option.id] === value
+
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setSelectedOptions(prev => ({ ...prev, [option.id]: value }))}
+                            className={cn(
+                              'relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-all',
+                              isSelected
+                                ? 'border-primary-600 ring-2 ring-primary-200'
+                                : 'border-neutral-200 hover:border-neutral-400'
+                            )}
+                            title={value}
+                          >
+                            {optionValue?.image ? (
+                              <img src={optionValue.image} alt={value} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-neutral-100 flex items-center justify-center text-xs text-neutral-500">
+                                {value.substring(0, 2)}
+                              </div>
+                            )}
+                            {isSelected && (
+                              <div className="absolute inset-0 bg-primary-600/10 flex items-center justify-center">
+                                <div className="w-5 h-5 bg-primary-600 rounded-full flex items-center justify-center">
+                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    /* 기본 드롭다운 UI */
+                    <div className="relative border border-neutral-200 rounded-lg">
+                      <select
+                        value={selectedOptions[option.id] || ''}
+                        onChange={(e) => setSelectedOptions(prev => ({ ...prev, [option.id]: e.target.value }))}
+                        className="w-full px-4 py-3 text-sm text-neutral-900 bg-transparent border-none focus:outline-none cursor-pointer appearance-none pr-10"
+                      >
+                        <option value="">선택하세요</option>
+                        {option.values.map((value) => {
+                          const optionValue = adminOption?.values.find(v => v.value === value)
+                          const priceModifier = optionValue?.priceModifier || 0
+                          const priceText = priceModifier > 0 ? ` (+${formatPrice(priceModifier)})` :
+                                           priceModifier < 0 ? ` (${formatPrice(priceModifier)})` : ''
+                          return (
+                            <option key={value} value={value}>{value}{priceText}</option>
+                          )
+                        })}
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+                    </div>
+                  )}
                 </div>
               )
             })}
+
+            {/* 수량별 할인 선택 (쿠팡 스타일) */}
+            {productSettings.quantityDiscounts.length > 0 && (
+              <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                <div className="bg-neutral-50 px-4 py-2 border-b border-neutral-200">
+                  <p className="text-sm font-medium text-neutral-700">구매 수량 선택</p>
+                </div>
+                <div className="divide-y divide-neutral-100">
+                  {productSettings.quantityDiscounts.map((discount: QuantityDiscount) => {
+                    const discountedPrice = Math.round(currentPrice * (1 - discount.discountPercent / 100))
+                    const totalPrice = discountedPrice * discount.quantity
+                    const isSelected = selectedQuantityDiscount?.id === discount.id
+
+                    return (
+                      <label
+                        key={discount.id}
+                        className={cn(
+                          'flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors',
+                          isSelected ? 'bg-primary-50' : 'hover:bg-neutral-50'
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="quantityDiscount"
+                          checked={isSelected}
+                          onChange={() => {
+                            setSelectedQuantityDiscount(discount)
+                            setQuantity(discount.quantity)
+                          }}
+                          className="w-4 h-4 text-primary-600 border-neutral-300 focus:ring-primary-500"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-neutral-900">{discount.quantity}개</span>
+                            {discount.label && (
+                              <Badge variant="success" size="sm">{discount.label}</Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-neutral-500 mt-0.5">
+                            개당 {formatPrice(discountedPrice)}
+                            {discount.discountPercent > 0 && (
+                              <span className="text-red-500 ml-1">({discount.discountPercent}% 할인)</span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-neutral-900">{formatPrice(totalPrice)}</p>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* 배송비 옵션 (모든 상품에 표시) */}
             <div className="relative border border-neutral-200 rounded-lg bg-neutral-50">
@@ -490,6 +645,114 @@ export function ProductDetailPage() {
             </div>
           </section>
         </Animated>
+      )}
+
+      {/* Image Lightbox Modal */}
+      {isLightboxOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+          onClick={() => setIsLightboxOpen(false)}
+        >
+          {/* 닫기 버튼 */}
+          <button
+            onClick={() => setIsLightboxOpen(false)}
+            className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors z-10"
+          >
+            <X className="w-6 h-6 text-white" />
+          </button>
+
+          {/* 줌 컨트롤 */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 z-10">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setZoomLevel(prev => Math.max(0.5, prev - 0.25))
+              }}
+              className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+            >
+              <ZoomOut className="w-5 h-5 text-white" />
+            </button>
+            <span className="text-white text-sm min-w-[60px] text-center">{Math.round(zoomLevel * 100)}%</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setZoomLevel(prev => Math.min(3, prev + 0.25))
+              }}
+              className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+            >
+              <ZoomIn className="w-5 h-5 text-white" />
+            </button>
+          </div>
+
+          {/* 이미지 */}
+          <div
+            className="relative max-w-[90vw] max-h-[85vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={product.images[currentImageIndex]}
+              alt={product.name}
+              className="max-w-none transition-transform duration-200"
+              style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }}
+              draggable={false}
+            />
+          </div>
+
+          {/* 이전/다음 버튼 */}
+          {product.images.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setCurrentImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length)
+                  setZoomLevel(1)
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              >
+                <ChevronLeft className="w-6 h-6 text-white" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setCurrentImageIndex((prev) => (prev + 1) % product.images.length)
+                  setZoomLevel(1)
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              >
+                <ChevronRight className="w-6 h-6 text-white" />
+              </button>
+            </>
+          )}
+
+          {/* 하단 썸네일 */}
+          {product.images.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 px-4 py-2 bg-black/50 rounded-full">
+              {product.images.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCurrentImageIndex(idx)
+                    setZoomLevel(1)
+                  }}
+                  className={cn(
+                    'w-12 h-12 rounded-lg overflow-hidden border-2 transition-all',
+                    idx === currentImageIndex ? 'border-white' : 'border-transparent opacity-60 hover:opacity-100'
+                  )}
+                >
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* 이미지 카운터 */}
+          {product.images.length > 1 && (
+            <div className="absolute top-4 left-4 px-3 py-1 bg-white/10 text-white text-sm rounded-full">
+              {currentImageIndex + 1} / {product.images.length}
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

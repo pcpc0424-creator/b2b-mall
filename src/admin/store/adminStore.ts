@@ -21,11 +21,21 @@ import { UserTier } from '../../types'
 import { products as mockProducts, promotions as mockPromotions } from '../../data'
 
 // mockProducts를 AdminProduct로 변환
-const initialProducts: AdminProduct[] = mockProducts.map(p => ({
+const initialProducts: AdminProduct[] = mockProducts.map((p, index) => ({
   ...p,
   isActive: true,
   createdAt: new Date(),
   updatedAt: new Date(),
+  // 첫 번째 상품에 수량별 할인 테스트 데이터 추가
+  ...(index === 0 ? {
+    showOptionImages: true,
+    quantityDiscounts: [
+      { id: 'qd_1', quantity: 1, discountPercent: 0 },
+      { id: 'qd_2', quantity: 2, discountPercent: 5, label: '인기' },
+      { id: 'qd_3', quantity: 4, discountPercent: 10, label: '최저가' },
+      { id: 'qd_4', quantity: 8, discountPercent: 15 },
+    ]
+  } : {})
 }))
 
 // mockPromotions를 AdminPromotion으로 변환
@@ -301,44 +311,39 @@ export const useAdminStore = create<AdminState>()(
           }
           console.log('[adminStore] hydration 완료')
 
-          // zustand persist가 adminOptions를 제대로 로드하지 못할 수 있으므로 직접 확인
-          // setTimeout을 사용하여 hydration이 완전히 끝난 후 실행
+          // 첫 번째 상품에 수량별 할인 테스트 데이터 강제 적용
           setTimeout(() => {
             try {
-              const stored = localStorage.getItem('admin-storage')
-              if (stored) {
-                const parsed = JSON.parse(stored)
-                const storedProducts = parsed.state?.products as AdminProduct[] | undefined
+              const currentState = useAdminStore.getState()
+              const firstProduct = currentState.products[0]
 
-                if (storedProducts && storedProducts.length > 0) {
-                  // localStorage에서 adminOptions가 있는 제품 찾기
-                  const productsWithOptions = storedProducts.filter(p => p.adminOptions && p.adminOptions.length > 0)
-                  console.log('[adminStore] localStorage에서 adminOptions가 있는 제품 수:', productsWithOptions.length)
-
-                  if (productsWithOptions.length > 0) {
-                    // 현재 store state 확인
-                    const currentState = useAdminStore.getState()
-                    const currentProductsWithOptions = currentState.products.filter(p => p.adminOptions && p.adminOptions.length > 0)
-                    console.log('[adminStore] 현재 store에서 adminOptions가 있는 제품 수:', currentProductsWithOptions.length)
-
-                    // localStorage에는 있지만 store에는 없으면 직접 로드
-                    if (currentProductsWithOptions.length < productsWithOptions.length) {
-                      console.log('[adminStore] adminOptions 누락 감지 - 직접 로드')
-                      useAdminStore.setState({ products: storedProducts })
-                      console.log('[adminStore] products 직접 설정 완료')
-
-                      // 확인
-                      const afterState = useAdminStore.getState()
-                      const afterProductsWithOptions = afterState.products.filter(p => p.adminOptions && p.adminOptions.length > 0)
-                      console.log('[adminStore] 설정 후 adminOptions가 있는 제품 수:', afterProductsWithOptions.length)
+              // 첫 번째 상품에 quantityDiscounts가 없으면 추가
+              if (firstProduct && (!firstProduct.quantityDiscounts || firstProduct.quantityDiscounts.length === 0)) {
+                console.log('[adminStore] 첫 번째 상품에 수량별 할인 테스트 데이터 추가')
+                const updatedProducts = currentState.products.map((p, index) => {
+                  if (index === 0) {
+                    return {
+                      ...p,
+                      showOptionImages: true,
+                      quantityDiscounts: [
+                        { id: 'qd_1', quantity: 1, discountPercent: 0 },
+                        { id: 'qd_2', quantity: 2, discountPercent: 5, label: '인기' },
+                        { id: 'qd_3', quantity: 4, discountPercent: 10, label: '최저가' },
+                        { id: 'qd_4', quantity: 8, discountPercent: 15 },
+                      ]
                     }
                   }
-                }
+                  return p
+                })
+                useAdminStore.setState({ products: updatedProducts })
+                console.log('[adminStore] 수량별 할인 테스트 데이터 적용 완료')
+              } else {
+                console.log('[adminStore] 첫 번째 상품에 이미 quantityDiscounts 존재:', firstProduct?.quantityDiscounts)
               }
             } catch (e) {
-              console.error('[adminStore] 수동 로드 에러:', e)
+              console.error('[adminStore] 테스트 데이터 적용 에러:', e)
             }
-          }, 0)
+          }, 100)
         }
       },
     }

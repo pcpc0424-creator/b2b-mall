@@ -62,10 +62,19 @@ export function HomePage() {
 
   return (
     <div>
+      {/* Top Banner - 가성비연구소 */}
+      <section className="w-full">
+        <img
+          src={`${import.meta.env.BASE_URL}be.jpeg`}
+          alt="가성비연구소 PRICE LAB"
+          className="w-full h-auto object-cover"
+        />
+      </section>
+
       {/* Hero Section - 캐러셀 스타일 */}
-      <section className="relative bg-neutral-100 py-4 md:py-6 overflow-hidden">
+      <section className="relative bg-neutral-100 py-2 md:py-6 overflow-hidden">
         <div className="relative max-w-7xl mx-auto px-2 md:px-4">
-          <div className="relative h-[280px] md:h-[400px]">
+          <div className="relative h-[200px] md:h-[400px]">
             {/* 슬라이드 컨테이너 */}
             <div className="flex items-center justify-center h-full">
               {heroPromotions.map((promo, index) => {

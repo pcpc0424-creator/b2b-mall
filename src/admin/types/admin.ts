@@ -32,6 +32,16 @@ export interface OptionValue {
   priceModifier: number     // 추가금액 (+0, +1000, -500)
   stockModifier?: number
   isDefault: boolean
+  image?: string            // 옵션 이미지 (base64 또는 URL)
+}
+
+// 수량별 할인 설정
+export interface QuantityDiscount {
+  id: string
+  quantity: number          // 구매 수량
+  discountPercent: number   // 할인율 (%)
+  discountPrice?: number    // 또는 고정 할인가
+  label?: string            // 표시 라벨 (예: "최저가", "인기")
 }
 
 // 옵션 조합으로 생성된 변형 상품
@@ -64,6 +74,8 @@ export interface AdminProduct extends Product {
   shipping?: ProductShipping              // 상품별 배송비 설정
   description?: string                    // 상품 상세 설명 (HTML)
   detailImages?: string[]                 // 상세 페이지 이미지들
+  showOptionImages?: boolean              // 옵션 이미지 표시 여부
+  quantityDiscounts?: QuantityDiscount[]  // 수량별 할인 설정
 }
 
 // 배송비 설정

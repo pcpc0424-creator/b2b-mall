@@ -5,7 +5,7 @@ import { useAdminStore } from '../store/adminStore'
 import { products as mockProducts, categories } from '../../data'
 import { Button, Card, CardContent, Input, Badge } from '../../components/ui'
 import { formatPrice, cn } from '../../lib/utils'
-import { ProductOptionAdmin, OptionValue, ProductVariant, ProductShipping } from '../types/admin'
+import { ProductOptionAdmin, OptionValue, ProductVariant, ProductShipping, QuantityDiscount } from '../types/admin'
 
 export function ProductEditPage() {
   const { id } = useParams()
@@ -49,6 +49,13 @@ export function ProductEditPage() {
   const [description, setDescription] = useState('')
   const [detailImages, setDetailImages] = useState<string[]>([])
   const detailFileInputRef = useRef<HTMLInputElement>(null)
+
+  // 옵션 이미지 표시 여부
+  const [showOptionImages, setShowOptionImages] = useState(false)
+
+  // 수량별 할인 설정
+  const [quantityDiscounts, setQuantityDiscounts] = useState<QuantityDiscount[]>([])
+  const [enableQuantityDiscount, setEnableQuantityDiscount] = useState(false)
 
   // 기존 상품 로드
   useEffect(() => {
@@ -113,6 +120,17 @@ export function ProductEditPage() {
         }
         if (adminProduct?.detailImages) {
           setDetailImages(adminProduct.detailImages)
+        }
+
+        // 옵션 이미지 표시 여부 로드
+        if (adminProduct?.showOptionImages !== undefined) {
+          setShowOptionImages(adminProduct.showOptionImages)
+        }
+
+        // 수량별 할인 로드
+        if (adminProduct?.quantityDiscounts && adminProduct.quantityDiscounts.length > 0) {
+          setQuantityDiscounts(adminProduct.quantityDiscounts)
+          setEnableQuantityDiscount(true)
         }
       }
     }
@@ -359,6 +377,8 @@ export function ProductEditPage() {
       shipping: shipping,
       description: description,
       detailImages: detailImages,
+      showOptionImages: showOptionImages,
+      quantityDiscounts: enableQuantityDiscount ? quantityDiscounts : [],
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -1016,6 +1036,31 @@ export function ProductEditPage() {
               </Button>
             </div>
 
+            {/* 옵션 이미지 표시 설정 */}
+            {options.length > 0 && (
+              <div className="flex items-center justify-between p-3 mb-4 bg-blue-50 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium text-blue-900">옵션 이미지 표시</p>
+                  <p className="text-xs text-blue-700 mt-0.5">상세페이지에서 옵션을 이미지로 표시합니다</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowOptionImages(!showOptionImages)}
+                  className={cn(
+                    'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                    showOptionImages ? 'bg-primary-600' : 'bg-neutral-200'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                      showOptionImages ? 'translate-x-5' : 'translate-x-0'
+                    )}
+                  />
+                </button>
+              </div>
+            )}
+
             {/* 옵션 목록 */}
             <div className="space-y-3 sm:space-y-4">
               {options.map((option, index) => (
@@ -1023,12 +1068,25 @@ export function ProductEditPage() {
                   key={option.id}
                   option={option}
                   index={index}
+                  showOptionImages={showOptionImages}
                   onNameChange={(name) => handleOptionNameChange(option.id, name)}
                   onAddValue={(value) => handleAddOptionValue(option.id, value)}
                   onRemoveValue={(valueId) => handleRemoveOptionValue(option.id, valueId)}
                   onPriceModifierChange={(valueId, modifier) =>
                     handlePriceModifierChange(option.id, valueId, modifier)
                   }
+                  onImageChange={(valueId, image) => {
+                    setOptions(options.map(opt =>
+                      opt.id === option.id
+                        ? {
+                            ...opt,
+                            values: opt.values.map(v =>
+                              v.id === valueId ? { ...v, image } : v
+                            )
+                          }
+                        : opt
+                    ))
+                  }}
                   onRemove={() => handleRemoveOption(option.id)}
                 />
               ))}
@@ -1169,6 +1227,155 @@ export function ProductEditPage() {
           </CardContent>
         </Card>
 
+        {/* 수량별 할인 설정 */}
+        <Card>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-neutral-900">수량별 할인 설정</h2>
+                <p className="text-xs sm:text-sm text-neutral-500 mt-0.5">
+                  구매 수량에 따른 할인율을 설정합니다
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEnableQuantityDiscount(!enableQuantityDiscount)}
+                className={cn(
+                  'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                  enableQuantityDiscount ? 'bg-primary-600' : 'bg-neutral-200'
+                )}
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                    enableQuantityDiscount ? 'translate-x-5' : 'translate-x-0'
+                  )}
+                />
+              </button>
+            </div>
+
+            {enableQuantityDiscount && (
+              <div className="space-y-4">
+                {/* 할인 항목 목록 */}
+                <div className="space-y-3">
+                  {quantityDiscounts.map((discount, idx) => (
+                    <div key={discount.id} className="flex items-center gap-2 sm:gap-3 p-3 bg-neutral-50 rounded-lg">
+                      <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div>
+                          <label className="block text-xs text-neutral-500 mb-1">수량</label>
+                          <div className="flex items-center">
+                            <input
+                              type="number"
+                              value={discount.quantity}
+                              onChange={(e) => {
+                                const newDiscounts = [...quantityDiscounts]
+                                newDiscounts[idx].quantity = parseInt(e.target.value) || 1
+                                setQuantityDiscounts(newDiscounts)
+                              }}
+                              min="1"
+                              className="w-full px-2 py-1.5 text-sm border border-neutral-200 rounded text-center"
+                            />
+                            <span className="text-sm text-neutral-500 ml-1">개</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-neutral-500 mb-1">할인율</label>
+                          <div className="flex items-center">
+                            <input
+                              type="number"
+                              value={discount.discountPercent}
+                              onChange={(e) => {
+                                const newDiscounts = [...quantityDiscounts]
+                                newDiscounts[idx].discountPercent = parseInt(e.target.value) || 0
+                                setQuantityDiscounts(newDiscounts)
+                              }}
+                              min="0"
+                              max="100"
+                              className="w-full px-2 py-1.5 text-sm border border-neutral-200 rounded text-center"
+                            />
+                            <span className="text-sm text-neutral-500 ml-1">%</span>
+                          </div>
+                        </div>
+                        <div className="col-span-2 sm:col-span-1">
+                          <label className="block text-xs text-neutral-500 mb-1">라벨 (선택)</label>
+                          <input
+                            type="text"
+                            value={discount.label || ''}
+                            onChange={(e) => {
+                              const newDiscounts = [...quantityDiscounts]
+                              newDiscounts[idx].label = e.target.value
+                              setQuantityDiscounts(newDiscounts)
+                            }}
+                            placeholder="예: 최저가"
+                            className="w-full px-2 py-1.5 text-sm border border-neutral-200 rounded"
+                          />
+                        </div>
+                        <div className="hidden sm:flex items-end">
+                          <p className="text-sm text-primary-600 font-medium">
+                            개당 {formatPrice(Math.round(formData.retailPrice * (1 - discount.discountPercent / 100)))}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuantityDiscounts(quantityDiscounts.filter(d => d.id !== discount.id))
+                        }}
+                        className="p-1.5 text-neutral-400 hover:text-red-500"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 항목 추가 버튼 */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newDiscount: QuantityDiscount = {
+                      id: `qd_${Date.now()}`,
+                      quantity: quantityDiscounts.length > 0
+                        ? quantityDiscounts[quantityDiscounts.length - 1].quantity * 2
+                        : 1,
+                      discountPercent: 0,
+                    }
+                    setQuantityDiscounts([...quantityDiscounts, newDiscount])
+                  }}
+                  className="w-full"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  수량 할인 추가
+                </Button>
+
+                {/* 미리보기 */}
+                {quantityDiscounts.length > 0 && (
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm font-medium text-blue-900 mb-2">미리보기</p>
+                    <div className="space-y-1">
+                      {quantityDiscounts.map(d => (
+                        <p key={d.id} className="text-sm text-blue-700">
+                          {d.quantity}개 구매 시: {formatPrice(Math.round(formData.retailPrice * (1 - d.discountPercent / 100)))}
+                          <span className="text-blue-500 ml-2">({d.discountPercent}% 할인)</span>
+                          {d.label && <Badge variant="success" size="sm" className="ml-2">{d.label}</Badge>}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!enableQuantityDiscount && (
+              <div className="text-center py-6 bg-neutral-50 rounded-lg border-2 border-dashed border-neutral-200">
+                <p className="text-neutral-500 text-sm">수량별 할인을 사용하려면 위 토글을 켜세요</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* 저장 버튼 */}
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
           <Button type="button" variant="outline" onClick={() => navigate('/admin/products')} className="w-full sm:w-auto">
@@ -1188,20 +1395,24 @@ export function ProductEditPage() {
 interface OptionItemProps {
   option: ProductOptionAdmin
   index: number
+  showOptionImages: boolean
   onNameChange: (name: string) => void
   onAddValue: (value: string) => void
   onRemoveValue: (valueId: string) => void
   onPriceModifierChange: (valueId: string, modifier: number) => void
+  onImageChange: (valueId: string, image: string) => void
   onRemove: () => void
 }
 
 function OptionItem({
   option,
   index,
+  showOptionImages,
   onNameChange,
   onAddValue,
   onRemoveValue,
   onPriceModifierChange,
+  onImageChange,
   onRemove,
 }: OptionItemProps) {
   const [newValue, setNewValue] = useState('')
@@ -1256,13 +1467,18 @@ function OptionItem({
 
       {/* 옵션값 */}
       <div className="p-3 sm:p-4">
-        <div className="flex flex-wrap gap-2 mb-3 sm:mb-4">
+        <div className={cn(
+          'gap-2 mb-3 sm:mb-4',
+          showOptionImages ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4' : 'flex flex-wrap'
+        )}>
           {option.values.map((value) => (
             <OptionValueTag
               key={value.id}
               value={value}
+              showImage={showOptionImages}
               onRemove={() => onRemoveValue(value.id)}
               onPriceChange={(modifier) => onPriceModifierChange(value.id, modifier)}
+              onImageChange={(image) => onImageChange(value.id, image)}
             />
           ))}
         </div>
@@ -1289,13 +1505,107 @@ function OptionItem({
 // 옵션값 태그 컴포넌트
 interface OptionValueTagProps {
   value: OptionValue
+  showImage: boolean
   onRemove: () => void
   onPriceChange: (modifier: number) => void
+  onImageChange: (image: string) => void
 }
 
-function OptionValueTag({ value, onRemove, onPriceChange }: OptionValueTagProps) {
+function OptionValueTag({ value, showImage, onRemove, onPriceChange, onImageChange }: OptionValueTagProps) {
   const [showPriceInput, setShowPriceInput] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드 가능합니다.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      onImageChange(event.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // 이미지 표시 모드
+  if (showImage) {
+    return (
+      <div className="relative border border-neutral-200 rounded-lg p-2 bg-white">
+        {/* 이미지 영역 */}
+        <div
+          onClick={() => imageInputRef.current?.click()}
+          className="aspect-square mb-2 rounded-md overflow-hidden bg-neutral-100 cursor-pointer hover:bg-neutral-200 transition-colors flex items-center justify-center"
+        >
+          {value.image ? (
+            <img src={value.image} alt={value.value} className="w-full h-full object-cover" />
+          ) : (
+            <div className="text-center p-2">
+              <ImageIcon className="w-6 h-6 text-neutral-400 mx-auto mb-1" />
+              <p className="text-xs text-neutral-500">이미지 추가</p>
+            </div>
+          )}
+        </div>
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          className="hidden"
+        />
+
+        {/* 옵션명 */}
+        <p className="text-sm font-medium text-neutral-900 text-center truncate">{value.value}</p>
+
+        {/* 가격 조정 */}
+        {value.priceModifier !== 0 && (
+          <p className={cn(
+            'text-xs text-center mt-1',
+            value.priceModifier > 0 ? 'text-green-600' : 'text-red-600'
+          )}>
+            {value.priceModifier > 0 ? '+' : ''}{formatPrice(value.priceModifier)}
+          </p>
+        )}
+
+        {/* 버튼 영역 */}
+        <div className="flex justify-center gap-2 mt-2">
+          <button
+            type="button"
+            onClick={() => setShowPriceInput(!showPriceInput)}
+            className="text-xs text-primary-600 hover:text-primary-800"
+          >
+            가격
+          </button>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-xs text-red-500 hover:text-red-700"
+          >
+            삭제
+          </button>
+        </div>
+
+        {showPriceInput && (
+          <div className="mt-2">
+            <input
+              type="number"
+              value={value.priceModifier}
+              onChange={(e) => onPriceChange(parseInt(e.target.value) || 0)}
+              onBlur={() => setShowPriceInput(false)}
+              className="w-full text-xs px-2 py-1 border rounded text-center"
+              placeholder="추가금액"
+              autoFocus
+            />
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // 기본 태그 모드
   return (
     <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm bg-primary-50 text-primary-700 border border-primary-200">
       <span>{value.value}</span>

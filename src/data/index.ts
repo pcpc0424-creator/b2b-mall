@@ -80,7 +80,15 @@ export const products: Product[] = [
     name: "프리미엄 홍삼정과 선물세트",
     brand: "정관장",
     categoryId: 1,
-    images: ["https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=600&h=600&fit=crop"],
+    images: [
+      "https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=600&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=600&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1599599810694-b5b37304c041?w=600&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&h=600&fit=crop"
+    ],
     prices: { retail: 89000, member: 80000, premium: 75000, vip: 69000 },
     minQuantity: 1,
     stock: 500,
