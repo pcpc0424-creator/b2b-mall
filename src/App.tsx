@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { Layout } from './components/layout'
+import { AuthGuard } from './components/auth'
 import {
   HomePage,
   ProductListPage,
@@ -38,6 +39,8 @@ import {
   OrderManagementPage,
   MemberManagementPage,
   TierSettingsPage,
+  ModalManagementPage,
+  BannerSettingsPage,
 } from './admin/pages'
 
 // 페이지 전환 시 스크롤을 상단으로 이동
@@ -56,30 +59,32 @@ function App() {
     <BrowserRouter basename="/b2b-mall">
       <ScrollToTop />
       <Routes>
-        {/* Public Routes */}
+        {/* Public Routes - 비로그인 접근 가능 */}
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/products" element={<ProductListPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/category/:categoryId" element={<ProductListPage />} />
           <Route path="/product/:productId" element={<ProductDetailPage />} />
-          <Route path="/quote" element={<QuotePage />} />
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/promotions" element={<PromotionsPage />} />
           <Route path="/promotion/:promoId" element={<PromotionDetailPage />} />
           <Route path="/community/notice" element={<NoticePage />} />
           <Route path="/community/faq" element={<FAQPage />} />
-          <Route path="/community/qna" element={<QnAPage />} />
-          <Route path="/exclusive" element={<ExclusivePage />} />
-          <Route path="/orders" element={<OrdersPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/payment/success" element={<PaymentSuccessPage />} />
-          <Route path="/payment/fail" element={<PaymentFailPage />} />
-          <Route path="/my/coupons" element={<MyCouponsPage />} />
+
+          {/* Protected Routes - 회원 전용 (로그인 필수) */}
+          <Route path="/quote" element={<AuthGuard><QuotePage /></AuthGuard>} />
+          <Route path="/cart" element={<AuthGuard><CartPage /></AuthGuard>} />
+          <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
+          <Route path="/analytics" element={<AuthGuard><AnalyticsPage /></AuthGuard>} />
+          <Route path="/community/qna" element={<AuthGuard><QnAPage /></AuthGuard>} />
+          <Route path="/exclusive" element={<AuthGuard><ExclusivePage /></AuthGuard>} />
+          <Route path="/orders" element={<AuthGuard><OrdersPage /></AuthGuard>} />
+          <Route path="/payment/success" element={<AuthGuard><PaymentSuccessPage /></AuthGuard>} />
+          <Route path="/payment/fail" element={<AuthGuard><PaymentFailPage /></AuthGuard>} />
+          <Route path="/my/coupons" element={<AuthGuard><MyCouponsPage /></AuthGuard>} />
         </Route>
 
         {/* Admin Routes */}
@@ -101,6 +106,8 @@ function App() {
           <Route path="members" element={<MemberManagementPage />} />
           <Route path="settings/shipping" element={<ShippingSettingsPage />} />
           <Route path="settings/tiers" element={<TierSettingsPage />} />
+          <Route path="settings/modals" element={<ModalManagementPage />} />
+          <Route path="settings/banner" element={<BannerSettingsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

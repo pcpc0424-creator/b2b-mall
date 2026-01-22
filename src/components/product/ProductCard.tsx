@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ShoppingCart, Package } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ShoppingCart, Package, Lock } from 'lucide-react'
 import { Product } from '../../types'
 import { useStore, getPriceByTier, getTierLabel } from '../../store'
 import { Button, Badge, NumberStepper } from '../ui'
@@ -12,7 +12,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const { user, addToCart } = useStore()
+  const navigate = useNavigate()
+  const { user, addToCart, isLoggedIn } = useStore()
   const [quantity, setQuantity] = useState(0)
 
   const tier = user?.tier || 'guest'
@@ -66,38 +67,63 @@ export function ProductCard({ product }: ProductCardProps) {
           </h3>
         </Link>
 
-        {/* Price */}
+        {/* Price - 폐쇄몰: 비로그인 시 가격 숨김 */}
         <div className="mt-2 md:mt-3 h-14 md:h-16">
-          <p className="text-xs text-neutral-400 line-through">
-            {formatPrice(retailPrice)}
-          </p>
-          <div className="flex items-center gap-1">
-            <span className="text-sm font-bold text-red-500">{discountRate}%</span>
-            <span className="text-sm md:text-lg font-bold text-primary-600">
-              {formatPrice(salePrice)}
-            </span>
-          </div>
+          {isLoggedIn ? (
+            <>
+              <p className="text-xs text-neutral-400 line-through">
+                {formatPrice(retailPrice)}
+              </p>
+              <div className="flex items-center gap-1">
+                <span className="text-sm font-bold text-red-500">{discountRate}%</span>
+                <span className="text-sm md:text-lg font-bold text-primary-600">
+                  {formatPrice(salePrice)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full">
+              <Lock className="w-4 h-4 text-neutral-400 mb-1" />
+              <p className="text-xs text-neutral-500 text-center">
+                회원만 가격 확인 가능
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Actions */}
+        {/* Actions - 폐쇄몰: 비로그인 시 로그인 유도 */}
         <div className="mt-auto pt-2 md:pt-4 space-y-2">
-          <NumberStepper
-            value={quantity}
-            onChange={setQuantity}
-            min={0}
-            max={product.stock}
-            size="sm"
-            disabled={product.stockStatus === 'out_of_stock'}
-          />
-          <Button
-            size="sm"
-            onClick={() => addToCart(product, quantity)}
-            disabled={product.stockStatus === 'out_of_stock'}
-            className="w-full btn-hover text-xs md:text-sm"
-          >
-            <ShoppingCart className="w-3 h-3 md:w-4 md:h-4 mr-1" />
-            장바구니
-          </Button>
+          {isLoggedIn ? (
+            <>
+              <NumberStepper
+                value={quantity}
+                onChange={setQuantity}
+                min={0}
+                max={product.stock}
+                size="sm"
+                disabled={product.stockStatus === 'out_of_stock'}
+              />
+              <Button
+                size="sm"
+                onClick={() => addToCart(product, quantity)}
+                disabled={product.stockStatus === 'out_of_stock'}
+                className="w-full btn-hover text-xs md:text-sm"
+              >
+                <ShoppingCart className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                장바구니
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => navigate('/login')}
+              className="w-full text-xs md:text-sm"
+            >
+              <Lock className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+              로그인하여 가격 확인
+            </Button>
+          )}
         </div>
       </div>
     </div>

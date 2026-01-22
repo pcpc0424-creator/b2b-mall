@@ -1,0 +1,233 @@
+import { useState, useRef } from 'react'
+import { Save, Image, Link as LinkIcon, Eye, EyeOff, Upload, Trash2 } from 'lucide-react'
+import { useAdminStore } from '../store/adminStore'
+import { Button, Card, CardContent } from '../../components/ui'
+
+export function BannerSettingsPage() {
+  const { siteSettings, updateTopBanner } = useAdminStore()
+  const [isSaving, setIsSaving] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 로컬 상태
+  const [bannerImage, setBannerImage] = useState(siteSettings?.topBanner?.image || '')
+  const [bannerAlt, setBannerAlt] = useState(siteSettings?.topBanner?.alt || '가성비연구소 PRICE LAB')
+  const [bannerLink, setBannerLink] = useState(siteSettings?.topBanner?.link || '')
+  const [isActive, setIsActive] = useState(siteSettings?.topBanner?.isActive ?? true)
+
+  // 이미지 파일 업로드 핸들러
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // 파일 크기 체크 (10MB 제한)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('파일 크기는 10MB 이하로 선택해주세요.')
+      return
+    }
+
+    // 이미지 파일 체크
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드 가능합니다.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string
+      setBannerImage(base64)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // 이미지 삭제
+  const handleRemoveImage = () => {
+    setBannerImage('')
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  // 저장
+  const handleSave = async () => {
+    setIsSaving(true)
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    updateTopBanner({
+      image: bannerImage,
+      alt: bannerAlt,
+      link: bannerLink,
+      isActive,
+    })
+
+    setIsSaving(false)
+    alert('저장되었습니다.')
+  }
+
+  // 기본 배너 URL
+  const defaultBannerUrl = `${import.meta.env.BASE_URL}be.jpeg`
+  const displayImage = bannerImage || defaultBannerUrl
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-bold text-neutral-900">배너 이미지 설정</h1>
+        <Button onClick={handleSave} disabled={isSaving} size="sm">
+          <Save className="w-4 h-4 mr-1" />
+          {isSaving ? '저장...' : '저장'}
+        </Button>
+      </div>
+
+      {/* 활성화 토글 */}
+      <Card>
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isActive ? (
+                <Eye className="w-4 h-4 text-green-600" />
+              ) : (
+                <EyeOff className="w-4 h-4 text-neutral-400" />
+              )}
+              <span className="text-sm font-medium text-neutral-900">배너 표시</span>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-10 h-5 bg-neutral-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+            </label>
+          </div>
+          <p className="text-xs text-neutral-500 mt-1">
+            비활성화하면 홈페이지 상단 배너가 숨겨집니다.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* 현재 배너 미리보기 */}
+      <Card>
+        <CardContent className="p-3 space-y-3">
+          <div className="flex items-center gap-2">
+            <Image className="w-4 h-4 text-neutral-500" />
+            <span className="text-sm font-medium text-neutral-900">현재 배너</span>
+          </div>
+
+          <div className="relative border border-neutral-200 rounded-lg overflow-hidden">
+            <img
+              src={displayImage}
+              alt={bannerAlt}
+              className="w-full h-auto object-cover"
+            />
+            {!bannerImage && (
+              <div className="absolute bottom-2 right-2">
+                <span className="px-2 py-1 bg-neutral-900/70 text-white text-xs rounded">
+                  기본 이미지
+                </span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 이미지 업로드 */}
+      <Card>
+        <CardContent className="p-3 space-y-3">
+          <div className="flex items-center gap-2">
+            <Upload className="w-4 h-4 text-neutral-500" />
+            <span className="text-sm font-medium text-neutral-900">이미지 변경</span>
+          </div>
+
+          <div className="space-y-3">
+            {/* 파일 업로드 */}
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="banner-upload"
+              />
+              <label
+                htmlFor="banner-upload"
+                className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-neutral-300 rounded-lg cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors"
+              >
+                <Upload className="w-5 h-5 text-neutral-400" />
+                <span className="text-sm text-neutral-600">
+                  클릭하여 이미지 업로드 (최대 10MB)
+                </span>
+              </label>
+            </div>
+
+            {/* 또는 URL 입력 */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-px bg-neutral-200" />
+              <span className="text-xs text-neutral-400">또는</span>
+              <div className="flex-1 h-px bg-neutral-200" />
+            </div>
+
+            <div>
+              <label className="block text-xs text-neutral-500 mb-1">이미지 URL 직접 입력</label>
+              <input
+                type="text"
+                value={bannerImage.startsWith('data:') ? '' : bannerImage}
+                onChange={(e) => setBannerImage(e.target.value)}
+                placeholder="https://example.com/banner.jpg"
+                className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            {/* 이미지 삭제 (기본으로 되돌리기) */}
+            {bannerImage && (
+              <Button variant="outline" size="sm" onClick={handleRemoveImage} className="text-red-600 border-red-200 hover:bg-red-50">
+                <Trash2 className="w-4 h-4 mr-1" />
+                기본 이미지로 되돌리기
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 기타 설정 */}
+      <Card>
+        <CardContent className="p-3 space-y-3">
+          <span className="text-sm font-medium text-neutral-900">기타 설정</span>
+
+          {/* 대체 텍스트 */}
+          <div>
+            <label className="block text-xs text-neutral-500 mb-1">
+              대체 텍스트 (접근성용)
+            </label>
+            <input
+              type="text"
+              value={bannerAlt}
+              onChange={(e) => setBannerAlt(e.target.value)}
+              placeholder="가성비연구소 PRICE LAB"
+              className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          {/* 클릭 링크 */}
+          <div>
+            <label className="flex items-center gap-1 text-xs text-neutral-500 mb-1">
+              <LinkIcon className="w-3 h-3" />
+              클릭 시 이동할 링크 (선택사항)
+            </label>
+            <input
+              type="text"
+              value={bannerLink}
+              onChange={(e) => setBannerLink(e.target.value)}
+              placeholder="/promotions 또는 https://example.com"
+              className="w-full px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <p className="text-xs text-neutral-400 mt-1">
+              비워두면 클릭해도 이동하지 않습니다.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

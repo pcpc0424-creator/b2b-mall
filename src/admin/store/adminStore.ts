@@ -15,7 +15,9 @@ import {
   MemberFilters,
   PromotionFilters,
   PaginationParams,
-  TierSettings
+  TierSettings,
+  PopupModal,
+  SiteSettings
 } from '../types/admin'
 import { UserTier } from '../../types'
 import { products as mockProducts, promotions as mockPromotions } from '../../data'
@@ -126,6 +128,19 @@ interface AdminState {
   setTierSettings: (settings: TierSettings) => void
   updateTierSettings: (updates: Partial<TierSettings>) => void
   updateTierThreshold: (tier: UserTier, updates: Partial<TierSettings['thresholds'][0]>) => void
+
+  // Popup Modals
+  popupModals: PopupModal[]
+  setPopupModals: (modals: PopupModal[]) => void
+  addPopupModal: (modal: PopupModal) => void
+  updatePopupModal: (id: string, updates: Partial<PopupModal>) => void
+  deletePopupModal: (id: string) => void
+  togglePopupModalActive: (id: string) => void
+
+  // Site Settings
+  siteSettings: SiteSettings
+  updateSiteSettings: (updates: Partial<SiteSettings>) => void
+  updateTopBanner: (updates: Partial<SiteSettings['topBanner']>) => void
 
   // UI State
   isSidebarCollapsed: boolean
@@ -282,6 +297,62 @@ export const useAdminStore = create<AdminState>()(
         }
       })),
 
+      // Popup Modals - 기본 샘플 모달
+      popupModals: [
+        {
+          id: 'modal-1',
+          title: '환영합니다!',
+          content: '<p>가성비연구소에 오신 것을 환영합니다.</p><p>회원가입 시 <strong>10% 할인 쿠폰</strong>을 드립니다!</p>',
+          isActive: false,
+          targetPages: ['home'],
+          showOnce: true,
+          showToLoggedInOnly: false,
+          buttonText: '회원가입하기',
+          buttonLink: '/register',
+          priority: 10,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+      ],
+      setPopupModals: (modals) => set({ popupModals: modals }),
+      addPopupModal: (modal) => set((state) => ({
+        popupModals: [...state.popupModals, modal]
+      })),
+      updatePopupModal: (id, updates) => set((state) => ({
+        popupModals: state.popupModals.map(m =>
+          m.id === id ? { ...m, ...updates, updatedAt: new Date() } : m
+        )
+      })),
+      deletePopupModal: (id) => set((state) => ({
+        popupModals: state.popupModals.filter(m => m.id !== id)
+      })),
+      togglePopupModalActive: (id) => set((state) => ({
+        popupModals: state.popupModals.map(m =>
+          m.id === id ? { ...m, isActive: !m.isActive, updatedAt: new Date() } : m
+        )
+      })),
+
+      // Site Settings - 기본값 (기본 배너 이미지 사용)
+      siteSettings: {
+        topBanner: {
+          image: '', // 빈 값이면 기본 이미지 사용
+          alt: '가성비연구소 PRICE LAB',
+          link: '',
+          isActive: true,
+        },
+        updatedAt: new Date(),
+      },
+      updateSiteSettings: (updates) => set((state) => ({
+        siteSettings: { ...state.siteSettings, ...updates, updatedAt: new Date() }
+      })),
+      updateTopBanner: (updates) => set((state) => ({
+        siteSettings: {
+          ...state.siteSettings,
+          topBanner: { ...state.siteSettings.topBanner, ...updates },
+          updatedAt: new Date()
+        }
+      })),
+
       // UI State
       isSidebarCollapsed: false,
       toggleSidebar: () => set((state) => ({
@@ -301,6 +372,8 @@ export const useAdminStore = create<AdminState>()(
         tierSettings: state.tierSettings,
         products: state.products,
         promotions: state.promotions,
+        popupModals: state.popupModals,
+        siteSettings: state.siteSettings,
       }),
       onRehydrateStorage: () => {
         console.log('[adminStore] hydration 시작')

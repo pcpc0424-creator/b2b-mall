@@ -295,7 +295,12 @@ export const mockUser: User = {
   id: "u1",
   name: "김정담",
   email: "jd.kim@email.com",
-  tier: "vip"
+  tier: "vip",
+  provider: "email",
+  createdAt: new Date('2023-01-15'),
+  lastLoginAt: new Date(),
+  isActive: true,
+  marketingConsent: true
 }
 
 export const mockSalesData: SalesData[] = [

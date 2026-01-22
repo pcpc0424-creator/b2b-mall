@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Zap, ArrowRight, Clock, ShoppingCart } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ChevronLeft, ChevronRight, Zap, ArrowRight, Clock, ShoppingCart, Lock } from 'lucide-react'
 import { useStore, getTierLabel, getPriceByTier } from '../store'
 import { useAdminStore } from '../admin/store/adminStore'
 import { categories, products as defaultProducts } from '../data'
@@ -12,7 +12,7 @@ import { Product } from '../types'
 
 export function HomePage() {
   const { user, isLoggedIn } = useStore()
-  const { products: adminProducts, promotions } = useAdminStore()
+  const { products: adminProducts, promotions, siteSettings } = useAdminStore()
   const [currentSlide, setCurrentSlide] = useState(0)
 
   // 관리자 상품과 기본 상품 병합 (관리자 상품 우선)
@@ -60,16 +60,34 @@ export function HomePage() {
     return products.filter(p => p.categoryId === categoryId).slice(0, 3)
   }
 
+  // 배너 설정
+  const bannerImage = siteSettings?.topBanner?.image || `${import.meta.env.BASE_URL}be.jpeg`
+  const bannerAlt = siteSettings?.topBanner?.alt || '가성비연구소 PRICE LAB'
+  const bannerLink = siteSettings?.topBanner?.link
+  const isBannerActive = siteSettings?.topBanner?.isActive ?? true
+
   return (
     <div>
       {/* Top Banner - 가성비연구소 */}
-      <section className="w-full">
-        <img
-          src={`${import.meta.env.BASE_URL}be.jpeg`}
-          alt="가성비연구소 PRICE LAB"
-          className="w-full h-auto object-cover"
-        />
-      </section>
+      {isBannerActive && (
+        <section className="w-full">
+          {bannerLink ? (
+            <a href={bannerLink} className="block">
+              <img
+                src={bannerImage}
+                alt={bannerAlt}
+                className="w-full h-auto object-cover"
+              />
+            </a>
+          ) : (
+            <img
+              src={bannerImage}
+              alt={bannerAlt}
+              className="w-full h-auto object-cover"
+            />
+          )}
+        </section>
+      )}
 
       {/* Hero Section - 캐러셀 스타일 */}
       <section className="relative bg-neutral-100 py-2 md:py-6 overflow-hidden">
@@ -222,11 +240,20 @@ export function HomePage() {
                             <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
                             <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
                             <div className="mt-1">
-                              <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs font-bold text-red-500">{discountRate}%</span>
-                                <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
-                              </div>
+                              {isLoggedIn ? (
+                                <>
+                                  <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                                    <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="flex items-center gap-1 text-neutral-400">
+                                  <Lock className="w-3 h-3" />
+                                  <span className="text-[10px]">회원전용</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -264,11 +291,20 @@ export function HomePage() {
                               <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
                               <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
                               <div className="mt-1">
-                                <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs font-bold text-red-500">{discountRate}%</span>
-                                  <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
-                                </div>
+                                {isLoggedIn ? (
+                                  <>
+                                    <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                                      <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="flex items-center gap-1 text-neutral-400">
+                                    <Lock className="w-3 h-3" />
+                                    <span className="text-[10px]">회원전용</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -360,11 +396,20 @@ export function HomePage() {
                             <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
                             <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
                             <div className="mt-1">
-                              <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs font-bold text-red-500">{discountRate}%</span>
-                                <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
-                              </div>
+                              {isLoggedIn ? (
+                                <>
+                                  <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                                    <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="flex items-center gap-1 text-neutral-400">
+                                  <Lock className="w-3 h-3" />
+                                  <span className="text-[10px]">회원전용</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -402,11 +447,20 @@ export function HomePage() {
                               <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
                               <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
                               <div className="mt-1">
-                                <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs font-bold text-red-500">{discountRate}%</span>
-                                  <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
-                                </div>
+                                {isLoggedIn ? (
+                                  <>
+                                    <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                                      <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="flex items-center gap-1 text-neutral-400">
+                                    <Lock className="w-3 h-3" />
+                                    <span className="text-[10px]">회원전용</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -498,11 +552,20 @@ export function HomePage() {
                             <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
                             <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
                             <div className="mt-1">
-                              <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs font-bold text-red-500">{discountRate}%</span>
-                                <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
-                              </div>
+                              {isLoggedIn ? (
+                                <>
+                                  <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                                    <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="flex items-center gap-1 text-neutral-400">
+                                  <Lock className="w-3 h-3" />
+                                  <span className="text-[10px]">회원전용</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -540,11 +603,20 @@ export function HomePage() {
                               <p className="text-[10px] text-neutral-500 truncate">{product.brand}</p>
                               <p className="text-xs font-medium text-neutral-800 truncate">{product.name}</p>
                               <div className="mt-1">
-                                <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs font-bold text-red-500">{discountRate}%</span>
-                                  <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
-                                </div>
+                                {isLoggedIn ? (
+                                  <>
+                                    <p className="text-[10px] text-neutral-400 line-through">{formatPrice(retailPrice)}</p>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-xs font-bold text-red-500">{discountRate}%</span>
+                                      <span className="text-xs font-bold text-neutral-900">{formatPrice(salePrice)}</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="flex items-center gap-1 text-neutral-400">
+                                    <Lock className="w-3 h-3" />
+                                    <span className="text-[10px]">회원전용</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

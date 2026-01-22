@@ -1,5 +1,15 @@
 export type UserTier = 'guest' | 'member' | 'premium' | 'vip'
 
+// 소셜 로그인 제공자 타입
+export type SocialProvider = 'kakao' | 'naver' | 'google' | 'email'
+
+// 소셜 로그인 연동 정보
+export interface SocialAccount {
+  provider: SocialProvider
+  providerId: string  // 소셜 서비스에서 제공하는 고유 ID
+  connectedAt: Date
+}
+
 export interface User {
   id: string
   name: string
@@ -7,6 +17,19 @@ export interface User {
   tier: UserTier
   company?: string
   businessNumber?: string
+  phone?: string
+
+  // 소셜 로그인 관련
+  provider: SocialProvider  // 가입 경로
+  providerId?: string       // 소셜 서비스 고유 ID
+  socialAccounts?: SocialAccount[]  // 연동된 소셜 계정들
+  profileImage?: string     // 소셜에서 가져온 프로필 이미지
+
+  // 회원 관리
+  createdAt: Date
+  lastLoginAt?: Date
+  isActive: boolean
+  marketingConsent?: boolean  // 마케팅 수신 동의
 }
 
 export interface Category {

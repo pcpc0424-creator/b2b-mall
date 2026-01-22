@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ShoppingCart, Zap, ChevronDown, Truck, Package, X, ZoomIn, ZoomOut } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ShoppingCart, Zap, ChevronDown, Truck, Package, X, ZoomIn, ZoomOut, Lock } from 'lucide-react'
 import { useStore, getPriceByTier, getTierLabel, getTierColor } from '../store'
 import { useAdminStore } from '../admin/store/adminStore'
 import { products as defaultProducts, categories } from '../data'
@@ -14,7 +14,7 @@ import { ProductOptionAdmin, OptionValue, QuantityDiscount } from '../admin/type
 export function ProductDetailPage() {
   const { productId } = useParams()
   const navigate = useNavigate()
-  const { user, addToCart } = useStore()
+  const { user, addToCart, isLoggedIn } = useStore()
   const [showAddedToast, setShowAddedToast] = useState(false)
   const { products: adminProducts } = useAdminStore()
   const [quantity, setQuantity] = useState(0)
@@ -323,37 +323,50 @@ export function ProductDetailPage() {
 
           <h1 className="text-2xl font-bold text-neutral-900 mb-4">{product.name}</h1>
 
-          {/* Price Section */}
+          {/* Price Section - 폐쇄몰: 비로그인 시 가격 숨김 */}
           <div className="bg-neutral-50 rounded-lg p-6 mb-6">
-            {/* 상품가격 (정상가) */}
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm text-neutral-500 w-16">상품가격</span>
-              <span className="text-base text-neutral-400 line-through">{formatPrice(retailPrice)}</span>
-            </div>
+            {isLoggedIn ? (
+              <>
+                {/* 상품가격 (정상가) */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-neutral-500 w-16">상품가격</span>
+                  <span className="text-base text-neutral-400 line-through">{formatPrice(retailPrice)}</span>
+                </div>
 
-            {/* 할인률 */}
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm text-neutral-500 w-16">할인</span>
-              <span className="text-lg font-bold text-red-500">{tierDiscountPercent}%</span>
-              {tier !== 'guest' && tierDiscountPercent > discountPercent && (
-                <span className="text-xs text-red-400">(기본 {discountPercent}% + 등급추가할인)</span>
-              )}
-            </div>
+                {/* 할인률 */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-neutral-500 w-16">할인</span>
+                  <span className="text-lg font-bold text-red-500">{tierDiscountPercent}%</span>
+                  {tier !== 'guest' && tierDiscountPercent > discountPercent && (
+                    <span className="text-xs text-red-400">(기본 {discountPercent}% + 등급추가할인)</span>
+                  )}
+                </div>
 
-            {/* 판매가 */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-sm text-neutral-500 w-16">판매가</span>
-              <span className="text-2xl font-bold text-primary-600">{formatPrice(tier === 'guest' ? memberPrice : currentPrice)}</span>
-              {tier !== 'guest' && (
-                <span className={cn('text-xs font-medium px-2 py-0.5 rounded', getTierColor(tier))}>
-                  {getTierLabel(tier)}
-                </span>
-              )}
-            </div>
-
+                {/* 판매가 */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-sm text-neutral-500 w-16">판매가</span>
+                  <span className="text-2xl font-bold text-primary-600">{formatPrice(tier === 'guest' ? memberPrice : currentPrice)}</span>
+                  {tier !== 'guest' && (
+                    <span className={cn('text-xs font-medium px-2 py-0.5 rounded', getTierColor(tier))}>
+                      {getTierLabel(tier)}
+                    </span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6">
+                <Lock className="w-10 h-10 text-neutral-400 mb-3" />
+                <p className="text-neutral-600 font-medium mb-1">회원 전용 가격</p>
+                <p className="text-sm text-neutral-500 mb-4">로그인 후 회원 특별가를 확인하세요</p>
+                <Button onClick={() => navigate('/login')} size="sm">
+                  로그인하여 가격 확인
+                </Button>
+              </div>
+            )}
           </div>
 
-          {/* 옵션 선택 (쿠팡 스타일) */}
+          {/* 옵션 선택 (쿠팡 스타일) - 로그인 회원만 표시 */}
+          {isLoggedIn && (
           <div className="mb-6 space-y-4">
             {/* 상품 옵션들 */}
             {productOptions.map((option) => {
@@ -532,8 +545,10 @@ export function ProductDetailPage() {
               </div>
             )}
           </div>
+          )}
 
-          {/* Stock & Quantity */}
+          {/* Stock & Quantity - 로그인 회원만 표시 */}
+          {isLoggedIn && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-neutral-600">재고 상태</span>
@@ -563,9 +578,12 @@ export function ProductDetailPage() {
               </span>
             </div>
           </div>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3 mb-6">
+          {isLoggedIn ? (
+            <>
             <Button
               size="lg"
               onClick={() => {
@@ -613,6 +631,17 @@ export function ProductDetailPage() {
               <ShoppingCart className="w-5 h-5 mr-2" />
               장바구니 담기
             </Button>
+            </>
+          ) : (
+            <Button
+              size="lg"
+              onClick={() => navigate('/login')}
+              className="flex-1"
+            >
+              <Lock className="w-5 h-5 mr-2" />
+              로그인하고 구매하기
+            </Button>
+          )}
           </div>
 
           {/* 장바구니 추가 알림 */}

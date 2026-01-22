@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
-import { Search, Eye, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Search, Eye, RefreshCw } from 'lucide-react'
 import { useAdminStore } from '../store/adminStore'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { formatPrice, cn } from '../../lib/utils'
 import { MemberListItem, MemberStatus } from '../types/admin'
-import { UserTier } from '../../types'
+import { UserTier, SocialProvider } from '../../types'
+import { getAllMembers, getProviderName, updateMemberTier as updateMemberTierDB, updateMemberActive } from '../../services/auth'
 
 // 데모 회원 데이터
 const mockMembers: MemberListItem[] = [
@@ -85,11 +86,43 @@ export function MemberManagementPage() {
   const [tierFilter, setTierFilter] = useState<UserTier | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<MemberStatus | 'all'>('all')
   const [selectedMember, setSelectedMember] = useState<MemberListItem | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  // 데모 데이터 로드
-  useEffect(() => {
-    setMembers(mockMembers)
+  // 회원 목록 로드 함수
+  const loadMembers = useCallback(() => {
+    setIsLoading(true)
+    try {
+      // 실제 가입한 회원 목록 가져오기
+      const registeredMembers = getAllMembers()
+      const convertedMembers: MemberListItem[] = registeredMembers.map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        tier: user.tier,
+        status: user.isActive ? 'active' : 'inactive',
+        totalOrders: 0,
+        totalSpent: 0,
+        createdAt: new Date(user.createdAt),
+        lastOrderAt: user.lastLoginAt ? new Date(user.lastLoginAt) : undefined,
+        company: user.company,
+        businessNumber: user.businessNumber,
+        provider: user.provider,
+      }))
+
+      // 데모 데이터와 실제 회원 합치기 (중복 제거)
+      const existingIds = new Set(convertedMembers.map(m => m.email))
+      const filteredMockMembers = mockMembers.filter(m => !existingIds.has(m.email))
+
+      setMembers([...convertedMembers, ...filteredMockMembers])
+    } finally {
+      setIsLoading(false)
+    }
   }, [setMembers])
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    loadMembers()
+  }, [loadMembers])
 
   // 필터링
   const filteredMembers = members.filter(member => {
@@ -103,14 +136,31 @@ export function MemberManagementPage() {
     return matchesSearch && matchesTier && matchesStatus
   })
 
-  // 등급 변경
-  const handleTierChange = (memberId: string, newTier: UserTier) => {
+  // 등급 변경 (DB + Store 동시 업데이트)
+  const handleTierChange = async (memberId: string, newTier: UserTier) => {
+    // Store 즉시 업데이트 (UI 반영)
     updateMemberTier(memberId, newTier)
+
+    // DB 업데이트 (실제 가입 회원인 경우)
+    const result = await updateMemberTierDB(memberId, newTier)
+    if (!result.success) {
+      // 데모 회원인 경우 에러 무시 (DB에 없는 회원)
+      console.log('데모 회원 등급 변경:', memberId)
+    }
   }
 
-  // 상태 변경
-  const handleStatusChange = (memberId: string, newStatus: MemberStatus) => {
+  // 상태 변경 (DB + Store 동시 업데이트)
+  const handleStatusChange = async (memberId: string, newStatus: MemberStatus) => {
+    // Store 즉시 업데이트 (UI 반영)
     updateMemberStatus(memberId, newStatus)
+
+    // DB 업데이트 (active/inactive만 지원)
+    const isActive = newStatus === 'active'
+    const result = await updateMemberActive(memberId, isActive)
+    if (!result.success) {
+      // 데모 회원인 경우 에러 무시 (DB에 없는 회원)
+      console.log('데모 회원 상태 변경:', memberId)
+    }
   }
 
   return (
@@ -121,6 +171,15 @@ export function MemberManagementPage() {
           <h1 className="text-lg font-bold text-neutral-900">회원 관리</h1>
           <span className="text-sm text-neutral-500">{filteredMembers.length}명</span>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={loadMembers}
+          disabled={isLoading}
+        >
+          <RefreshCw className={cn("w-4 h-4 mr-1", isLoading && "animate-spin")} />
+          새로고침
+        </Button>
       </div>
 
       {/* Filters - 한 줄 */}
@@ -166,17 +225,28 @@ export function MemberManagementPage() {
           return (
             <Card key={member.id}>
               <CardContent className="p-3 overflow-hidden">
-                {/* 첫째 줄: 이름 + 등급 + 상태 */}
+                {/* 첫째 줄: 이름 + 가입경로 + 등급 + 상태 */}
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-neutral-900">{member.name}</span>
+                    {member.provider && (
+                      <span className={cn(
+                        'px-1.5 py-0.5 rounded text-xs',
+                        member.provider === 'kakao' && 'bg-yellow-100 text-yellow-700',
+                        member.provider === 'naver' && 'bg-green-100 text-green-700',
+                        member.provider === 'google' && 'bg-blue-100 text-blue-700',
+                        member.provider === 'email' && 'bg-neutral-100 text-neutral-600'
+                      )}>
+                        {member.provider === 'email' ? '이메일' : member.provider.charAt(0).toUpperCase() + member.provider.slice(1)}
+                      </span>
+                    )}
                     <span className={cn('px-2 py-0.5 rounded text-xs font-medium', tier.color)}>
                       {tier.label}
                     </span>
                   </div>
                   <Badge variant={status.variant} size="sm">{status.label}</Badge>
                 </div>
-                {/* 둘째 줄: 금액 + 상세버튼 */}
+                {/* 둘째 줄: 이메일 + 금액 + 상세버튼 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-neutral-500 min-w-0">
                     <span className="truncate">{member.email}</span>
@@ -216,6 +286,20 @@ export function MemberManagementPage() {
                 <div className="bg-neutral-50 rounded-lg p-3 text-sm space-y-1">
                   <div className="flex justify-between"><span className="text-neutral-500">이름</span><span>{selectedMember.name}</span></div>
                   <div className="flex justify-between"><span className="text-neutral-500">이메일</span><span>{selectedMember.email}</span></div>
+                  {selectedMember.provider && (
+                    <div className="flex justify-between">
+                      <span className="text-neutral-500">가입경로</span>
+                      <span className={cn(
+                        'px-2 py-0.5 rounded text-xs font-medium',
+                        selectedMember.provider === 'kakao' && 'bg-yellow-100 text-yellow-800',
+                        selectedMember.provider === 'naver' && 'bg-green-100 text-green-800',
+                        selectedMember.provider === 'google' && 'bg-blue-100 text-blue-800',
+                        selectedMember.provider === 'email' && 'bg-neutral-100 text-neutral-700'
+                      )}>
+                        {getProviderName(selectedMember.provider)}
+                      </span>
+                    </div>
+                  )}
                   {selectedMember.company && <div className="flex justify-between"><span className="text-neutral-500">회사</span><span>{selectedMember.company}</span></div>}
                   {selectedMember.businessNumber && <div className="flex justify-between"><span className="text-neutral-500">사업자번호</span><span>{selectedMember.businessNumber}</span></div>}
                 </div>
