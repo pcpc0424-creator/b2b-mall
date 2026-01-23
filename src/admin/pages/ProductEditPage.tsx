@@ -355,6 +355,20 @@ export function ProductEditPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
+    // 필수 필드 검증
+    if (!formData.name.trim()) {
+      alert('상품명을 입력해주세요.')
+      return
+    }
+    if (!formData.sku.trim()) {
+      alert('SKU를 입력해주세요.')
+      return
+    }
+    if (formData.retailPrice <= 0) {
+      alert('정상가를 입력해주세요.')
+      return
+    }
+
     const productData = {
       id: isNew ? `p_${Date.now()}` : id!,
       sku: formData.sku,
@@ -364,9 +378,9 @@ export function ProductEditPage() {
       images: images.length > 0 ? images : ['https://picsum.photos/seed/new/400/400'],
       prices: {
         retail: formData.retailPrice,
-        member: formData.memberPrice,
-        premium: formData.premiumPrice,
-        vip: formData.vipPrice,
+        member: formData.memberPrice || formData.retailPrice,
+        premium: formData.premiumPrice || formData.retailPrice,
+        vip: formData.vipPrice || formData.retailPrice,
       },
       minQuantity: formData.minQuantity,
       stock: formData.stock,
@@ -379,80 +393,22 @@ export function ProductEditPage() {
       detailImages: detailImages,
       showOptionImages: showOptionImages,
       quantityDiscounts: enableQuantityDiscount ? quantityDiscounts : [],
-      createdAt: new Date(),
+      createdAt: isNew ? new Date() : new Date(),
       updatedAt: new Date(),
     }
 
     console.log('[ProductEditPage] 저장할 상품:', productData)
-    console.log('[ProductEditPage] 저장할 adminOptions:', options)
 
-    // 1. 먼저 localStorage에서 현재 products 가져오기
-    let currentProducts: any[] = []
-    try {
-      const stored = localStorage.getItem('admin-storage')
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        currentProducts = parsed.state?.products || []
-      }
-    } catch (e) {
-      console.error('localStorage 읽기 에러:', e)
-    }
-
-    // 2. products 배열 업데이트
-    console.log('[ProductEditPage] 현재 localStorage products 수:', currentProducts.length)
-    console.log('[ProductEditPage] options 상태:', options)
-
-    if (isNew) {
-      currentProducts = [...currentProducts, productData]
-      console.log('[ProductEditPage] 새 상품 추가')
-    } else {
-      // 기존 상품이 있는지 확인
-      const existingIndex = currentProducts.findIndex(p => p.id === id)
-      if (existingIndex >= 0) {
-        // 기존 상품 업데이트
-        currentProducts[existingIndex] = { ...currentProducts[existingIndex], ...productData }
-        console.log('[ProductEditPage] 기존 상품 업데이트')
-      } else {
-        // 상품이 없으면 추가
-        currentProducts = [...currentProducts, productData]
-        console.log('[ProductEditPage] 상품이 없어서 새로 추가')
-      }
-    }
-
-    // 3. zustand store 업데이트
+    // zustand store 업데이트 (persist 미들웨어가 자동으로 localStorage에 저장)
     if (isNew) {
       addProduct(productData)
+      console.log('[ProductEditPage] 새 상품 추가 완료')
     } else {
       updateProduct(id!, productData)
+      console.log('[ProductEditPage] 상품 업데이트 완료')
     }
 
-    // 4. localStorage에 직접 저장 (zustand persist 완전 우회)
-    try {
-      const stored = localStorage.getItem('admin-storage')
-      const parsed = stored ? JSON.parse(stored) : { state: {}, version: 0 }
-
-      parsed.state = {
-        ...parsed.state,
-        products: currentProducts,
-      }
-
-      localStorage.setItem('admin-storage', JSON.stringify(parsed))
-      console.log('[ProductEditPage] ✅ localStorage 직접 저장 완료!')
-      console.log('[ProductEditPage] 저장된 products:', currentProducts.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        adminOptions: p.adminOptions?.length || 0
-      })))
-
-      // 저장 확인
-      const verify = JSON.parse(localStorage.getItem('admin-storage') || '{}')
-      const savedProduct = verify.state?.products?.find((p: any) => p.id === (isNew ? productData.id : id))
-      console.log('[ProductEditPage] 저장 확인 - 해당 상품:', savedProduct?.name, 'adminOptions:', savedProduct?.adminOptions)
-    } catch (e) {
-      console.error('[ProductEditPage] localStorage 저장 에러:', e)
-    }
-
-    // 5. 페이지 이동
+    // 페이지 이동
     navigate('/admin/products')
   }
 

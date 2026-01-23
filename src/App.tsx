@@ -56,7 +56,7 @@ function ScrollToTop() {
 
 function App() {
   return (
-    <BrowserRouter basename="/b2b-mall">
+    <BrowserRouter basename="">
       <ScrollToTop />
       <Routes>
         {/* Public Routes - 비로그인 접근 가능 */}

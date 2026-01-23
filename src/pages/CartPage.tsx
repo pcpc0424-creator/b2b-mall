@@ -182,8 +182,8 @@ export function CartPage() {
         orderId,
         orderName,
         customerName: user?.name || '고객',
-        successUrl: `${window.location.origin}/b2b-mall/payment/success`,
-        failUrl: `${window.location.origin}/b2b-mall/payment/fail`,
+        successUrl: `${window.location.origin}/payment/success`,
+        failUrl: `${window.location.origin}/payment/fail`,
       })
     } catch (error: any) {
       // 사용자 취소 시 무시
