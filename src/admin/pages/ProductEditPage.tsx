@@ -19,6 +19,7 @@ export function ProductEditPage() {
     sku: '',
     brand: '',
     categoryId: 1,
+    subcategory: '',
     retailPrice: 0,
     memberPrice: 0,
     premiumPrice: 0,
@@ -70,6 +71,7 @@ export function ProductEditPage() {
           sku: existingProduct.sku,
           brand: existingProduct.brand,
           categoryId: existingProduct.categoryId,
+          subcategory: existingProduct.subcategory || '',
           retailPrice: existingProduct.prices.retail,
           memberPrice: existingProduct.prices.member,
           premiumPrice: existingProduct.prices.premium,
@@ -375,6 +377,7 @@ export function ProductEditPage() {
       name: formData.name,
       brand: formData.brand,
       categoryId: formData.categoryId,
+      subcategory: formData.subcategory || undefined,
       images: images.length > 0 ? images : ['https://picsum.photos/seed/new/400/400'],
       prices: {
         retail: formData.retailPrice,
@@ -397,15 +400,11 @@ export function ProductEditPage() {
       updatedAt: new Date(),
     }
 
-    console.log('[ProductEditPage] 저장할 상품:', productData)
-
     // zustand store 업데이트 (persist 미들웨어가 자동으로 localStorage에 저장)
     if (isNew) {
       addProduct(productData)
-      console.log('[ProductEditPage] 새 상품 추가 완료')
     } else {
       updateProduct(id!, productData)
-      console.log('[ProductEditPage] 상품 업데이트 완료')
     }
 
     // 페이지 이동
@@ -480,11 +479,27 @@ export function ProductEditPage() {
                 </label>
                 <select
                   value={formData.categoryId}
-                  onChange={(e) => setFormData({ ...formData, categoryId: parseInt(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, categoryId: parseInt(e.target.value), subcategory: '' })}
                   className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  세부 카테고리
+                </label>
+                <select
+                  value={formData.subcategory}
+                  onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="">선택 안함</option>
+                  {(categories.find(cat => cat.id === formData.categoryId)?.subcategories || []).map(sub => (
+                    <option key={sub} value={sub}>{sub}</option>
                   ))}
                 </select>
               </div>

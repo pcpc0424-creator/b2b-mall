@@ -17,14 +17,11 @@ export function HomePage() {
 
   // 관리자 상품과 기본 상품 병합 (관리자 상품 우선)
   const products = useMemo((): Product[] => {
-    console.log('[HomePage] adminProducts:', adminProducts)
-    console.log('[HomePage] adminProducts.length:', adminProducts.length)
     const adminProductIds = new Set(adminProducts.map(p => p.id))
     const mergedProducts = [
       ...adminProducts.filter(p => p.isActive),
       ...defaultProducts.filter(p => !adminProductIds.has(p.id))
     ]
-    console.log('[HomePage] mergedProducts:', mergedProducts.length)
     return mergedProducts
   }, [adminProducts])
 

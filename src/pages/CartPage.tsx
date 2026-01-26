@@ -187,10 +187,7 @@ export function CartPage() {
       })
     } catch (error: any) {
       // 사용자 취소 시 무시
-      if (error.code === 'USER_CANCEL') {
-        console.log('사용자가 결제를 취소했습니다.')
-      } else {
-        console.error('결제 오류:', error)
+      if (error.code !== 'USER_CANCEL') {
         alert('결제 처리 중 오류가 발생했습니다.')
       }
     } finally {

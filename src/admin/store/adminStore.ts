@@ -50,13 +50,9 @@ const initialPromotions: AdminPromotion[] = mockPromotions.map(p => ({
 // 커스텀 스토리지 - adminOptions가 제대로 저장/로드되도록 보장
 const customStorage: StateStorage = {
   getItem: (name: string): string | null => {
-    const str = localStorage.getItem(name)
-    if (!str) return null
-    console.log('[customStorage] getItem 호출:', name)
-    return str
+    return localStorage.getItem(name)
   },
   setItem: (name: string, value: string): void => {
-    console.log('[customStorage] setItem 호출:', name)
     localStorage.setItem(name, value)
   },
   removeItem: (name: string): void => {
@@ -168,21 +164,14 @@ export const useAdminStore = create<AdminState>()(
       setProductPagination: (pagination) => set({ productPagination: pagination }),
       setSelectedProductIds: (ids) => set({ selectedProductIds: ids }),
       addProduct: (product) => {
-        console.log('[adminStore] addProduct:', product)
-        console.log('[adminStore] addProduct adminOptions:', product.adminOptions)
         return set((state) => ({
           products: [...state.products, product]
         }))
       },
       updateProduct: (id, updates) => {
-        console.log('[adminStore] updateProduct id:', id)
-        console.log('[adminStore] updateProduct updates:', updates)
-        console.log('[adminStore] updateProduct adminOptions:', updates.adminOptions)
-        return set((state) => {
-          const newProducts = state.products.map(p => p.id === id ? { ...p, ...updates } : p)
-          console.log('[adminStore] 업데이트된 상품:', newProducts.find(p => p.id === id))
-          return { products: newProducts }
-        })
+        return set((state) => ({
+          products: state.products.map(p => p.id === id ? { ...p, ...updates } : p)
+        }))
       },
       deleteProduct: (id) => set((state) => ({
         products: state.products.filter(p => p.id !== id)
@@ -375,50 +364,6 @@ export const useAdminStore = create<AdminState>()(
         popupModals: state.popupModals,
         siteSettings: state.siteSettings,
       }),
-      onRehydrateStorage: () => {
-        console.log('[adminStore] hydration 시작')
-        return (state, error) => {
-          if (error) {
-            console.error('[adminStore] hydration 에러:', error)
-            return
-          }
-          console.log('[adminStore] hydration 완료')
-
-          // 첫 번째 상품에 수량별 할인 테스트 데이터 강제 적용
-          setTimeout(() => {
-            try {
-              const currentState = useAdminStore.getState()
-              const firstProduct = currentState.products[0]
-
-              // 첫 번째 상품에 quantityDiscounts가 없으면 추가
-              if (firstProduct && (!firstProduct.quantityDiscounts || firstProduct.quantityDiscounts.length === 0)) {
-                console.log('[adminStore] 첫 번째 상품에 수량별 할인 테스트 데이터 추가')
-                const updatedProducts = currentState.products.map((p, index) => {
-                  if (index === 0) {
-                    return {
-                      ...p,
-                      showOptionImages: true,
-                      quantityDiscounts: [
-                        { id: 'qd_1', quantity: 1, discountPercent: 0 },
-                        { id: 'qd_2', quantity: 2, discountPercent: 5, label: '인기' },
-                        { id: 'qd_3', quantity: 4, discountPercent: 10, label: '최저가' },
-                        { id: 'qd_4', quantity: 8, discountPercent: 15 },
-                      ]
-                    }
-                  }
-                  return p
-                })
-                useAdminStore.setState({ products: updatedProducts })
-                console.log('[adminStore] 수량별 할인 테스트 데이터 적용 완료')
-              } else {
-                console.log('[adminStore] 첫 번째 상품에 이미 quantityDiscounts 존재:', firstProduct?.quantityDiscounts)
-              }
-            } catch (e) {
-              console.error('[adminStore] 테스트 데이터 적용 에러:', e)
-            }
-          }, 100)
-        }
-      },
     }
   )
 )

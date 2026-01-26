@@ -76,6 +76,10 @@ export function ProductListPage() {
     ? products.filter(p => p.categoryId === parseInt(categoryId))
     : products
 
+  if (selectedFilters.subcategory !== 'all') {
+    filteredProducts = filteredProducts.filter(p => p.subcategory === selectedFilters.subcategory)
+  }
+
   if (selectedFilters.stockStatus !== 'all') {
     filteredProducts = filteredProducts.filter(p => p.stockStatus === selectedFilters.stockStatus)
   }

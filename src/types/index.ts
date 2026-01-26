@@ -46,6 +46,7 @@ export interface Product {
   name: string
   brand: string
   categoryId: number
+  subcategory?: string
   images: string[]
   prices: {
     retail: number    // 비회원가

@@ -142,11 +142,7 @@ export function MemberManagementPage() {
     updateMemberTier(memberId, newTier)
 
     // DB 업데이트 (실제 가입 회원인 경우)
-    const result = await updateMemberTierDB(memberId, newTier)
-    if (!result.success) {
-      // 데모 회원인 경우 에러 무시 (DB에 없는 회원)
-      console.log('데모 회원 등급 변경:', memberId)
-    }
+    await updateMemberTierDB(memberId, newTier)
   }
 
   // 상태 변경 (DB + Store 동시 업데이트)
@@ -156,11 +152,7 @@ export function MemberManagementPage() {
 
     // DB 업데이트 (active/inactive만 지원)
     const isActive = newStatus === 'active'
-    const result = await updateMemberActive(memberId, isActive)
-    if (!result.success) {
-      // 데모 회원인 경우 에러 무시 (DB에 없는 회원)
-      console.log('데모 회원 상태 변경:', memberId)
-    }
+    await updateMemberActive(memberId, isActive)
   }
 
   return (

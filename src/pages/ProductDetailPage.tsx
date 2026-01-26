@@ -88,14 +88,8 @@ export function ProductDetailPage() {
     // localStorage에서 직접 읽기 (zustand persist 문제 우회)
     const localStorageOptions = productId ? getAdminOptionsFromLocalStorage(productId) : []
 
-    console.log('=== 옵션 디버그 ===')
-    console.log('productId:', productId)
-    console.log('adminProduct.adminOptions:', adminProduct?.adminOptions)
-    console.log('localStorage adminOptions:', localStorageOptions)
-
     // 1. localStorage에서 직접 가져온 adminOptions 우선 사용
     if (localStorageOptions && localStorageOptions.length > 0) {
-      console.log('localStorage adminOptions 사용')
       return localStorageOptions.map((opt: any) => ({
         id: opt.id,
         name: opt.name,
@@ -104,7 +98,6 @@ export function ProductDetailPage() {
     }
     // 2. zustand store의 adminOptions 사용
     if (adminProduct?.adminOptions && adminProduct.adminOptions.length > 0) {
-      console.log('adminOptions 사용')
       return adminProduct.adminOptions.map(opt => ({
         id: opt.id,
         name: opt.name,
@@ -113,11 +106,9 @@ export function ProductDetailPage() {
     }
     // 3. 기본 상품의 options 확인
     if (defaultProduct?.options && defaultProduct.options.length > 0) {
-      console.log('defaultProduct.options 사용')
       return defaultProduct.options
     }
     // 4. product.options 폴백
-    console.log('폴백 사용')
     return product?.options || []
   }, [productId, adminProducts, product])
 

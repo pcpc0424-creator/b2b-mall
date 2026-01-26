@@ -10,14 +10,19 @@ export function ProductManagementPage() {
   const { products, deleteProduct, selectedProductIds, setSelectedProductIds } = useAdminStore()
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [subcategoryFilter, setSubcategoryFilter] = useState('all')
   const [stockFilter, setStockFilter] = useState('all')
+
+  const selectedCategory = categoryFilter !== 'all' ? categories.find(cat => cat.id === parseInt(categoryFilter)) : null
+  const subcategories = selectedCategory?.subcategories || []
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.sku.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = categoryFilter === 'all' || product.categoryId === parseInt(categoryFilter)
+    const matchesSubcategory = subcategoryFilter === 'all' || product.subcategory === subcategoryFilter
     const matchesStock = stockFilter === 'all' || product.stockStatus === stockFilter
-    return matchesSearch && matchesCategory && matchesStock
+    return matchesSearch && matchesCategory && matchesSubcategory && matchesStock
   })
 
   const handleSelectProduct = (productId: string, checked: boolean) => {
@@ -67,12 +72,22 @@ export function ProductManagementPage() {
         </div>
         <select
           value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
+          onChange={(e) => { setCategoryFilter(e.target.value); setSubcategoryFilter('all') }}
           className="px-2 py-2 text-sm border border-neutral-200 rounded-lg"
         >
           <option value="all">카테고리</option>
           {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
         </select>
+        {subcategories.length > 0 && (
+          <select
+            value={subcategoryFilter}
+            onChange={(e) => setSubcategoryFilter(e.target.value)}
+            className="px-2 py-2 text-sm border border-neutral-200 rounded-lg"
+          >
+            <option value="all">세부 카테고리</option>
+            {subcategories.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+          </select>
+        )}
         <select
           value={stockFilter}
           onChange={(e) => setStockFilter(e.target.value)}

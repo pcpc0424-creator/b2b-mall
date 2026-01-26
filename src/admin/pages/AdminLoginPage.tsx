@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react'
 import { useAdminStore } from '../store/adminStore'
 import { Button, Input } from '../../components/ui'
@@ -19,8 +19,7 @@ export function AdminLoginPage() {
 
   // 이미 로그인된 경우 리다이렉트
   if (isAdminAuthenticated) {
-    navigate(from, { replace: true })
-    return null
+    return <Navigate to={from} replace />
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
