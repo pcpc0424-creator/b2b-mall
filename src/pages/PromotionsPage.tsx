@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Clock, Tag, ArrowRight } from 'lucide-react'
-import { products } from '../data'
-import { usePromotions } from '../hooks/queries'
+import { usePromotions, useProducts } from '../hooks/queries'
 import { useStore } from '../store'
 import { ProductCard } from '../components/product'
 import { Badge, Card, CardContent } from '../components/ui'
@@ -9,6 +8,7 @@ import { Animated } from '../hooks'
 
 export function PromotionsPage() {
   const { data: promotions = [] } = usePromotions()
+  const { data: products = [] } = useProducts()
   const { user } = useStore()
   const tier = user?.tier || 'guest'
 
@@ -17,7 +17,7 @@ export function PromotionsPage() {
     .filter(p => p.isActive)
     .filter(p => tier === 'guest' || p.targetTiers.includes(tier))
 
-  // 프로모션 상품들 (할인율이 높은 상품들)
+  // 프로모션 상품들
   const promotionProducts = products.slice(0, 8)
 
   return (

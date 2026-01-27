@@ -4,9 +4,11 @@ import { useStore, getTierLabel } from '../store'
 import { Button, NumberStepper, Card, CardContent, Input } from '../components/ui'
 import { formatPrice, formatNumber, cn } from '../lib/utils'
 import { Animated } from '../hooks'
+import { useSaveQuote } from '../hooks/queries'
 
 export function QuotePage() {
   const { user, quoteItems, updateQuoteQuantity, removeFromQuote, clearQuote, getQuoteTotal, addToCart } = useStore()
+  const saveQuoteMutation = useSaveQuote()
   const [memo, setMemo] = useState('')
   const [showPreview, setShowPreview] = useState(false)
 
@@ -22,6 +24,34 @@ export function QuotePage() {
       addToCart(item.product, item.quantity)
     })
     clearQuote()
+  }
+
+  const handleSaveQuote = () => {
+    if (!user) {
+      alert('로그인이 필요합니다.')
+      return
+    }
+    saveQuoteMutation.mutate(
+      {
+        userId: user.id,
+        items: quoteItems.map(item => ({
+          productId: item.product.id,
+          productName: item.product.name,
+          sku: item.product.sku,
+          image: item.product.images[0] || '',
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
+          subtotal: item.subtotal,
+        })),
+        totalAmount,
+        memo: memo || undefined,
+        deliveryDate,
+      },
+      {
+        onSuccess: () => alert('견적서가 저장되었습니다.'),
+        onError: () => alert('견적서 저장에 실패했습니다.'),
+      }
+    )
   }
 
   const totalQuantity = quoteItems.reduce((sum, item) => sum + item.quantity, 0)
@@ -178,9 +208,9 @@ export function QuotePage() {
               견적서 미리보기
             </Button>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleSaveQuote} disabled={saveQuoteMutation.isPending}>
                 <Save className="w-4 h-4 mr-2" />
-                저장하기
+                {saveQuoteMutation.isPending ? '저장 중...' : '저장하기'}
               </Button>
               <Button variant="outline">
                 <Download className="w-4 h-4 mr-2" />

@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, ShoppingCart, Zap, ChevronDown, Truck, Package, X, ZoomIn, ZoomOut, Lock } from 'lucide-react'
 import { useStore, getPriceByTier, getTierLabel, getTierColor } from '../store'
-import { useProducts } from '../hooks/queries'
-import { products as defaultProducts, categories } from '../data'
+import { useProducts, useCategories } from '../hooks/queries'
 import { ProductCard, ProductReviews } from '../components/product'
 import { Button, Badge, NumberStepper, Card, CardContent } from '../components/ui'
 import { formatPrice, cn } from '../lib/utils'
@@ -17,6 +16,7 @@ export function ProductDetailPage() {
   const { user, addToCart, isLoggedIn } = useStore()
   const [showAddedToast, setShowAddedToast] = useState(false)
   const { data: adminProducts = [] } = useProducts()
+  const { data: categories = [] } = useCategories()
   const [quantity, setQuantity] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
@@ -25,11 +25,9 @@ export function ProductDetailPage() {
   const [optionPriceModifier, setOptionPriceModifier] = useState(0)
   const [selectedQuantityDiscount, setSelectedQuantityDiscount] = useState<QuantityDiscount | null>(null)
 
-  // 관리자 상품 우선, 없으면 기본 상품 사용
+  // 관리자 상품에서 찾기
   const product = useMemo(() => {
-    const adminProduct = adminProducts.find(p => p.id === productId)
-    if (adminProduct) return adminProduct
-    return defaultProducts.find(p => p.id === productId)
+    return adminProducts.find(p => p.id === productId)
   }, [productId, adminProducts])
 
   // 상품 설정 가져오기
@@ -37,16 +35,17 @@ export function ProductDetailPage() {
     const adminProduct = adminProducts.find(p => p.id === productId)
     return {
       showOptionImages: adminProduct?.showOptionImages || false,
-      quantityDiscounts: adminProduct?.quantityDiscounts || []
+      quantityDiscounts: adminProduct?.quantityDiscounts || [],
+      description: adminProduct?.description || '',
+      detailImages: adminProduct?.detailImages || [],
     }
   }, [productId, adminProducts])
 
   // 관리자 상품에서 옵션 가져오기 (adminOptions -> ProductOption 변환)
   const productOptions = useMemo((): ProductOption[] => {
     const adminProduct = adminProducts.find(p => p.id === productId)
-    const defaultProduct = defaultProducts.find(p => p.id === productId)
 
-    // 1. zustand store의 adminOptions 사용
+    // 1. adminOptions 사용
     if (adminProduct?.adminOptions && adminProduct.adminOptions.length > 0) {
       return adminProduct.adminOptions.map(opt => ({
         id: opt.id,
@@ -54,11 +53,7 @@ export function ProductDetailPage() {
         values: opt.values.map(v => v.value)
       }))
     }
-    // 2. 기본 상품의 options 확인
-    if (defaultProduct?.options && defaultProduct.options.length > 0) {
-      return defaultProduct.options
-    }
-    // 3. product.options 폴백
+    // 2. product.options 폴백
     return product?.options || []
   }, [productId, adminProducts, product])
 
@@ -127,7 +122,7 @@ export function ProductDetailPage() {
   const tierDiscountPercent = tier !== 'guest' ? Math.round((1 - currentPrice / retailPrice) * 100) : discountPercent
 
   // Related products
-  const relatedProducts = defaultProducts
+  const relatedProducts = adminProducts
     .filter(p => p.categoryId === product.categoryId && p.id !== product.id)
     .slice(0, 5)
 
@@ -572,6 +567,28 @@ export function ProductDetailPage() {
 
         </Animated>
       </div>
+
+      {/* 상품 상세 설명 & 이미지 */}
+      {(productSettings.description || productSettings.detailImages.length > 0) && (
+        <Animated animation="fade-up" delay={250}>
+          <section className="mb-12">
+            {productSettings.description && (
+              <div
+                className="prose prose-sm max-w-none mb-6"
+                dangerouslySetInnerHTML={{ __html: productSettings.description }}
+              />
+            )}
+            {productSettings.detailImages.map((img, index) => (
+              <img
+                key={index}
+                src={img}
+                alt={`${product.name} 상세 이미지 ${index + 1}`}
+                className="w-full mb-4 rounded-lg"
+              />
+            ))}
+          </section>
+        </Animated>
+      )}
 
       {/* Product Reviews */}
       <Animated animation="fade-up" delay={300}>

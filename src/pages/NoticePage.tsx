@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, AlertCircle, Gift, RefreshCw, ChevronDown, ChevronUp, Eye } from 'lucide-react'
-import { notices } from '../data'
-import { Notice } from '../types'
+import { Bell, AlertCircle, Gift, RefreshCw, ChevronDown, ChevronUp, Eye, Loader2 } from 'lucide-react'
 import { Badge, Card } from '../components/ui'
 import { Animated } from '../hooks'
+import { useNotices } from '../hooks/queries'
 import { cn } from '../lib/utils'
 
 export function NoticePage() {
+  const { data: notices = [], isLoading } = useNotices()
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -88,7 +88,16 @@ export function NoticePage() {
         </div>
       </Animated>
 
+      {/* 로딩 */}
+      {isLoading && (
+        <div className="py-16 text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500 mx-auto mb-4" />
+          <p className="text-neutral-500">공지사항을 불러오는 중...</p>
+        </div>
+      )}
+
       {/* Notice List */}
+      {!isLoading && (
       <Animated animation="fade-up" delay={300}>
         <Card className="overflow-hidden">
           {/* Table Header - PC only */}
@@ -210,6 +219,7 @@ export function NoticePage() {
           )}
         </Card>
       </Animated>
+      )}
     </div>
   )
 }

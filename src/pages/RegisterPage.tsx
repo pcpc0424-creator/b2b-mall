@@ -4,7 +4,7 @@ import { Mail, Lock, Eye, EyeOff, User, Phone, UserPlus } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Input, Card, CardContent } from '../components/ui'
 import { cn } from '../lib/utils'
-import { registerWithEmail, simulateSocialLogin, getProviderName } from '../services/auth'
+import { registerWithEmail, loginWithSocial, getProviderName } from '../services/auth'
 import { SocialProvider } from '../types'
 
 export function RegisterPage() {
@@ -114,17 +114,14 @@ export function RegisterPage() {
   const handleSocialLogin = async (provider: SocialProvider) => {
     setSocialLoading(provider)
     try {
-      const result = await simulateSocialLogin(provider)
-      if (result.success && result.user) {
-        login(result.user)
-        alert(`${getProviderName(provider)}로 회원가입이 완료되었습니다!`)
-        navigate('/')
-      } else {
-        alert(result.error || '소셜 로그인에 실패했습니다.')
+      const result = await loginWithSocial(provider)
+      if (!result.success) {
+        alert(result.error || `${getProviderName(provider)} 로그인에 실패했습니다.`)
+        setSocialLoading(null)
       }
+      // 성공 시 OAuth 리다이렉트 → App.tsx의 onAuthStateChange가 처리
     } catch (error) {
       alert('소셜 로그인 중 오류가 발생했습니다.')
-    } finally {
       setSocialLoading(null)
     }
   }

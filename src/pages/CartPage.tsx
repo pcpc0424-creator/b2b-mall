@@ -1,12 +1,11 @@
 import { Link } from 'react-router-dom'
 import { Trash2, ShoppingBag, ArrowRight, Package, Truck, Ticket, ChevronDown, X, LogIn } from 'lucide-react'
 import { useStore, getPriceByTier, getTierLabel } from '../store'
-import { useProducts } from '../hooks/queries'
+import { useProducts, useUserCoupons, useClaimAllCoupons } from '../hooks/queries'
 import { Button, NumberStepper, Card, CardContent, Badge } from '../components/ui'
 import { formatPrice, formatNumber, cn } from '../lib/utils'
 import { Animated } from '../hooks'
 import { useMemo, useState, useEffect } from 'react'
-import { sampleCoupons } from '../data'
 import { Coupon } from '../types'
 import { AdminProduct } from '../admin/types/admin'
 
@@ -48,25 +47,24 @@ export function CartPage() {
     removeFromCart,
     clearCart,
     getCartTotal,
-    myCoupons,
-    addCoupon,
     appliedCoupon,
     applyCoupon,
     getCouponDiscount,
-    useCoupon
   } = useStore()
   const { data: adminProducts = [] } = useProducts()
+  const { data: myCoupons = [] } = useUserCoupons(user?.id)
+  const claimAll = useClaimAllCoupons()
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   const [showCouponSelector, setShowCouponSelector] = useState(false)
+  const [claimed, setClaimed] = useState(false)
 
-  // 샘플 쿠폰 자동 발급 (처음 방문 시)
+  // 쿠폰 자동 발급 (Supabase, 처음 방문 시 보유 쿠폰 없으면)
   useEffect(() => {
-    if (myCoupons.length === 0) {
-      sampleCoupons.forEach(coupon => {
-        addCoupon(coupon)
-      })
+    if (user?.id && myCoupons.length === 0 && !claimed) {
+      setClaimed(true)
+      claimAll.mutate(user.id)
     }
-  }, [myCoupons.length, addCoupon])
+  }, [user?.id, myCoupons.length, claimed, claimAll])
 
   const tier = user?.tier || 'guest'
   const totalAmount = getCartTotal()
@@ -168,6 +166,40 @@ export function CartPage() {
         localStorage.setItem('pendingCouponId', appliedCoupon.id)
       }
 
+      // 결제 성공 시 주문 생성에 필요한 데이터를 localStorage에 저장
+      // (Toss 결제는 리다이렉트 방식이므로 상태가 유지되지 않음)
+      const orderItems = cart.map(item => {
+        const unitPrice = getPriceByTier(item.product, tier)
+        return {
+          id: crypto.randomUUID(),
+          productId: item.product.id,
+          productName: item.product.name,
+          productSku: item.product.sku,
+          selectedOptions: item.selectedOptions,
+          quantity: item.quantity,
+          unitPrice,
+          subtotal: unitPrice * item.quantity,
+        }
+      })
+
+      const pendingOrderData = {
+        orderNumber: orderId,
+        userId: user?.id || '',
+        user: {
+          id: user?.id || '',
+          name: user?.name || '',
+          email: user?.email || '',
+          company: user?.company,
+          tier: user?.tier || 'guest',
+        },
+        items: orderItems,
+        subtotal: totalAmount,
+        shippingFee: shippingCalculation.totalShippingFee,
+        totalAmount: grandTotal,
+        paymentMethod: '카드',
+      }
+      localStorage.setItem('pendingOrderData', JSON.stringify(pendingOrderData))
+
       // 결제 요청
       await tossPayments.requestPayment('카드', {
         amount: grandTotal,
@@ -182,6 +214,8 @@ export function CartPage() {
       if (error.code !== 'USER_CANCEL') {
         alert('결제 처리 중 오류가 발생했습니다.')
       }
+      // 결제 실패 시 pendingOrderData 정리
+      localStorage.removeItem('pendingOrderData')
     } finally {
       setIsPaymentLoading(false)
     }

@@ -1,11 +1,11 @@
-import { useState } from 'react'
-import { Download, Calendar, TrendingUp, TrendingDown, Filter } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Download, Calendar, TrendingUp, TrendingDown, Filter, Loader2 } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts'
 import { useStore } from '../store'
-import { mockSalesData, products, categories } from '../data'
+import { useCategories, useUserOrders, useProducts } from '../hooks/queries'
 import { Button, Card, CardContent, Select, Badge, Tabs } from '../components/ui'
 import { formatPrice, formatNumber, cn } from '../lib/utils'
 import { Animated } from '../hooks'
@@ -14,6 +14,9 @@ export function AnalyticsPage() {
   const { user } = useStore()
   const [period, setPeriod] = useState('month')
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const { data: orders = [], isLoading: ordersLoading } = useUserOrders(user?.id)
+  const { data: allProducts = [] } = useProducts()
+  const { data: categories = [] } = useCategories()
 
   if (!user) {
     return (
@@ -24,28 +27,71 @@ export function AnalyticsPage() {
     )
   }
 
-  // Generate category sales data
-  const categorySalesData = categories.map((cat) => ({
-    name: cat.name,
-    value: Math.floor(Math.random() * 30000000) + 5000000,
-    fill: `hsl(${cat.id * 45}, 70%, 50%)`,
-  }))
+  // 월별 매출 데이터 계산
+  const monthlySalesData = useMemo(() => {
+    const monthMap = new Map<string, { amount: number; orders: number }>()
+    orders.forEach(o => {
+      const d = new Date(o.createdAt)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const existing = monthMap.get(key) || { amount: 0, orders: 0 }
+      monthMap.set(key, { amount: existing.amount + o.totalAmount, orders: existing.orders + 1 })
+    })
+    return Array.from(monthMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6)
+      .map(([key, val]) => ({ date: `${parseInt(key.split('-')[1])}월`, amount: val.amount, orders: val.orders }))
+  }, [orders])
 
-  // Generate product sales data
-  const productSalesData = products.slice(0, 10).map((p) => ({
-    name: p.name.slice(0, 10) + '...',
-    fullName: p.name,
-    sku: p.sku,
-    quantity: Math.floor(Math.random() * 500) + 50,
-    amount: Math.floor(Math.random() * 5000000) + 500000,
-  }))
+  // 카테고리별 매출 데이터 (주문 아이템에서 계산)
+  const categorySalesData = useMemo(() => {
+    const productCategoryMap = new Map<string, number>()
+    allProducts.forEach(p => productCategoryMap.set(p.id, p.categoryId))
 
-  const totalAmount = mockSalesData.reduce((sum, d) => sum + d.amount, 0)
-  const totalOrders = mockSalesData.reduce((sum, d) => sum + d.orders, 0)
-  const avgOrderValue = Math.round(totalAmount / totalOrders)
+    const catMap = new Map<number, number>()
+    orders.forEach(o => {
+      o.items.forEach((item: { productId: string; totalPrice: number }) => {
+        const catId = productCategoryMap.get(item.productId) || 0
+        catMap.set(catId, (catMap.get(catId) || 0) + item.totalPrice)
+      })
+    })
 
-  const lastMonthAmount = mockSalesData[mockSalesData.length - 2]?.amount || 0
-  const currentMonthAmount = mockSalesData[mockSalesData.length - 1]?.amount || 0
+    return categories
+      .map(cat => ({ name: cat.name, value: catMap.get(cat.id) || 0, fill: `hsl(${cat.id * 45}, 70%, 50%)` }))
+      .filter(c => c.value > 0)
+      .sort((a, b) => b.value - a.value)
+  }, [orders, allProducts])
+
+  // 상품별 매출 데이터 (주문 아이템에서 계산)
+  const productSalesData = useMemo(() => {
+    const prodMap = new Map<string, { name: string; sku: string; quantity: number; amount: number }>()
+    orders.forEach(o => {
+      o.items.forEach((item: { productId: string; productName?: string; sku?: string; quantity: number; totalPrice: number }) => {
+        const existing = prodMap.get(item.productId)
+        if (existing) {
+          existing.quantity += item.quantity
+          existing.amount += item.totalPrice
+        } else {
+          prodMap.set(item.productId, {
+            name: (item.productName || '알 수 없는 상품'),
+            sku: item.sku || '',
+            quantity: item.quantity,
+            amount: item.totalPrice,
+          })
+        }
+      })
+    })
+    return Array.from(prodMap.values())
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 10)
+      .map(p => ({ ...p, fullName: p.name, name: p.name.length > 10 ? p.name.slice(0, 10) + '...' : p.name }))
+  }, [orders])
+
+  const totalAmount = orders.reduce((sum, o) => sum + o.totalAmount, 0)
+  const totalOrders = orders.length
+  const avgOrderValue = totalOrders > 0 ? Math.round(totalAmount / totalOrders) : 0
+
+  const lastMonthAmount = monthlySalesData[monthlySalesData.length - 2]?.amount || 0
+  const currentMonthAmount = monthlySalesData[monthlySalesData.length - 1]?.amount || 0
   const growthPercent = lastMonthAmount > 0 ? Math.round(((currentMonthAmount - lastMonthAmount) / lastMonthAmount) * 100) : 0
 
   const COLORS = ['#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16']
@@ -103,7 +149,7 @@ export function AnalyticsPage() {
           <CardContent className="p-6">
             <p className="text-sm text-neutral-500 mb-1">총 주문건수</p>
             <p className="text-2xl font-bold text-neutral-900">{formatNumber(totalOrders)}건</p>
-            <p className="text-sm text-neutral-400 mt-2">월 평균 {Math.round(totalOrders / 6)}건</p>
+            <p className="text-sm text-neutral-400 mt-2">월 평균 {monthlySalesData.length > 0 ? Math.round(totalOrders / monthlySalesData.length) : 0}건</p>
           </CardContent>
         </Card>
 
@@ -139,7 +185,7 @@ export function AnalyticsPage() {
                     <h3 className="font-bold text-neutral-900 mb-6">기간별 매출 추이</h3>
                     <div className="h-80">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={mockSalesData}>
+                        <LineChart data={monthlySalesData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                           <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#6B7280" />
                           <YAxis

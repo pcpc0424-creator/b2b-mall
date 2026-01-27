@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, Package, Leaf, Pill, Sparkles, Shirt, ChefHat, Refrigerator, Monitor, Dumbbell, PawPrint } from 'lucide-react'
-import { categories, products } from '../data'
+import { useCategories, useProducts } from '../hooks/queries'
 import { Button, Badge, Card, CardContent } from '../components/ui'
 import { Animated } from '../hooks'
 
@@ -18,6 +18,9 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 }
 
 export function CategoriesPage() {
+  const { data: categories = [] } = useCategories()
+  const { data: products = [] } = useProducts()
+
   const getProductCount = (categoryId: number) => {
     return products.filter(p => p.categoryId === categoryId).length
   }

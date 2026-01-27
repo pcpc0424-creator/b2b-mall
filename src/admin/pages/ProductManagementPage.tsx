@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Search, Edit, Trash2 } from 'lucide-react'
 import { useAdminStore } from '../store/adminStore'
-import { useProducts, useDeleteProduct } from '../../hooks/queries'
-import { categories } from '../../data'
+import { useProducts, useDeleteProduct, useCategories } from '../../hooks/queries'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { formatPrice } from '../../lib/utils'
 
 export function ProductManagementPage() {
   const { data: products = [], isLoading } = useProducts()
+  const { data: categories = [] } = useCategories()
   const deleteMutation = useDeleteProduct()
   const { selectedProductIds, setSelectedProductIds } = useAdminStore()
   const [searchTerm, setSearchTerm] = useState('')

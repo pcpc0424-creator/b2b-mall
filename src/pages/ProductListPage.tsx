@@ -2,33 +2,21 @@ import { useState, useEffect, useMemo } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Grid, List, Filter, ChevronDown } from 'lucide-react'
 import { useStore } from '../store'
-import { useProducts } from '../hooks/queries'
-import { products as defaultProducts, categories } from '../data'
+import { useProducts, useCategories } from '../hooks/queries'
 import { ProductCard, ProductTable } from '../components/product'
 import { Button, Select, Badge, Card, CardContent } from '../components/ui'
 import { cn } from '../lib/utils'
 import { Animated } from '../hooks'
-import { Product } from '../types'
 
 export function ProductListPage() {
   const { categoryId: paramCategoryId } = useParams()
   const [searchParams] = useSearchParams()
   const { viewMode, setViewMode } = useStore()
-  const { data: adminProducts = [] } = useProducts()
+  const { data: products = [] } = useProducts()
+  const { data: categories = [] } = useCategories()
 
   // URL path parameter 또는 query parameter에서 categoryId 가져오기
   const categoryId = paramCategoryId || searchParams.get('category')
-
-  // 관리자 상품과 기본 상품 병합 (관리자 상품 우선)
-  const products = useMemo((): Product[] => {
-    const adminProductIds = new Set(adminProducts.map(p => p.id))
-    const activeAdminProducts = adminProducts.filter(p => p.isActive)
-    const mergedProducts = [
-      ...activeAdminProducts,
-      ...defaultProducts.filter(p => !adminProductIds.has(p.id))
-    ]
-    return mergedProducts
-  }, [adminProducts])
 
   // URL의 sort 파라미터에 따라 초기 정렬 설정
   const getSortFromUrl = () => {

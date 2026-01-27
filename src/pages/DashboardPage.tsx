@@ -1,19 +1,22 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   TrendingUp, TrendingDown, ShoppingBag, FileText, DollarSign, Package,
-  Download, Calendar, ArrowRight, Gift, Star, Clock
+  Download, Calendar, ArrowRight, Gift, Star, Clock, Loader2
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { useStore, getTierLabel, getTierColor } from '../store'
-import { mockSalesData, products, promotions } from '../data'
 import { Button, Card, CardContent, Badge, Select, Tabs } from '../components/ui'
 import { formatPrice, formatNumber, cn } from '../lib/utils'
 import { Animated } from '../hooks'
+import { useUserOrders, useProducts, usePromotions } from '../hooks/queries'
 
 export function DashboardPage() {
   const { user } = useStore()
   const [period, setPeriod] = useState('month')
+  const { data: orders = [], isLoading: ordersLoading } = useUserOrders(user?.id)
+  const { data: allProducts = [], isLoading: productsLoading } = useProducts()
+  const { data: allPromotions = [] } = usePromotions()
 
   if (!user) {
     return (
@@ -26,16 +29,34 @@ export function DashboardPage() {
 
   const tier = user.tier
 
-  // Summary stats
-  const totalOrders = 127
-  const totalAmount = mockSalesData.reduce((sum, d) => sum + d.amount, 0)
-  const avgOrderValue = Math.round(totalAmount / totalOrders)
-  const lastMonthAmount = mockSalesData[mockSalesData.length - 2]?.amount || 0
-  const currentMonthAmount = mockSalesData[mockSalesData.length - 1]?.amount || 0
+  // 주문 데이터에서 통계 계산
+  const totalOrders = orders.length
+  const totalAmount = orders.reduce((sum, o) => sum + o.totalAmount, 0)
+  const avgOrderValue = totalOrders > 0 ? Math.round(totalAmount / totalOrders) : 0
+  const shippingCount = orders.filter(o => o.status === 'shipped').length
+
+  // 월별 매출 데이터 계산
+  const monthlySalesData = useMemo(() => {
+    const monthMap = new Map<string, { amount: number; orders: number }>()
+    orders.forEach(o => {
+      const d = new Date(o.createdAt)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const label = `${d.getMonth() + 1}월`
+      const existing = monthMap.get(key) || { amount: 0, orders: 0 }
+      monthMap.set(key, { amount: existing.amount + o.totalAmount, orders: existing.orders + 1 })
+    })
+    return Array.from(monthMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6)
+      .map(([key, val]) => ({ date: `${parseInt(key.split('-')[1])}월`, amount: val.amount, orders: val.orders }))
+  }, [orders])
+
+  const lastMonthAmount = monthlySalesData[monthlySalesData.length - 2]?.amount || 0
+  const currentMonthAmount = monthlySalesData[monthlySalesData.length - 1]?.amount || 0
   const growthPercent = lastMonthAmount > 0 ? Math.round(((currentMonthAmount - lastMonthAmount) / lastMonthAmount) * 100) : 0
 
-  // Top products
-  const topProducts = products.slice(0, 5)
+  // Top products (Supabase에서)
+  const topProducts = allProducts.slice(0, 5)
 
   // User tier benefits
   const tierBenefits = {
@@ -46,7 +67,9 @@ export function DashboardPage() {
 
   const currentBenefits = tierBenefits[tier as keyof typeof tierBenefits] || []
 
-  const exclusivePromotions = promotions.filter(p => p.targetTiers.includes(tier) && p.type === 'exclusive')
+  const exclusivePromotions = allPromotions.filter(p => p.targetTiers.includes(tier) && p.type === 'exclusive')
+
+  const isLoading = ordersLoading || productsLoading
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -142,7 +165,7 @@ export function DashboardPage() {
               </div>
             </div>
             <p className="text-sm text-neutral-500">배송 중</p>
-            <p className="text-2xl font-bold text-neutral-900">3건</p>
+            <p className="text-2xl font-bold text-neutral-900">{shippingCount}건</p>
           </CardContent>
         </Card>
       </div>
@@ -169,7 +192,7 @@ export function DashboardPage() {
               </div>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={mockSalesData}>
+                  <LineChart data={monthlySalesData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                     <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#6B7280" />
                     <YAxis
@@ -287,28 +310,34 @@ export function DashboardPage() {
               </Link>
             </div>
             <div className="space-y-4">
-              {[
-                { id: 'ORD-001', date: '2024-01-20', amount: 1250000, status: '배송완료', items: 5 },
-                { id: 'ORD-002', date: '2024-01-18', amount: 890000, status: '배송중', items: 3 },
-                { id: 'ORD-003', date: '2024-01-15', amount: 2100000, status: '배송완료', items: 8 },
-                { id: 'ORD-004', date: '2024-01-10', amount: 560000, status: '배송완료', items: 2 },
-              ].map((order) => (
+              {orders.slice(0, 4).map((order) => {
+                const statusLabel: Record<string, string> = {
+                  pending: '주문접수', confirmed: '주문확인', preparing: '상품준비중',
+                  shipped: '배송중', delivered: '배송완료', cancelled: '취소', refunded: '환불',
+                }
+                const isDelivered = order.status === 'delivered'
+                return (
                 <div key={order.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-neutral-50 transition-colors">
                   <div>
-                    <p className="text-sm font-medium text-neutral-900">{order.id}</p>
-                    <p className="text-xs text-neutral-500">{order.date} · {order.items}개 품목</p>
+                    <p className="text-sm font-medium text-neutral-900">{order.orderNumber}</p>
+                    <p className="text-xs text-neutral-500">
+                      {new Date(order.createdAt).toLocaleDateString('ko-KR')} · {order.items.length}개 품목
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-neutral-900">{formatPrice(order.amount)}</p>
+                    <p className="text-sm font-bold text-neutral-900">{formatPrice(order.totalAmount)}</p>
                     <Badge
-                      variant={order.status === '배송완료' ? 'success' : 'primary'}
+                      variant={isDelivered ? 'success' : 'primary'}
                       size="sm"
                     >
-                      {order.status}
+                      {statusLabel[order.status] || order.status}
                     </Badge>
                   </div>
                 </div>
-              ))}
+                )
+              })}{orders.length === 0 && (
+                <p className="text-sm text-neutral-500 text-center py-4">주문 내역이 없습니다.</p>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -22,7 +22,7 @@ const statusConfig: Record<MemberStatus, { label: string; variant: 'success' | '
 }
 
 export function MemberManagementPage() {
-  const { data: members = [], isLoading, refetch } = useMembers()
+  const { data: members = [], isLoading, error, refetch } = useMembers()
   const updateTierMutation = useUpdateMemberTier()
   const updateStatusMutation = useUpdateMemberStatus()
   const [searchTerm, setSearchTerm] = useState('')
@@ -104,6 +104,13 @@ export function MemberManagementPage() {
           ))}
         </select>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          회원 목록을 불러오는 중 오류가 발생했습니다: {(error as Error).message}
+        </div>
+      )}
 
       {/* Members List */}
       <div className="space-y-2">

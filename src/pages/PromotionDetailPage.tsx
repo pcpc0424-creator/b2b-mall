@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Clock, Tag, ArrowLeft, Calendar } from 'lucide-react'
-import { promotions, products } from '../data'
+import { usePromotions, useProducts } from '../hooks/queries'
 import { ProductCard } from '../components/product'
 import { Badge, Button } from '../components/ui'
 import { Animated } from '../hooks'
@@ -8,6 +8,8 @@ import { Animated } from '../hooks'
 export function PromotionDetailPage() {
   const { promoId } = useParams<{ promoId: string }>()
   const navigate = useNavigate()
+  const { data: promotions = [] } = usePromotions()
+  const { data: products = [] } = useProducts()
 
   const promotion = promotions.find(p => p.id === promoId)
 

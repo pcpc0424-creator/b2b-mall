@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ShoppingCart,
@@ -8,29 +8,31 @@ import {
   AlertCircle,
   ArrowRight
 } from 'lucide-react'
-import { useAdminStore } from '../store/adminStore'
+import { useOrders, useProducts } from '../../hooks/queries'
 import { Card, CardContent, Badge } from '../../components/ui'
 import { formatPrice } from '../../lib/utils'
 
 export function AdminDashboard() {
-  const { dashboardStats, setDashboardStats } = useAdminStore()
+  const { data: orders = [] } = useOrders()
+  const { data: products = [] } = useProducts()
 
-  useEffect(() => {
-    setDashboardStats({
-      todayOrders: 24,
-      todayRevenue: 3850000,
-      pendingOrders: 8,
-      lowStockProducts: 5,
-      newMembers: 12,
-      recentOrders: []
-    })
-  }, [setDashboardStats])
+  const dashboardStats = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const todayOrders = orders.filter(o => new Date(o.createdAt) >= today)
+    const todayRevenue = todayOrders.reduce((sum, o) => sum + o.totalAmount, 0)
+    const pendingOrders = orders.filter(o => o.status === 'pending').length
+    const lowStockProducts = products.filter(p => p.stockStatus === 'low' || p.stockStatus === 'out_of_stock').length
+
+    return { todayOrders: todayOrders.length, todayRevenue, pendingOrders, lowStockProducts }
+  }, [orders, products])
 
   const stats = [
-    { label: '오늘 주문', value: dashboardStats?.todayOrders || 0, suffix: '건', icon: ShoppingCart, color: 'bg-primary-500', link: '/admin/orders' },
-    { label: '오늘 매출', value: formatPrice(dashboardStats?.todayRevenue || 0), suffix: '', icon: TrendingUp, color: 'bg-green-500', link: '/admin/orders' },
-    { label: '대기 주문', value: dashboardStats?.pendingOrders || 0, suffix: '건', icon: AlertCircle, color: 'bg-amber-500', link: '/admin/orders?status=pending' },
-    { label: '재고부족', value: dashboardStats?.lowStockProducts || 0, suffix: '개', icon: Package, color: 'bg-red-500', link: '/admin/products?stock=low' },
+    { label: '오늘 주문', value: dashboardStats.todayOrders, suffix: '건', icon: ShoppingCart, color: 'bg-primary-500', link: '/admin/orders' },
+    { label: '오늘 매출', value: formatPrice(dashboardStats.todayRevenue), suffix: '', icon: TrendingUp, color: 'bg-green-500', link: '/admin/orders' },
+    { label: '대기 주문', value: dashboardStats.pendingOrders, suffix: '건', icon: AlertCircle, color: 'bg-amber-500', link: '/admin/orders?status=pending' },
+    { label: '재고부족', value: dashboardStats.lowStockProducts, suffix: '개', icon: Package, color: 'bg-red-500', link: '/admin/products?stock=low' },
   ]
 
   return (
@@ -72,27 +74,27 @@ export function AdminDashboard() {
             </Link>
           </div>
           <div className="space-y-2">
-            {[
-              { id: 'ORD-001', customer: '김철수', amount: 125000, status: 'pending' },
-              { id: 'ORD-002', customer: '이영희', amount: 89000, status: 'confirmed' },
-              { id: 'ORD-003', customer: '박지민', amount: 234000, status: 'shipped' },
-            ].map((order) => (
-              <div key={order.id} className="flex items-center justify-between py-2 border-b border-neutral-100 last:border-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-primary-600">{order.id}</span>
-                  <span className="text-sm text-neutral-500">{order.customer}</span>
+            {orders.slice(0, 3).map((order) => {
+              const statusLabel: Record<string, string> = { pending: '대기', confirmed: '확인', preparing: '준비', shipped: '배송', delivered: '완료', cancelled: '취소', refunded: '환불' }
+              const statusVariant: Record<string, 'warning' | 'primary' | 'secondary' | 'success' | 'error'> = { pending: 'warning', confirmed: 'primary', preparing: 'secondary', shipped: 'secondary', delivered: 'success', cancelled: 'error', refunded: 'error' }
+              return (
+                <div key={order.id} className="flex items-center justify-between py-2 border-b border-neutral-100 last:border-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-primary-600">{order.orderNumber}</span>
+                    <span className="text-sm text-neutral-500">{order.user.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{formatPrice(order.totalAmount)}</span>
+                    <Badge variant={statusVariant[order.status] || 'secondary'} size="sm">
+                      {statusLabel[order.status] || order.status}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{formatPrice(order.amount)}</span>
-                  <Badge
-                    variant={order.status === 'pending' ? 'warning' : order.status === 'confirmed' ? 'primary' : 'secondary'}
-                    size="sm"
-                  >
-                    {order.status === 'pending' ? '대기' : order.status === 'confirmed' ? '확인' : '배송'}
-                  </Badge>
-                </div>
-              </div>
-            ))}
+              )
+            })}
+            {orders.length === 0 && (
+              <div className="text-center py-4 text-sm text-neutral-400">주문이 없습니다.</div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -113,7 +115,7 @@ export function AdminDashboard() {
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-amber-100 rounded"><ShoppingCart className="w-4 h-4 text-amber-600" /></div>
                 <span className="text-sm font-medium">주문 처리</span>
-                <Badge variant="warning" size="sm">{dashboardStats?.pendingOrders}건</Badge>
+                <Badge variant="warning" size="sm">{dashboardStats.pendingOrders}건</Badge>
               </div>
               <ArrowRight className="w-4 h-4 text-neutral-400" />
             </Link>

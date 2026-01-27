@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Order, OrderStatus } from '../admin/types/admin'
+import type { Order, OrderStatus, OrderItem, OrderUser, ShippingAddress } from '../admin/types/admin'
 
 /**
  * 주문 서비스
@@ -36,11 +36,73 @@ export function toOrder(row: DbRow): Order {
   }
 }
 
-/** 전체 주문 목록 조회 (생성일 내림차순) */
+/** 주문 생성 입력 데이터 */
+export interface CreateOrderInput {
+  orderNumber: string
+  userId: string
+  user: OrderUser
+  items: OrderItem[]
+  subtotal: number
+  shippingFee: number
+  totalAmount: number
+  paymentMethod: string
+  paymentKey?: string
+  shippingAddress?: ShippingAddress
+  notes?: string
+}
+
+/** 주문 생성 */
+export async function createOrder(input: CreateOrderInput): Promise<Order> {
+  const now = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('orders')
+    .insert({
+      id: crypto.randomUUID(),
+      order_number: input.orderNumber,
+      user_id: input.userId,
+      user: input.user,
+      items: input.items,
+      subtotal: input.subtotal,
+      shipping_fee: input.shippingFee,
+      total_amount: input.totalAmount,
+      status: 'confirmed' as OrderStatus,
+      payment_status: 'paid',
+      payment_method: input.paymentMethod,
+      shipping_address: input.shippingAddress ?? {
+        recipient: input.user.name,
+        phone: '',
+        postalCode: '',
+        address1: '',
+      },
+      notes: input.notes ?? null,
+      tracking_number: null,
+      created_at: now,
+      updated_at: now,
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return toOrder(data)
+}
+
+/** 전체 주문 목록 조회 (생성일 내림차순) — 관리자용 */
 export async function fetchOrders(): Promise<Order[]> {
   const { data, error } = await supabase
     .from('orders')
     .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return (data || []).map(toOrder)
+}
+
+/** 특정 사용자의 주문 목록 조회 (생성일 내림차순) */
+export async function fetchUserOrders(userId: string): Promise<Order[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
   if (error) throw error

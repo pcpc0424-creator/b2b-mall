@@ -1,21 +1,20 @@
 import { useState } from 'react'
-import { Star, ThumbsUp, CheckCircle, ChevronDown, ChevronUp, X } from 'lucide-react'
-import { Review } from '../../types'
-import { reviews as allReviews } from '../../data'
+import { Star, ThumbsUp, CheckCircle, ChevronDown, ChevronUp, X, Loader2 } from 'lucide-react'
 import { Button, Badge, Card } from '../ui'
 import { cn } from '../../lib/utils'
+import { useProductReviews, useCreateReview, useIncrementHelpful } from '../../hooks/queries'
+import { useStore } from '../../store'
 
 interface ProductReviewsProps {
   productId: string
 }
 
 export function ProductReviews({ productId }: ProductReviewsProps) {
+  const { data: productReviews = [], isLoading } = useProductReviews(productId)
+  const incrementHelpful = useIncrementHelpful()
   const [sortBy, setSortBy] = useState<'recent' | 'helpful'>('recent')
   const [showWriteForm, setShowWriteForm] = useState(false)
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set())
-
-  // 해당 상품의 리뷰만 필터링
-  const productReviews = allReviews.filter(r => r.productId === productId)
 
   // 정렬
   const sortedReviews = [...productReviews].sort((a, b) => {
@@ -70,6 +69,15 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
             )}
           />
         ))}
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="mt-12 py-16 text-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-500 mx-auto mb-4" />
+        <p className="text-neutral-500">리뷰를 불러오는 중...</p>
       </div>
     )
   }
@@ -202,7 +210,10 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
 
                   <div className="flex items-center justify-between pt-3 border-t border-neutral-100">
                     <span className="text-sm text-neutral-500">{review.author}</span>
-                    <button className="flex items-center gap-1 text-sm text-neutral-500 hover:text-primary-600 transition-colors">
+                    <button
+                      onClick={() => incrementHelpful.mutate({ reviewId: review.id, productId })}
+                      className="flex items-center gap-1 text-sm text-neutral-500 hover:text-primary-600 transition-colors"
+                    >
                       <ThumbsUp className="w-4 h-4" />
                       도움이 돼요 ({review.helpful})
                     </button>
@@ -233,6 +244,8 @@ function ReviewWriteModal({
   productId: string
   onClose: () => void
 }) {
+  const { user } = useStore()
+  const createReview = useCreateReview()
   const [rating, setRating] = useState(5)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -251,9 +264,25 @@ function ReviewWriteModal({
       return
     }
 
-    // 실제로는 API 호출
-    alert('리뷰가 등록되었습니다. (데모)')
-    onClose()
+    createReview.mutate(
+      {
+        productId,
+        author: user?.name || '익명',
+        userId: user?.id,
+        rating,
+        title: title.trim(),
+        content: content.trim(),
+      },
+      {
+        onSuccess: () => {
+          alert('리뷰가 등록되었습니다.')
+          onClose()
+        },
+        onError: () => {
+          alert('리뷰 등록에 실패했습니다.')
+        },
+      }
+    )
   }
 
   return (
@@ -334,11 +363,12 @@ function ReviewWriteModal({
               variant="outline"
               onClick={onClose}
               className="flex-1"
+              disabled={createReview.isPending}
             >
               취소
             </Button>
-            <Button type="submit" className="flex-1">
-              등록하기
+            <Button type="submit" className="flex-1" disabled={createReview.isPending}>
+              {createReview.isPending ? '등록 중...' : '등록하기'}
             </Button>
           </div>
         </form>

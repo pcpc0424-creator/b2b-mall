@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { migrateLocalStorageToSupabase } from './services/migration'
+import { getCurrentUser, migrateLocalMembers } from './services/auth'
+import { supabase } from './lib/supabase'
+import { useStore } from './store'
 import { Layout } from './components/layout'
 import { AuthGuard } from './components/auth'
 import {
@@ -56,11 +59,55 @@ function ScrollToTop() {
 }
 
 function App() {
+  const { login, logout } = useStore()
   const migrationRan = useRef(false)
+
+  // 마이그레이션 (상품 + 회원)
   useEffect(() => {
     if (!migrationRan.current) {
       migrationRan.current = true
       migrateLocalStorageToSupabase().catch(console.error)
+      migrateLocalMembers().catch(console.error)
+    }
+  }, [])
+
+  // Supabase Auth 세션 복원 + 상태 리스너
+  useEffect(() => {
+    // 1. 현재 세션 확인 (새로고침 시 자동 로그인)
+    const initSession = async () => {
+      const user = await getCurrentUser()
+      if (user) {
+        login(user)
+      } else {
+        // Supabase 세션 없으면 store도 정리
+        const storeState = useStore.getState()
+        if (storeState.isLoggedIn) {
+          logout()
+        }
+      }
+    }
+    initSession()
+
+    // 2. Auth 상태 변경 리스너 (로그인/로그아웃/토큰 갱신)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'SIGNED_IN') {
+        const user = await getCurrentUser()
+        if (user) {
+          login(user)
+        }
+      } else if (event === 'SIGNED_OUT') {
+        const storeState = useStore.getState()
+        if (storeState.isLoggedIn) {
+          // store만 정리 (supabase.auth.signOut는 이미 호출됨)
+          useStore.setState({ user: null, isLoggedIn: false })
+        }
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
     }
   }, [])
 

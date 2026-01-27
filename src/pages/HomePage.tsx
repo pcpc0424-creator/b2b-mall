@@ -2,30 +2,19 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Zap, ArrowRight, Clock, ShoppingCart, Lock } from 'lucide-react'
 import { useStore, getTierLabel, getPriceByTier } from '../store'
-import { useProducts, usePromotions, useSiteSettings } from '../hooks/queries'
-import { categories, products as defaultProducts } from '../data'
+import { useProducts, usePromotions, useSiteSettings, useCategories } from '../hooks/queries'
 import { ProductCard } from '../components/product'
 import { Button, Badge, Card, CardContent } from '../components/ui'
 import { cn, formatPrice } from '../lib/utils'
 import { Animated } from '../hooks'
-import { Product } from '../types'
 
 export function HomePage() {
   const { user, isLoggedIn } = useStore()
-  const { data: adminProducts = [] } = useProducts()
+  const { data: products = [] } = useProducts()
   const { data: promotions = [] } = usePromotions()
   const { data: siteSettings } = useSiteSettings()
+  const { data: categories = [] } = useCategories()
   const [currentSlide, setCurrentSlide] = useState(0)
-
-  // 관리자 상품과 기본 상품 병합 (관리자 상품 우선)
-  const products = useMemo((): Product[] => {
-    const adminProductIds = new Set(adminProducts.map(p => p.id))
-    const mergedProducts = [
-      ...adminProducts.filter(p => p.isActive),
-      ...defaultProducts.filter(p => !adminProductIds.has(p.id))
-    ]
-    return mergedProducts
-  }, [adminProducts])
 
   // 상품 캐러셀 슬라이드 인덱스
   const [productSlide1, setProductSlide1] = useState(0)

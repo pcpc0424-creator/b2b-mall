@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Save, ArrowLeft, Plus, X, GripVertical, Trash2, Upload, Image as ImageIcon, Bold, Italic, List, Link as LinkIcon, AlignLeft, AlignCenter } from 'lucide-react'
-import { useProducts, useCreateProduct, useUpdateProduct } from '../../hooks/queries'
+import { useProducts, useCreateProduct, useUpdateProduct, useCategories } from '../../hooks/queries'
 import { uploadBase64Image } from '../../services/storage'
-import { products as mockProducts, categories } from '../../data'
 import { Button, Card, CardContent, Input, Badge } from '../../components/ui'
 import { formatPrice, cn } from '../../lib/utils'
 import { ProductOptionAdmin, OptionValue, ProductVariant, ProductShipping, QuantityDiscount } from '../types/admin'
@@ -12,6 +11,7 @@ export function ProductEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: products = [] } = useProducts()
+  const { data: categories = [] } = useCategories()
   const createMutation = useCreateProduct()
   const updateMutation = useUpdateProduct()
   const isNew = !id || id === 'new'
@@ -68,8 +68,7 @@ export function ProductEditPage() {
   useEffect(() => {
     if (!isNew && id) {
       const adminProduct = products.find(p => p.id === id)
-      const mockProduct = mockProducts.find(p => p.id === id)
-      const existingProduct = adminProduct || mockProduct
+      const existingProduct = adminProduct
 
       if (existingProduct) {
         setFormData({
@@ -1393,9 +1392,11 @@ export function ProductEditPage() {
           <Button type="button" variant="outline" onClick={() => navigate('/admin/products')} className="w-full sm:w-auto">
             취소
           </Button>
-          <Button type="submit" className="w-full sm:w-auto">
+          <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="w-full sm:w-auto">
             <Save className="w-4 h-4 mr-2" />
-            {isNew ? '상품 등록' : '변경사항 저장'}
+            {createMutation.isPending || updateMutation.isPending
+              ? '저장 중...'
+              : isNew ? '상품 등록' : '변경사항 저장'}
           </Button>
         </div>
       </form>

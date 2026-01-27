@@ -1,75 +1,88 @@
+import { supabase } from '../lib/supabase'
 import { User, SocialProvider } from '../types'
 
-// 회원 DB 시뮬레이션 (실제 서비스에서는 백엔드 API로 대체)
+/**
+ * Supabase Auth 기반 인증 서비스
+ * - 이메일 회원가입/로그인: Supabase Auth + members 테이블
+ * - 소셜 로그인: Supabase OAuth (카카오/네이버/구글)
+ * - localStorage 기존 회원 마이그레이션 지원
+ */
+
+// localStorage 키 (마이그레이션용)
 const MEMBERS_STORAGE_KEY = 'b2b-mall-members'
+const MEMBERS_MIGRATED_KEY = 'b2b-mall-members-supabase-migrated'
 
-interface MemberRecord extends User {
-  password?: string  // 이메일 가입 시에만 사용
-}
+// ── 응답 타입 ──────────────────────────────────────────
 
-// 소셜 로그인 응답 타입
-interface SocialLoginResponse {
-  success: boolean
-  user?: User
-  error?: string
-  isNewUser?: boolean
-}
-
-// 이메일 로그인 응답 타입
 interface EmailLoginResponse {
   success: boolean
   user?: User
   error?: string
 }
 
-// 회원가입 응답 타입
 interface RegisterResponse {
   success: boolean
   user?: User
   error?: string
 }
 
-/**
- * 회원 DB에서 모든 회원 조회
- */
-function getMembers(): MemberRecord[] {
-  const data = localStorage.getItem(MEMBERS_STORAGE_KEY)
-  return data ? JSON.parse(data) : []
+interface SocialLoginResponse {
+  success: boolean
+  error?: string
 }
 
-/**
- * 회원 DB에 회원 저장
- */
-function saveMembers(members: MemberRecord[]): void {
-  localStorage.setItem(MEMBERS_STORAGE_KEY, JSON.stringify(members))
+// ── DB → App 변환 ──────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DbRow = Record<string, any>
+
+function toUser(row: DbRow): User {
+  return {
+    id: row.id,
+    name: row.name || '',
+    email: row.email || '',
+    tier: row.tier || 'member',
+    phone: row.phone,
+    company: row.company,
+    businessNumber: row.business_number,
+    provider: row.provider || 'email',
+    providerId: row.provider_id,
+    profileImage: row.profile_image,
+    createdAt: new Date(row.created_at),
+    lastLoginAt: row.last_login_at ? new Date(row.last_login_at) : undefined,
+    isActive: row.status !== 'inactive' && row.status !== 'suspended',
+    marketingConsent: row.marketing_consent,
+  }
 }
 
-/**
- * 이메일로 회원 찾기
- */
-function findMemberByEmail(email: string): MemberRecord | undefined {
-  const members = getMembers()
-  return members.find(m => m.email.toLowerCase() === email.toLowerCase())
+// ── 내부 유틸 ──────────────────────────────────────────
+
+/** Supabase members 테이블에서 프로필 조회 */
+async function fetchMemberProfile(userId: string): Promise<User | null> {
+  const { data, error } = await supabase
+    .from('members')
+    .select('*')
+    .eq('id', userId)
+    .single()
+
+  if (error || !data) return null
+  return toUser(data)
 }
 
-/**
- * 소셜 ID로 회원 찾기
- */
-function findMemberBySocialId(provider: SocialProvider, providerId: string): MemberRecord | undefined {
-  const members = getMembers()
-  return members.find(m => m.provider === provider && m.providerId === providerId)
+/** members 테이블 upsert */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function upsertMemberProfile(profile: Record<string, any>): Promise<void> {
+  const { error } = await supabase
+    .from('members')
+    .upsert(profile, { onConflict: 'id' })
+
+  if (error) {
+    console.error('프로필 저장 실패:', error.message)
+  }
 }
 
-/**
- * 새 회원 ID 생성
- */
-function generateMemberId(): string {
-  return `member-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-}
+// ── 이메일 회원가입 ────────────────────────────────────
 
-/**
- * 이메일 회원가입
- */
 export async function registerWithEmail(
   email: string,
   password: string,
@@ -77,282 +90,312 @@ export async function registerWithEmail(
   phone: string,
   marketingConsent: boolean = false
 ): Promise<RegisterResponse> {
-  // 이메일 중복 체크
-  const existingMember = findMemberByEmail(email)
-  if (existingMember) {
-    return { success: false, error: '이미 가입된 이메일입니다.' }
+  // 1. Supabase Auth 계정 생성
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+  })
+
+  if (authError) {
+    if (
+      authError.message.includes('already registered') ||
+      authError.message.includes('User already registered')
+    ) {
+      return { success: false, error: '이미 가입된 이메일입니다.' }
+    }
+    return { success: false, error: `회원가입 실패: ${authError.message}` }
   }
 
-  const newMember: MemberRecord = {
-    id: generateMemberId(),
+  if (!authData.user) {
+    return { success: false, error: '회원가입에 실패했습니다.' }
+  }
+
+  // 2. members 테이블에 프로필 저장
+  const profileData = {
+    id: authData.user.id,
     email,
     name,
     phone,
-    password, // 실제 서비스에서는 해싱 필요
     tier: 'member',
+    status: 'active',
     provider: 'email',
-    createdAt: new Date(),
-    isActive: true,
-    marketingConsent,
+    marketing_consent: marketingConsent,
+    total_orders: 0,
+    total_spent: 0,
+    created_at: new Date().toISOString(),
+    last_login_at: new Date().toISOString(),
   }
 
-  const members = getMembers()
-  members.push(newMember)
-  saveMembers(members)
+  await upsertMemberProfile(profileData)
 
-  // 비밀번호 제외하고 반환
-  const { password: _, ...userWithoutPassword } = newMember
-  return { success: true, user: userWithoutPassword }
+  const user = await fetchMemberProfile(authData.user.id)
+  return { success: true, user: user || undefined }
 }
 
-/**
- * 이메일 로그인
- */
-export async function loginWithEmail(email: string, password: string): Promise<EmailLoginResponse> {
-  const member = findMemberByEmail(email)
+// ── 이메일 로그인 ──────────────────────────────────────
 
-  if (!member) {
-    return { success: false, error: '등록되지 않은 이메일입니다.' }
+export async function loginWithEmail(
+  email: string,
+  password: string
+): Promise<EmailLoginResponse> {
+  // 1. Supabase Auth 로그인 시도
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (!error && data.user) {
+    // 로그인 성공 → 프로필 조회/생성
+    await supabase
+      .from('members')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', data.user.id)
+
+    let user = await fetchMemberProfile(data.user.id)
+
+    if (!user) {
+      // Auth 계정은 있지만 프로필이 없는 경우 → 생성
+      await upsertMemberProfile({
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.email?.split('@')[0] || '회원',
+        tier: 'member',
+        status: 'active',
+        provider: 'email',
+        total_orders: 0,
+        total_spent: 0,
+        created_at: data.user.created_at || new Date().toISOString(),
+        last_login_at: new Date().toISOString(),
+      })
+      user = await fetchMemberProfile(data.user.id)
+    }
+
+    if (user && !user.isActive) {
+      await supabase.auth.signOut()
+      return { success: false, error: '비활성화된 계정입니다. 고객센터에 문의해주세요.' }
+    }
+
+    return { success: true, user: user || undefined }
   }
 
-  if (member.provider !== 'email') {
-    return {
-      success: false,
-      error: `이 이메일은 ${getProviderName(member.provider)} 계정으로 가입되어 있습니다.`
+  // 2. Supabase Auth 실패 → localStorage 폴백 (기존 회원 마이그레이션)
+  const localMember = tryLocalStorageLogin(email, password)
+  if (localMember) {
+    // localStorage에서 찾음 → Supabase Auth 계정 자동 생성
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+    })
+
+    if (signUpData?.user) {
+      // 프로필 마이그레이션
+      await upsertMemberProfile({
+        id: signUpData.user.id,
+        email: localMember.email,
+        name: localMember.name,
+        phone: localMember.phone,
+        tier: localMember.tier || 'member',
+        status: localMember.isActive !== false ? 'active' : 'inactive',
+        provider: localMember.provider || 'email',
+        company: localMember.company,
+        business_number: localMember.businessNumber,
+        marketing_consent: localMember.marketingConsent,
+        profile_image: localMember.profileImage,
+        total_orders: 0,
+        total_spent: 0,
+        created_at: localMember.createdAt || new Date().toISOString(),
+        last_login_at: new Date().toISOString(),
+      })
+
+      const user = await fetchMemberProfile(signUpData.user.id)
+      return { success: true, user: user || undefined }
+    }
+
+    // signUp도 실패한 경우 (이미 다른 비밀번호로 존재하는 등)
+    if (signUpError) {
+      console.warn('localStorage 회원 마이그레이션 실패:', signUpError.message)
     }
   }
 
-  if (member.password !== password) {
-    return { success: false, error: '비밀번호가 일치하지 않습니다.' }
-  }
-
-  if (!member.isActive) {
-    return { success: false, error: '비활성화된 계정입니다. 고객센터에 문의해주세요.' }
-  }
-
-  // 마지막 로그인 시간 업데이트
-  const members = getMembers()
-  const index = members.findIndex(m => m.id === member.id)
-  if (index >= 0) {
-    members[index].lastLoginAt = new Date()
-    saveMembers(members)
-  }
-
-  const { password: _, ...userWithoutPassword } = member
-  return { success: true, user: userWithoutPassword }
+  // 3. 모두 실패
+  return { success: false, error: '이메일 또는 비밀번호가 일치하지 않습니다.' }
 }
 
-/**
- * 소셜 로그인/가입 처리
- * 소셜 로그인은 자동으로 회원가입 처리됩니다.
- */
+// ── localStorage 폴백 (마이그레이션용) ─────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function tryLocalStorageLogin(email: string, password: string): any | null {
+  try {
+    const data = localStorage.getItem(MEMBERS_STORAGE_KEY)
+    if (!data) return null
+
+    const members = JSON.parse(data)
+    return (
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      members.find(
+        (m: any) =>
+          m.email?.toLowerCase() === email.toLowerCase() &&
+          m.password === password &&
+          m.provider === 'email'
+      ) || null
+    )
+  } catch {
+    return null
+  }
+}
+
+// ── 소셜 로그인 (Supabase OAuth) ───────────────────────
+
 export async function loginWithSocial(
-  provider: SocialProvider,
-  socialData: {
-    providerId: string
-    email: string
-    name: string
-    profileImage?: string
-  }
+  provider: SocialProvider
 ): Promise<SocialLoginResponse> {
-  // 기존 소셜 계정으로 가입된 회원 찾기
-  let member = findMemberBySocialId(provider, socialData.providerId)
-  let isNewUser = false
-
-  if (!member) {
-    // 같은 이메일로 가입된 회원이 있는지 확인
-    const existingByEmail = findMemberByEmail(socialData.email)
-
-    if (existingByEmail) {
-      // 이미 다른 방법으로 가입된 이메일
-      // 옵션 1: 에러 반환
-      // return {
-      //   success: false,
-      //   error: `이 이메일은 이미 ${getProviderName(existingByEmail.provider)}(으)로 가입되어 있습니다.`
-      // }
-
-      // 옵션 2: 소셜 계정 연동 (현재 구현)
-      const members = getMembers()
-      const index = members.findIndex(m => m.id === existingByEmail.id)
-      if (index >= 0) {
-        members[index].socialAccounts = members[index].socialAccounts || []
-        members[index].socialAccounts.push({
-          provider,
-          providerId: socialData.providerId,
-          connectedAt: new Date()
-        })
-        members[index].lastLoginAt = new Date()
-        saveMembers(members)
-      }
-
-      const { password: _, ...userWithoutPassword } = existingByEmail
-      return { success: true, user: userWithoutPassword, isNewUser: false }
-    }
-
-    // 새 회원 생성
-    const newMember: MemberRecord = {
-      id: generateMemberId(),
-      email: socialData.email,
-      name: socialData.name,
-      tier: 'member',
-      provider,
-      providerId: socialData.providerId,
-      profileImage: socialData.profileImage,
-      createdAt: new Date(),
-      lastLoginAt: new Date(),
-      isActive: true,
-    }
-
-    const members = getMembers()
-    members.push(newMember)
-    saveMembers(members)
-    member = newMember
-    isNewUser = true
-  } else {
-    // 기존 회원 로그인 시간 업데이트
-    const members = getMembers()
-    const index = members.findIndex(m => m.id === member!.id)
-    if (index >= 0) {
-      members[index].lastLoginAt = new Date()
-      if (socialData.profileImage) {
-        members[index].profileImage = socialData.profileImage
-      }
-      saveMembers(members)
-    }
-  }
-
-  if (!member.isActive) {
-    return { success: false, error: '비활성화된 계정입니다. 고객센터에 문의해주세요.' }
-  }
-
-  const { password: _, ...userWithoutPassword } = member
-  return { success: true, user: userWithoutPassword, isNewUser }
-}
-
-/**
- * 소셜 로그인 시뮬레이션 (실제 서비스에서는 OAuth 플로우로 대체)
- */
-export async function simulateSocialLogin(provider: SocialProvider): Promise<SocialLoginResponse> {
-  // 시뮬레이션: 실제로는 OAuth 인증 후 서버에서 받아오는 데이터
-  const mockSocialData = {
-    kakao: {
-      providerId: `kakao-${Date.now()}`,
-      email: `kakao_user_${Date.now()}@kakao.com`,
-      name: '카카오 사용자',
-      profileImage: 'https://via.placeholder.com/100'
-    },
-    naver: {
-      providerId: `naver-${Date.now()}`,
-      email: `naver_user_${Date.now()}@naver.com`,
-      name: '네이버 사용자',
-      profileImage: 'https://via.placeholder.com/100'
-    },
-    google: {
-      providerId: `google-${Date.now()}`,
-      email: `google_user_${Date.now()}@gmail.com`,
-      name: 'Google 사용자',
-      profileImage: 'https://via.placeholder.com/100'
-    },
-  }
-
   if (provider === 'email') {
     return { success: false, error: '이메일 로그인은 loginWithEmail을 사용하세요.' }
   }
 
-  const socialData = mockSocialData[provider]
-  return loginWithSocial(provider, socialData)
-}
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: provider as 'kakao' | 'google',
+    options: {
+      redirectTo: `${window.location.origin}/`,
+    },
+  })
 
-/**
- * 회원 정보 업데이트
- */
-export async function updateMember(userId: string, updates: Partial<User>): Promise<{ success: boolean; user?: User; error?: string }> {
-  const members = getMembers()
-  const index = members.findIndex(m => m.id === userId)
-
-  if (index < 0) {
-    return { success: false, error: '회원을 찾을 수 없습니다.' }
+  if (error) {
+    return { success: false, error: `소셜 로그인 실패: ${error.message}` }
   }
 
-  // 업데이트 불가능한 필드 제외
-  const { id, email, provider, providerId, createdAt, ...allowedUpdates } = updates as any
-
-  members[index] = { ...members[index], ...allowedUpdates }
-  saveMembers(members)
-
-  const { password: _, ...userWithoutPassword } = members[index]
-  return { success: true, user: userWithoutPassword }
-}
-
-/**
- * 회원 등급 변경 (관리자용)
- */
-export async function updateMemberTier(userId: string, tier: User['tier']): Promise<{ success: boolean; error?: string }> {
-  const members = getMembers()
-  const index = members.findIndex(m => m.id === userId)
-
-  if (index < 0) {
-    return { success: false, error: '회원을 찾을 수 없습니다.' }
-  }
-
-  members[index].tier = tier
-  saveMembers(members)
-
+  // OAuth는 리다이렉트 방식 → 브라우저가 이동하므로 여기서 끝
   return { success: true }
 }
 
-/**
- * 회원 활성화/비활성화 (관리자용)
- */
-export async function updateMemberActive(userId: string, isActive: boolean): Promise<{ success: boolean; error?: string }> {
-  const members = getMembers()
-  const index = members.findIndex(m => m.id === userId)
+// ── 현재 세션 사용자 조회 ──────────────────────────────
 
-  if (index < 0) {
-    return { success: false, error: '회원을 찾을 수 없습니다.' }
+export async function getCurrentUser(): Promise<User | null> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session?.user) return null
+
+  let user = await fetchMemberProfile(session.user.id)
+
+  if (!user) {
+    // Auth는 있지만 members 프로필 없음 → 자동 생성 (OAuth 최초 로그인 등)
+    const meta = session.user.user_metadata || {}
+    await upsertMemberProfile({
+      id: session.user.id,
+      email: session.user.email,
+      name:
+        meta.full_name ||
+        meta.name ||
+        meta.preferred_username ||
+        session.user.email?.split('@')[0] ||
+        '회원',
+      phone: meta.phone,
+      tier: 'member',
+      status: 'active',
+      provider: session.user.app_metadata?.provider || 'email',
+      profile_image: meta.avatar_url || meta.picture,
+      total_orders: 0,
+      total_spent: 0,
+      created_at: session.user.created_at || new Date().toISOString(),
+      last_login_at: new Date().toISOString(),
+    })
+    user = await fetchMemberProfile(session.user.id)
   }
 
-  members[index].isActive = isActive
-  saveMembers(members)
-
-  return { success: true }
+  return user
 }
 
-/**
- * 회원 탈퇴 (소프트 삭제)
- */
-export async function deactivateMember(userId: string): Promise<{ success: boolean; error?: string }> {
-  const members = getMembers()
-  const index = members.findIndex(m => m.id === userId)
+// ── 로그아웃 ───────────────────────────────────────────
 
-  if (index < 0) {
-    return { success: false, error: '회원을 찾을 수 없습니다.' }
+export async function logoutUser(): Promise<void> {
+  await supabase.auth.signOut()
+}
+
+// ── 회원 정보 업데이트 ─────────────────────────────────
+
+export async function updateMember(
+  userId: string,
+  updates: Partial<User>
+): Promise<{ success: boolean; user?: User; error?: string }> {
+  // camelCase → snake_case 변환
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dbUpdates: Record<string, any> = {}
+  if (updates.name !== undefined) dbUpdates.name = updates.name
+  if (updates.phone !== undefined) dbUpdates.phone = updates.phone
+  if (updates.company !== undefined) dbUpdates.company = updates.company
+  if (updates.businessNumber !== undefined) dbUpdates.business_number = updates.businessNumber
+  if (updates.profileImage !== undefined) dbUpdates.profile_image = updates.profileImage
+  if (updates.marketingConsent !== undefined) dbUpdates.marketing_consent = updates.marketingConsent
+
+  const { error } = await supabase
+    .from('members')
+    .update(dbUpdates)
+    .eq('id', userId)
+
+  if (error) {
+    return { success: false, error: `업데이트 실패: ${error.message}` }
   }
 
-  members[index].isActive = false
-  saveMembers(members)
-
-  return { success: true }
+  const user = await fetchMemberProfile(userId)
+  return { success: true, user: user || undefined }
 }
 
-/**
- * 전체 회원 목록 조회 (관리자용)
- */
-export function getAllMembers(): User[] {
-  return getMembers().map(({ password, ...user }) => user)
+// ── localStorage 회원 → Supabase 마이그레이션 ─────────
+
+export async function migrateLocalMembers(): Promise<void> {
+  if (localStorage.getItem(MEMBERS_MIGRATED_KEY)) return
+
+  const data = localStorage.getItem(MEMBERS_STORAGE_KEY)
+  if (!data) {
+    localStorage.setItem(MEMBERS_MIGRATED_KEY, 'true')
+    return
+  }
+
+  try {
+    const members = JSON.parse(data)
+    for (const member of members) {
+      try {
+        await supabase.from('members').upsert(
+          {
+            id: member.id,
+            email: member.email,
+            name: member.name,
+            phone: member.phone,
+            tier: member.tier || 'member',
+            status: member.isActive !== false ? 'active' : 'inactive',
+            provider: member.provider || 'email',
+            company: member.company,
+            business_number: member.businessNumber,
+            marketing_consent: member.marketingConsent,
+            profile_image: member.profileImage,
+            total_orders: 0,
+            total_spent: 0,
+            created_at: member.createdAt || new Date().toISOString(),
+            last_login_at: member.lastLoginAt,
+          },
+          { onConflict: 'id' }
+        )
+      } catch (err) {
+        console.error(`회원 마이그레이션 실패 (${member.email}):`, err)
+      }
+    }
+  } catch (err) {
+    console.error('localStorage 회원 파싱 실패:', err)
+  }
+
+  localStorage.setItem(MEMBERS_MIGRATED_KEY, 'true')
 }
 
-/**
- * Provider 이름 반환
- */
-function getProviderName(provider: SocialProvider): string {
+// ── Provider 이름 반환 ─────────────────────────────────
+
+export function getProviderName(provider: SocialProvider): string {
   const names: Record<SocialProvider, string> = {
     kakao: '카카오',
     naver: '네이버',
     google: 'Google',
-    email: '이메일'
+    email: '이메일',
   }
   return names[provider]
 }
-
-export { getProviderName }

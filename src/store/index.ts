@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { User, CartItem, QuoteItem, Product, UserTier, Coupon } from '../types'
-import { mockUser } from '../data'
+// 쿠폰 목록(myCoupons)은 Supabase에서 관리 → useUserCoupons 훅 사용
+// store에는 현재 적용 중인 쿠폰(appliedCoupon)만 유지
+import { supabase } from '../lib/supabase'
 
 interface AppState {
   // User
@@ -33,13 +35,9 @@ interface AppState {
   viewMode: 'normal' | 'bulk'
   setViewMode: (mode: 'normal' | 'bulk') => void
 
-  // Coupons
-  myCoupons: Coupon[]
+  // Coupons (목록은 Supabase → useUserCoupons 훅에서 관리)
   appliedCoupon: Coupon | null
-  addCoupon: (coupon: Coupon) => void
-  removeCoupon: (couponId: string) => void
   applyCoupon: (coupon: Coupon | null) => void
-  useCoupon: (couponId: string) => void
   getCouponDiscount: (orderAmount: number) => number
 }
 
@@ -51,7 +49,10 @@ export const useStore = create<AppState>()(
   isLoggedIn: false,
 
   login: (user) => set({ user, isLoggedIn: true }),
-  logout: () => set({ user: null, isLoggedIn: false }),
+  logout: () => {
+    supabase.auth.signOut()
+    set({ user: null, isLoggedIn: false })
+  },
   setUserTier: (tier) => set((state) => ({
     user: state.user ? { ...state.user, tier } : null
   })),
@@ -155,30 +156,9 @@ export const useStore = create<AppState>()(
   setViewMode: (mode) => set({ viewMode: mode }),
 
   // Coupons
-  myCoupons: [],
   appliedCoupon: null,
 
-  addCoupon: (coupon) => set((state) => {
-    // 이미 있는 쿠폰인지 확인
-    if (state.myCoupons.some(c => c.id === coupon.id)) {
-      return state
-    }
-    return { myCoupons: [...state.myCoupons, coupon] }
-  }),
-
-  removeCoupon: (couponId) => set((state) => ({
-    myCoupons: state.myCoupons.filter(c => c.id !== couponId),
-    appliedCoupon: state.appliedCoupon?.id === couponId ? null : state.appliedCoupon
-  })),
-
   applyCoupon: (coupon) => set({ appliedCoupon: coupon }),
-
-  useCoupon: (couponId) => set((state) => ({
-    myCoupons: state.myCoupons.map(c =>
-      c.id === couponId ? { ...c, isUsed: true, usedAt: new Date() } : c
-    ),
-    appliedCoupon: null
-  })),
 
   getCouponDiscount: (orderAmount) => {
     const state = get()
@@ -219,7 +199,6 @@ export const useStore = create<AppState>()(
         isLoggedIn: state.isLoggedIn,
         cart: state.cart,
         quoteItems: state.quoteItems,
-        myCoupons: state.myCoupons,
         appliedCoupon: state.appliedCoupon,
       }),
     }

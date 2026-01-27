@@ -1,20 +1,29 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
-import { CheckCircle, Package, ArrowRight } from 'lucide-react'
+import { CheckCircle, Package, ArrowRight, AlertCircle } from 'lucide-react'
 import { Button, Card } from '../components/ui'
 import { formatPrice } from '../lib/utils'
 import { useStore } from '../store'
+import { createOrder } from '../services/orders'
+import { markCouponUsed } from '../services/coupons'
+import type { CreateOrderInput } from '../services/orders'
 
 export function PaymentSuccessPage() {
   const [searchParams] = useSearchParams()
-  const { clearCart, useCoupon, applyCoupon } = useStore()
+  const { clearCart, applyCoupon } = useStore()
   const [orderInfo, setOrderInfo] = useState<{
     orderId: string
     amount: number
     paymentKey: string
   } | null>(null)
+  const [orderSaved, setOrderSaved] = useState(false)
+  const [orderError, setOrderError] = useState<string | null>(null)
+  const processedRef = useRef(false)
 
   useEffect(() => {
+    if (processedRef.current) return
+    processedRef.current = true
+
     const orderId = searchParams.get('orderId')
     const amount = searchParams.get('amount')
     const paymentKey = searchParams.get('paymentKey')
@@ -29,18 +38,41 @@ export function PaymentSuccessPage() {
       // 장바구니 비우기
       clearCart()
 
-      // 적용된 쿠폰 사용 처리
+      // 적용된 쿠폰 사용 처리 (Supabase)
       const pendingCouponId = localStorage.getItem('pendingCouponId')
       if (pendingCouponId) {
-        useCoupon(pendingCouponId)
+        markCouponUsed(pendingCouponId).catch(console.error)
         applyCoupon(null)
         localStorage.removeItem('pendingCouponId')
       }
 
-      // 실제 서비스에서는 여기서 서버에 결제 승인 요청을 보내야 합니다
-      // 예: await fetch('/api/payments/confirm', { ... })
+      // localStorage에서 주문 데이터 읽어와서 Supabase에 저장
+      const pendingOrderDataStr = localStorage.getItem('pendingOrderData')
+      if (pendingOrderDataStr) {
+        try {
+          const pendingOrderData: CreateOrderInput = JSON.parse(pendingOrderDataStr)
+          // paymentKey 추가
+          pendingOrderData.paymentKey = paymentKey
+
+          createOrder(pendingOrderData)
+            .then(() => {
+              setOrderSaved(true)
+              localStorage.removeItem('pendingOrderData')
+            })
+            .catch((err) => {
+              console.error('주문 저장 실패:', err)
+              setOrderError('주문 정보 저장에 실패했습니다. 고객센터에 문의해주세요.')
+            })
+        } catch {
+          console.error('주문 데이터 파싱 실패')
+          setOrderError('주문 데이터 처리 중 오류가 발생했습니다.')
+        }
+      } else {
+        // pendingOrderData가 없는 경우 (이미 처리됨 등)
+        setOrderSaved(true)
+      }
     }
-  }, [searchParams, clearCart, useCoupon, applyCoupon])
+  }, [searchParams, clearCart, applyCoupon])
 
   return (
     <div className="max-w-lg mx-auto px-4 py-16">
@@ -56,6 +88,16 @@ export function PaymentSuccessPage() {
           주문해 주셔서 감사합니다
         </p>
 
+        {orderError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-left">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-red-700 font-medium">주문 저장 오류</p>
+              <p className="text-sm text-red-600 mt-1">{orderError}</p>
+            </div>
+          </div>
+        )}
+
         {orderInfo && (
           <div className="bg-neutral-50 rounded-lg p-4 mb-8 text-left">
             <div className="space-y-3 text-sm">
@@ -67,6 +109,12 @@ export function PaymentSuccessPage() {
                 <span className="text-neutral-500">결제금액</span>
                 <span className="font-bold text-primary-600">{formatPrice(orderInfo.amount)}</span>
               </div>
+              {orderSaved && (
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">주문상태</span>
+                  <span className="text-green-600 font-medium">주문 확인됨</span>
+                </div>
+              )}
             </div>
           </div>
         )}

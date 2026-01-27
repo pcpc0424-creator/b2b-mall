@@ -3,7 +3,7 @@ import type { MemberListItem, MemberStatus } from '../admin/types/admin'
 import type { UserTier } from '../types'
 
 /**
- * 회원 서비스
+ * 회원 서비스 (Supabase 전용)
  * DB 행(snake_case) ↔ MemberListItem(camelCase) 변환 및 CRUD 제공
  */
 
@@ -28,14 +28,64 @@ export function toMember(row: DbRow): MemberListItem {
   }
 }
 
+/** 테스트 회원 시드 데이터 */
+const TEST_MEMBERS_SEED = [
+  {
+    id: 'test-member-001',
+    name: '테스트 사용자',
+    email: 'test@test.com',
+    tier: 'member',
+    status: 'active',
+    provider: 'email',
+    total_orders: 0,
+    total_spent: 0,
+    created_at: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'test-vip-001',
+    name: 'VIP 테스트',
+    email: 'vip@test.com',
+    tier: 'vip',
+    status: 'active',
+    provider: 'email',
+    total_orders: 5,
+    total_spent: 500000,
+    created_at: '2024-01-01T00:00:00Z',
+  },
+]
+
+/** 테스트 회원 시드 (Supabase) */
+let seeded = false
+async function ensureTestMembers(): Promise<void> {
+  if (seeded) return
+  seeded = true
+
+  try {
+    const { error } = await supabase
+      .from('members')
+      .upsert(TEST_MEMBERS_SEED, { onConflict: 'id' })
+    if (error) {
+      console.error('테스트 회원 시드 실패:', error.message)
+    }
+  } catch (err) {
+    console.error('테스트 회원 시드 중 예외 발생:', err)
+  }
+}
+
 /** 전체 회원 목록 조회 (생성일 내림차순) */
 export async function fetchMembers(): Promise<MemberListItem[]> {
+  await ensureTestMembers()
+
   const { data, error } = await supabase
     .from('members')
     .select('*')
     .order('created_at', { ascending: false })
 
-  if (error) throw error
+  if (error) {
+    console.error('회원 목록 조회 실패:', error.message)
+    return []
+  }
+
   return (data || []).map(toMember)
 }
 

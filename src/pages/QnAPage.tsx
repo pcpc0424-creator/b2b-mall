@@ -1,90 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MessageCircle, ChevronDown, ChevronUp, Search, Lock, CheckCircle } from 'lucide-react'
+import { MessageCircle, ChevronDown, ChevronUp, Search, Lock, CheckCircle, Loader2 } from 'lucide-react'
 import { Badge, Card, Button } from '../components/ui'
 import { Animated } from '../hooks'
+import { useQnAs } from '../hooks/queries'
 import { cn } from '../lib/utils'
 
-interface QnA {
-  id: string
-  productName: string
-  productImage: string
-  question: string
-  answer?: string
-  author: string
-  createdAt: Date
-  isPrivate: boolean
-  isAnswered: boolean
-}
-
-const qnas: QnA[] = [
-  {
-    id: 'qna-1',
-    productName: '프리미엄 홍삼정과 선물세트',
-    productImage: 'https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=100&h=100&fit=crop',
-    question: '유통기한이 어떻게 되나요?',
-    answer: '안녕하세요. 해당 상품의 유통기한은 제조일로부터 2년입니다. 현재 출고되는 상품은 2025년 12월까지입니다. 감사합니다.',
-    author: '김**',
-    createdAt: new Date('2024-01-14'),
-    isPrivate: false,
-    isAnswered: true
-  },
-  {
-    id: 'qna-2',
-    productName: '6년근 홍삼 농축액 세트',
-    productImage: 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=100&h=100&fit=crop',
-    question: '100박스 대량 주문 시 추가 할인이 가능한가요?',
-    answer: '안녕하세요. 대량 주문에 대한 추가 할인은 담당자 협의가 필요합니다. 고객센터(1588-0000) 또는 이메일(sales@b2bmall.co.kr)로 문의해 주시면 맞춤 견적을 보내드리겠습니다. 감사합니다.',
-    author: '박**',
-    createdAt: new Date('2024-01-13'),
-    isPrivate: false,
-    isAnswered: true
-  },
-  {
-    id: 'qna-3',
-    productName: '명품 견과류 선물세트',
-    productImage: 'https://images.unsplash.com/photo-1599599810694-b5b37304c041?w=100&h=100&fit=crop',
-    question: '포장 상태로 배송되나요? 선물용으로 사용하려고 합니다.',
-    answer: '네, 고급 선물포장 상태로 배송됩니다. 추가 요청사항이 있으시면 주문 시 메모에 남겨주세요.',
-    author: '이**',
-    createdAt: new Date('2024-01-12'),
-    isPrivate: false,
-    isAnswered: true
-  },
-  {
-    id: 'qna-4',
-    productName: '프리미엄 스킨케어 4종 세트',
-    productImage: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=100&h=100&fit=crop',
-    question: '민감성 피부에도 사용 가능한가요?',
-    author: '최**',
-    createdAt: new Date('2024-01-11'),
-    isPrivate: false,
-    isAnswered: false
-  },
-  {
-    id: 'qna-5',
-    productName: '비타민C 1000mg 180정',
-    productImage: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&h=100&fit=crop',
-    question: '결제 관련 문의드립니다.',
-    author: '정**',
-    createdAt: new Date('2024-01-10'),
-    isPrivate: true,
-    isAnswered: true
-  },
-  {
-    id: 'qna-6',
-    productName: '스테인리스 냄비 3종 세트',
-    productImage: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=100&h=100&fit=crop',
-    question: '인덕션에서 사용 가능한가요?',
-    answer: '네, 해당 제품은 인덕션 포함 모든 열원에서 사용 가능합니다. IH 인덕션 호환 제품입니다.',
-    author: '한**',
-    createdAt: new Date('2024-01-09'),
-    isPrivate: false,
-    isAnswered: true
-  }
-]
-
 export function QnAPage() {
+  const { data: qnas = [], isLoading } = useQnAs()
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<'all' | 'answered' | 'waiting'>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -168,7 +91,16 @@ export function QnAPage() {
         </div>
       </Animated>
 
+      {/* 로딩 */}
+      {isLoading && (
+        <div className="py-16 text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500 mx-auto mb-4" />
+          <p className="text-neutral-500">Q&A를 불러오는 중...</p>
+        </div>
+      )}
+
       {/* Q&A List */}
+      {!isLoading && (
       <Animated animation="fade-up" delay={200}>
         <Card className="overflow-hidden divide-y divide-neutral-100">
           {filteredQnAs.map((qna) => {
@@ -263,6 +195,7 @@ export function QnAPage() {
           )}
         </Card>
       </Animated>
+      )}
 
       {/* Notice */}
       <Animated animation="fade-up" delay={300}>

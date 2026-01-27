@@ -6,7 +6,7 @@ import {
   Refrigerator, Monitor, Dumbbell, PawPrint, Ticket
 } from 'lucide-react'
 import { useStore, getTierLabel, getTierColor } from '../../store'
-import { categories } from '../../data'
+import { useCategories } from '../../hooks/queries'
 import { Input } from '../ui'
 import { cn } from '../../lib/utils'
 
@@ -18,6 +18,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 export function Header() {
   const { user, isLoggedIn, logout, cart, isMegaMenuOpen, setMegaMenuOpen } = useStore()
+  const { data: categories = [] } = useCategories()
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileCommunityOpen, setMobileCommunityOpen] = useState(false)
 

@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Input, Card, CardContent } from '../components/ui'
-import { loginWithEmail, simulateSocialLogin, getProviderName } from '../services/auth'
+import { loginWithEmail, loginWithSocial, getProviderName } from '../services/auth'
 import { SocialProvider } from '../types'
 
 export function LoginPage() {
@@ -67,19 +67,14 @@ export function LoginPage() {
   const handleSocialLogin = async (provider: SocialProvider) => {
     setSocialLoading(provider)
     try {
-      const result = await simulateSocialLogin(provider)
-      if (result.success && result.user) {
-        login(result.user)
-        if (result.isNewUser) {
-          alert(`${getProviderName(provider)}로 회원가입이 완료되었습니다!`)
-        }
-        navigate(from, { replace: true })
-      } else {
-        alert(result.error || '소셜 로그인에 실패했습니다.')
+      const result = await loginWithSocial(provider)
+      if (!result.success) {
+        alert(result.error || `${getProviderName(provider)} 로그인에 실패했습니다.`)
+        setSocialLoading(null)
       }
+      // 성공 시 OAuth 리다이렉트 → App.tsx의 onAuthStateChange가 처리
     } catch (error) {
       alert('소셜 로그인 중 오류가 발생했습니다.')
-    } finally {
       setSocialLoading(null)
     }
   }
@@ -247,7 +242,46 @@ export function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 pt-6 border-t border-neutral-200 text-center">
+            {/* 테스트 계정 안내 */}
+            <div className="mt-6 pt-6 border-t border-neutral-200">
+              <p className="text-xs text-neutral-400 text-center mb-2">테스트 계정 (클릭 시 바로 로그인)</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const result = await loginWithEmail('test@test.com', 'test1234')
+                    if (result.success && result.user) {
+                      login(result.user)
+                      navigate(from, { replace: true })
+                    } else {
+                      setErrors({ general: result.error || '테스트 로그인 실패' })
+                    }
+                  }}
+                  className="p-2 bg-neutral-50 hover:bg-neutral-100 rounded-lg text-left transition-colors"
+                >
+                  <p className="text-xs font-medium text-neutral-700">일반회원</p>
+                  <p className="text-xs text-neutral-400">test@test.com</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const result = await loginWithEmail('vip@test.com', 'test1234')
+                    if (result.success && result.user) {
+                      login(result.user)
+                      navigate(from, { replace: true })
+                    } else {
+                      setErrors({ general: result.error || '테스트 로그인 실패' })
+                    }
+                  }}
+                  className="p-2 bg-neutral-50 hover:bg-neutral-100 rounded-lg text-left transition-colors"
+                >
+                  <p className="text-xs font-medium text-neutral-700">VIP회원</p>
+                  <p className="text-xs text-neutral-400">vip@test.com</p>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 text-center">
               <p className="text-neutral-600">
                 아직 회원이 아니신가요?{' '}
                 <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">

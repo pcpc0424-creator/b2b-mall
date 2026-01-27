@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react'
 import { Button, Card } from '../components/ui'
 import { Animated } from '../hooks'
+import { supabase } from '../lib/supabase'
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -26,11 +27,17 @@ export function ForgotPasswordPage() {
 
     setIsLoading(true)
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    setIsLoading(false)
-    setIsSubmitted(true)
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+      if (error) throw error
+      setIsSubmitted(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '비밀번호 재설정 요청에 실패했습니다.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   if (isSubmitted) {

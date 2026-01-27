@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Crown, Star, Gift, Truck, Percent, Headphones, Award, TrendingUp } from 'lucide-react'
 import { useStore } from '../store'
-import { products } from '../data'
+import { useProducts } from '../hooks/queries'
 import { ProductCard } from '../components/product'
 import { Badge, Card, Button } from '../components/ui'
 import { Animated } from '../hooks'
@@ -41,6 +41,8 @@ export function ExclusivePage() {
       benefits: ['VIP 전용가 적용', '적립금 3% 지급', '무료 배송', '우선 배송', 'VIP 전용 고객센터']
     }
   }
+
+  const { data: products = [] } = useProducts()
 
   const currentTierConfig = tierConfig[tier]
   const allTiers = ['member', 'premium', 'vip'] as const
