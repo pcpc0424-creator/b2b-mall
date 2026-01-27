@@ -1,70 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { Search, Eye, RefreshCw } from 'lucide-react'
-import { useAdminStore } from '../store/adminStore'
+import { useMembers, useUpdateMemberTier, useUpdateMemberStatus } from '../../hooks/queries'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { formatPrice, cn } from '../../lib/utils'
 import { MemberListItem, MemberStatus } from '../types/admin'
 import { UserTier, SocialProvider } from '../../types'
-import { getAllMembers, getProviderName, updateMemberTier as updateMemberTierDB, updateMemberActive } from '../../services/auth'
-
-// 데모 회원 데이터
-const mockMembers: MemberListItem[] = [
-  {
-    id: 'user-1',
-    name: '김철수',
-    email: 'kim@example.com',
-    tier: 'vip',
-    status: 'active',
-    totalOrders: 15,
-    totalSpent: 2500000,
-    createdAt: new Date('2023-06-15'),
-    lastOrderAt: new Date('2024-01-15'),
-  },
-  {
-    id: 'user-2',
-    name: '이영희',
-    email: 'lee@example.com',
-    tier: 'member',
-    status: 'active',
-    totalOrders: 5,
-    totalSpent: 350000,
-    createdAt: new Date('2023-10-20'),
-    lastOrderAt: new Date('2024-01-10'),
-  },
-  {
-    id: 'user-3',
-    name: '박지민',
-    email: 'park@example.com',
-    tier: 'premium',
-    status: 'active',
-    totalOrders: 45,
-    totalSpent: 15000000,
-    createdAt: new Date('2023-03-01'),
-    lastOrderAt: new Date('2024-01-14'),
-  },
-  {
-    id: 'user-4',
-    name: '최수진',
-    email: 'choi@example.com',
-    tier: 'member',
-    status: 'inactive',
-    totalOrders: 2,
-    totalSpent: 120000,
-    createdAt: new Date('2023-12-01'),
-    lastOrderAt: new Date('2023-12-15'),
-  },
-  {
-    id: 'user-5',
-    name: '정민호',
-    email: 'jung@example.com',
-    tier: 'vip',
-    status: 'active',
-    totalOrders: 120,
-    totalSpent: 85000000,
-    createdAt: new Date('2022-08-10'),
-    lastOrderAt: new Date('2024-01-16'),
-  },
-]
+import { getProviderName } from '../../services/auth'
 
 const tierConfig: Record<UserTier, { label: string; color: string }> = {
   guest: { label: '비회원', color: 'bg-neutral-100 text-neutral-700' },
@@ -81,48 +22,13 @@ const statusConfig: Record<MemberStatus, { label: string; variant: 'success' | '
 }
 
 export function MemberManagementPage() {
-  const { members, setMembers, updateMemberTier, updateMemberStatus } = useAdminStore()
+  const { data: members = [], isLoading, refetch } = useMembers()
+  const updateTierMutation = useUpdateMemberTier()
+  const updateStatusMutation = useUpdateMemberStatus()
   const [searchTerm, setSearchTerm] = useState('')
   const [tierFilter, setTierFilter] = useState<UserTier | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<MemberStatus | 'all'>('all')
   const [selectedMember, setSelectedMember] = useState<MemberListItem | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-
-  // 회원 목록 로드 함수
-  const loadMembers = useCallback(() => {
-    setIsLoading(true)
-    try {
-      // 실제 가입한 회원 목록 가져오기
-      const registeredMembers = getAllMembers()
-      const convertedMembers: MemberListItem[] = registeredMembers.map(user => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        tier: user.tier,
-        status: user.isActive ? 'active' : 'inactive',
-        totalOrders: 0,
-        totalSpent: 0,
-        createdAt: new Date(user.createdAt),
-        lastOrderAt: user.lastLoginAt ? new Date(user.lastLoginAt) : undefined,
-        company: user.company,
-        businessNumber: user.businessNumber,
-        provider: user.provider,
-      }))
-
-      // 데모 데이터와 실제 회원 합치기 (중복 제거)
-      const existingIds = new Set(convertedMembers.map(m => m.email))
-      const filteredMockMembers = mockMembers.filter(m => !existingIds.has(m.email))
-
-      setMembers([...convertedMembers, ...filteredMockMembers])
-    } finally {
-      setIsLoading(false)
-    }
-  }, [setMembers])
-
-  // 초기 데이터 로드
-  useEffect(() => {
-    loadMembers()
-  }, [loadMembers])
 
   // 필터링
   const filteredMembers = members.filter(member => {
@@ -136,23 +42,14 @@ export function MemberManagementPage() {
     return matchesSearch && matchesTier && matchesStatus
   })
 
-  // 등급 변경 (DB + Store 동시 업데이트)
-  const handleTierChange = async (memberId: string, newTier: UserTier) => {
-    // Store 즉시 업데이트 (UI 반영)
-    updateMemberTier(memberId, newTier)
-
-    // DB 업데이트 (실제 가입 회원인 경우)
-    await updateMemberTierDB(memberId, newTier)
+  // 등급 변경
+  const handleTierChange = (memberId: string, newTier: UserTier) => {
+    updateTierMutation.mutate({ memberId, tier: newTier })
   }
 
-  // 상태 변경 (DB + Store 동시 업데이트)
-  const handleStatusChange = async (memberId: string, newStatus: MemberStatus) => {
-    // Store 즉시 업데이트 (UI 반영)
-    updateMemberStatus(memberId, newStatus)
-
-    // DB 업데이트 (active/inactive만 지원)
-    const isActive = newStatus === 'active'
-    await updateMemberActive(memberId, isActive)
+  // 상태 변경
+  const handleStatusChange = (memberId: string, newStatus: MemberStatus) => {
+    updateStatusMutation.mutate({ memberId, status: newStatus })
   }
 
   return (
@@ -166,7 +63,7 @@ export function MemberManagementPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={loadMembers}
+          onClick={() => refetch()}
           disabled={isLoading}
         >
           <RefreshCw className={cn("w-4 h-4 mr-1", isLoading && "animate-spin")} />

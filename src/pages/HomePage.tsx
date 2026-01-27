@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Zap, ArrowRight, Clock, ShoppingCart, Lock } from 'lucide-react'
 import { useStore, getTierLabel, getPriceByTier } from '../store'
-import { useAdminStore } from '../admin/store/adminStore'
+import { useProducts, usePromotions, useSiteSettings } from '../hooks/queries'
 import { categories, products as defaultProducts } from '../data'
 import { ProductCard } from '../components/product'
 import { Button, Badge, Card, CardContent } from '../components/ui'
@@ -12,7 +12,9 @@ import { Product } from '../types'
 
 export function HomePage() {
   const { user, isLoggedIn } = useStore()
-  const { products: adminProducts, promotions, siteSettings } = useAdminStore()
+  const { data: adminProducts = [] } = useProducts()
+  const { data: promotions = [] } = usePromotions()
+  const { data: siteSettings } = useSiteSettings()
   const [currentSlide, setCurrentSlide] = useState(0)
 
   // 관리자 상품과 기본 상품 병합 (관리자 상품 우선)

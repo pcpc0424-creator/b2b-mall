@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { migrateLocalStorageToSupabase } from './services/migration'
 import { Layout } from './components/layout'
 import { AuthGuard } from './components/auth'
 import {
@@ -55,6 +56,14 @@ function ScrollToTop() {
 }
 
 function App() {
+  const migrationRan = useRef(false)
+  useEffect(() => {
+    if (!migrationRan.current) {
+      migrationRan.current = true
+      migrateLocalStorageToSupabase().catch(console.error)
+    }
+  }, [])
+
   return (
     <BrowserRouter basename="">
       <ScrollToTop />

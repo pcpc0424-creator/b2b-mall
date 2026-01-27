@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Save, ArrowLeft, Plus, X, GripVertical, Trash2, Upload, Image as ImageIcon, Bold, Italic, List, Link as LinkIcon, AlignLeft, AlignCenter } from 'lucide-react'
-import { useAdminStore } from '../store/adminStore'
+import { useProducts, useCreateProduct, useUpdateProduct } from '../../hooks/queries'
+import { uploadBase64Image } from '../../services/storage'
 import { products as mockProducts, categories } from '../../data'
 import { Button, Card, CardContent, Input, Badge } from '../../components/ui'
 import { formatPrice, cn } from '../../lib/utils'
@@ -10,7 +11,9 @@ import { ProductOptionAdmin, OptionValue, ProductVariant, ProductShipping, Quant
 export function ProductEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { addProduct, updateProduct, products } = useAdminStore()
+  const { data: products = [] } = useProducts()
+  const createMutation = useCreateProduct()
+  const updateMutation = useUpdateProduct()
   const isNew = !id || id === 'new'
 
   // 기본 상품 정보
@@ -53,6 +56,9 @@ export function ProductEditPage() {
 
   // 옵션 이미지 표시 여부
   const [showOptionImages, setShowOptionImages] = useState(false)
+
+  // 토스트 알림
+  const [toastMessage, setToastMessage] = useState('')
 
   // 수량별 할인 설정
   const [quantityDiscounts, setQuantityDiscounts] = useState<QuantityDiscount[]>([])
@@ -354,7 +360,7 @@ export function ProductEditPage() {
   }
 
   // 저장
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     // 필수 필드 검증
@@ -371,48 +377,83 @@ export function ProductEditPage() {
       return
     }
 
-    const productData = {
-      id: isNew ? `p_${Date.now()}` : id!,
-      sku: formData.sku,
-      name: formData.name,
-      brand: formData.brand,
-      categoryId: formData.categoryId,
-      subcategory: formData.subcategory || undefined,
-      images: images.length > 0 ? images : ['https://picsum.photos/seed/new/400/400'],
-      prices: {
-        retail: formData.retailPrice,
-        member: formData.memberPrice || formData.retailPrice,
-        premium: formData.premiumPrice || formData.retailPrice,
-        vip: formData.vipPrice || formData.retailPrice,
-      },
-      minQuantity: formData.minQuantity,
-      stock: formData.stock,
-      stockStatus: (formData.stock > 10 ? 'available' : formData.stock > 0 ? 'low' : 'out_of_stock') as 'available' | 'low' | 'out_of_stock',
-      isActive: formData.isActive,
-      adminOptions: options,
-      variants: variants,
-      shipping: shipping,
-      description: description,
-      detailImages: detailImages,
-      showOptionImages: showOptionImages,
-      quantityDiscounts: enableQuantityDiscount ? quantityDiscounts : [],
-      createdAt: isNew ? new Date() : new Date(),
-      updatedAt: new Date(),
-    }
+    try {
+      // base64 이미지를 Supabase Storage에 업로드
+      const uploadedImages = (await Promise.all(
+        images.map(img => uploadBase64Image('product-images', img))
+      )).filter(url => url !== '')
+      const uploadedDetailImages = (await Promise.all(
+        detailImages.map(img => uploadBase64Image('product-images', img))
+      )).filter(url => url !== '')
 
-    // zustand store 업데이트 (persist 미들웨어가 자동으로 localStorage에 저장)
-    if (isNew) {
-      addProduct(productData)
-    } else {
-      updateProduct(id!, productData)
-    }
+      // 옵션값 이미지 업로드
+      const uploadedOptions = await Promise.all(
+        options.map(async (opt) => ({
+          ...opt,
+          values: await Promise.all(
+            opt.values.map(async (v) => ({
+              ...v,
+              image: v.image ? await uploadBase64Image('product-images', v.image) : v.image,
+            }))
+          ),
+        }))
+      )
 
-    // 페이지 이동
-    navigate('/admin/products')
+      const productData = {
+        id: isNew ? `p_${Date.now()}` : id!,
+        sku: formData.sku,
+        name: formData.name,
+        brand: formData.brand,
+        categoryId: formData.categoryId,
+        subcategory: formData.subcategory || undefined,
+        images: uploadedImages.length > 0 ? uploadedImages : ['https://picsum.photos/seed/new/400/400'],
+        prices: {
+          retail: formData.retailPrice,
+          member: formData.memberPrice || formData.retailPrice,
+          premium: formData.premiumPrice || formData.retailPrice,
+          vip: formData.vipPrice || formData.retailPrice,
+        },
+        minQuantity: formData.minQuantity,
+        stock: formData.stock,
+        stockStatus: (formData.stock > 10 ? 'available' : formData.stock > 0 ? 'low' : 'out_of_stock') as 'available' | 'low' | 'out_of_stock',
+        isActive: formData.isActive,
+        adminOptions: uploadedOptions,
+        variants: variants,
+        shipping: shipping,
+        description: description,
+        detailImages: uploadedDetailImages,
+        showOptionImages: showOptionImages,
+        quantityDiscounts: enableQuantityDiscount ? quantityDiscounts : [],
+        createdAt: isNew ? new Date() : new Date(),
+        updatedAt: new Date(),
+      }
+
+      // React Query mutation으로 DB에 저장
+      if (isNew) {
+        await createMutation.mutateAsync(productData)
+        setToastMessage('상품이 등록되었습니다.')
+        setTimeout(() => navigate('/admin/products'), 1500)
+      } else {
+        await updateMutation.mutateAsync({ id: id!, updates: productData })
+        setToastMessage('상품이 수정되었습니다.')
+        setTimeout(() => navigate('/admin/products'), 1500)
+      }
+    } catch (err) {
+      console.error('상품 저장 실패:', err)
+      setToastMessage('상품 저장에 실패했습니다. 다시 시도해주세요.')
+      setTimeout(() => setToastMessage(''), 3000)
+    }
   }
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* 토스트 알림 */}
+      {toastMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-neutral-900 text-white px-6 py-3 rounded-lg shadow-lg z-[9999] animate-fade-in text-sm font-medium">
+          {toastMessage}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3 sm:gap-4">
         <Button variant="ghost" size="sm" onClick={() => navigate('/admin/products')} className="p-2">

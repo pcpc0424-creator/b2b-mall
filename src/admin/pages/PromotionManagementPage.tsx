@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Search, Edit, Trash2, Plus, X } from 'lucide-react'
-import { useAdminStore } from '../store/adminStore'
+import { usePromotions, useCreatePromotion, useUpdatePromotion, useDeletePromotion, useTogglePromotionActive } from '../../hooks/queries'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { AdminPromotion } from '../types/admin'
 import { UserTier } from '../../types'
@@ -19,7 +19,11 @@ const tierLabels: Record<UserTier, string> = {
 }
 
 export function PromotionManagementPage() {
-  const { promotions, togglePromotionActive, updatePromotion, addPromotion, deletePromotion } = useAdminStore()
+  const { data: promotions = [], isLoading } = usePromotions()
+  const createMutation = useCreatePromotion()
+  const updateMutation = useUpdatePromotion()
+  const deleteMutation = useDeletePromotion()
+  const toggleMutation = useTogglePromotionActive()
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [activeFilter, setActiveFilter] = useState('all')
@@ -38,7 +42,7 @@ export function PromotionManagementPage() {
 
   const handleDelete = (promoId: string) => {
     if (confirm('프로모션을 삭제하시겠습니까?')) {
-      deletePromotion(promoId)
+      deleteMutation.mutate(promoId)
     }
   }
 
@@ -76,9 +80,9 @@ export function PromotionManagementPage() {
 
     const existingPromo = promotions.find(p => p.id === editingPromo.id)
     if (existingPromo) {
-      updatePromotion(editingPromo.id, editingPromo)
+      updateMutation.mutate({ id: editingPromo.id, updates: editingPromo })
     } else {
-      addPromotion(editingPromo)
+      createMutation.mutate(editingPromo)
     }
     setIsModalOpen(false)
     setEditingPromo(null)
@@ -134,6 +138,9 @@ export function PromotionManagementPage() {
       </div>
 
       {/* Promotions List */}
+      {isLoading && (
+        <div className="text-center py-12 text-neutral-500">로딩 중...</div>
+      )}
       <div className="space-y-2">
         {filteredPromotions.map((promo) => (
           <Card key={promo.id}>
@@ -160,7 +167,7 @@ export function PromotionManagementPage() {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {/* Toggle Switch */}
                   <button
-                    onClick={() => togglePromotionActive(promo.id)}
+                    onClick={() => toggleMutation.mutate({ id: promo.id, currentActive: promo.isActive })}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
                       promo.isActive ? 'bg-primary-600' : 'bg-neutral-300'
                     }`}

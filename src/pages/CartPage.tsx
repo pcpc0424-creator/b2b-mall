@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom'
 import { Trash2, ShoppingBag, ArrowRight, Package, Truck, Ticket, ChevronDown, X, LogIn } from 'lucide-react'
 import { useStore, getPriceByTier, getTierLabel } from '../store'
+import { useProducts } from '../hooks/queries'
 import { Button, NumberStepper, Card, CardContent, Badge } from '../components/ui'
 import { formatPrice, formatNumber, cn } from '../lib/utils'
 import { Animated } from '../hooks'
 import { useMemo, useState, useEffect } from 'react'
 import { sampleCoupons } from '../data'
 import { Coupon } from '../types'
+import { AdminProduct } from '../admin/types/admin'
 
 // 토스페이먼츠 타입 선언
 declare global {
@@ -25,21 +27,10 @@ declare global {
 }
 
 // 상품별 배송 정보 가져오기
-function getProductShipping(productId: string) {
-  try {
-    const stored = localStorage.getItem('admin-storage')
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      const products = parsed.state?.products
-      if (products) {
-        const product = products.find((p: any) => p.id === productId)
-        if (product?.shipping) {
-          return product.shipping
-        }
-      }
-    }
-  } catch (e) {
-    // ignore
+function getProductShipping(productId: string, adminProducts: AdminProduct[]) {
+  const product = adminProducts.find(p => p.id === productId)
+  if (product?.shipping) {
+    return product.shipping
   }
   // 기본값: 유료배송, 묶음배송 가능
   return { type: 'paid' as const, fee: 3000, bundleShipping: true }
@@ -64,6 +55,7 @@ export function CartPage() {
     getCouponDiscount,
     useCoupon
   } = useStore()
+  const { data: adminProducts = [] } = useProducts()
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   const [showCouponSelector, setShowCouponSelector] = useState(false)
 
@@ -96,7 +88,7 @@ export function CartPage() {
     let separateShippingItems: { productId: string; fee: number }[] = []
 
     cart.forEach(item => {
-      const shipping = getProductShipping(item.product.id)
+      const shipping = getProductShipping(item.product.id, adminProducts)
 
       if (shipping.type === 'free') {
         freeShippingItems.push(item.product.id)
@@ -140,7 +132,7 @@ export function CartPage() {
       totalShippingFee,
       shippingCount
     }
-  }, [cart, tier])
+  }, [cart, tier, adminProducts])
 
   const couponDiscount = getCouponDiscount(totalAmount)
   const discountedAmount = totalAmount - couponDiscount
@@ -235,7 +227,7 @@ export function CartPage() {
                     : `${item.product.id}-${index}`
 
                   // 배송 정보
-                  const itemShipping = getProductShipping(item.product.id)
+                  const itemShipping = getProductShipping(item.product.id, adminProducts)
                   const isFreeShipping = itemShipping.type === 'free' ||
                     (itemShipping.type === 'conditional' && subtotal >= (itemShipping.freeCondition || 50000))
                   const isBundleShipping = !isFreeShipping && itemShipping.bundleShipping !== false

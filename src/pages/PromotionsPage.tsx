@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom'
 import { Clock, Tag, ArrowRight } from 'lucide-react'
 import { products } from '../data'
-import { useAdminStore } from '../admin/store/adminStore'
+import { usePromotions } from '../hooks/queries'
 import { useStore } from '../store'
 import { ProductCard } from '../components/product'
 import { Badge, Card, CardContent } from '../components/ui'
 import { Animated } from '../hooks'
 
 export function PromotionsPage() {
-  const { promotions } = useAdminStore()
+  const { data: promotions = [] } = usePromotions()
   const { user } = useStore()
   const tier = user?.tier || 'guest'
 

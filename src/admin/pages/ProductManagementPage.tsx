@@ -2,16 +2,20 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Search, Edit, Trash2 } from 'lucide-react'
 import { useAdminStore } from '../store/adminStore'
+import { useProducts, useDeleteProduct } from '../../hooks/queries'
 import { categories } from '../../data'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { formatPrice } from '../../lib/utils'
 
 export function ProductManagementPage() {
-  const { products, deleteProduct, selectedProductIds, setSelectedProductIds } = useAdminStore()
+  const { data: products = [], isLoading } = useProducts()
+  const deleteMutation = useDeleteProduct()
+  const { selectedProductIds, setSelectedProductIds } = useAdminStore()
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [subcategoryFilter, setSubcategoryFilter] = useState('all')
   const [stockFilter, setStockFilter] = useState('all')
+  const [toastMessage, setToastMessage] = useState('')
 
   const selectedCategory = categoryFilter !== 'all' ? categories.find(cat => cat.id === parseInt(categoryFilter)) : null
   const subcategories = selectedCategory?.subcategories || []
@@ -35,7 +39,16 @@ export function ProductManagementPage() {
 
   const handleDelete = (productId: string) => {
     if (confirm('삭제하시겠습니까?')) {
-      deleteProduct(productId)
+      deleteMutation.mutate(productId, {
+        onSuccess: () => {
+          setToastMessage('상품이 삭제되었습니다.')
+          setTimeout(() => setToastMessage(''), 2000)
+        },
+        onError: () => {
+          setToastMessage('상품 삭제에 실패했습니다.')
+          setTimeout(() => setToastMessage(''), 3000)
+        },
+      })
     }
   }
 
@@ -47,6 +60,13 @@ export function ProductManagementPage() {
 
   return (
     <div className="space-y-4">
+      {/* 토스트 알림 */}
+      {toastMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-neutral-900 text-white px-6 py-3 rounded-lg shadow-lg z-[9999] animate-fade-in text-sm font-medium">
+          {toastMessage}
+        </div>
+      )}
+
       {/* Header - 한 줄 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -101,6 +121,9 @@ export function ProductManagementPage() {
       </div>
 
       {/* Products List */}
+      {isLoading && (
+        <div className="text-center py-12 text-neutral-500">로딩 중...</div>
+      )}
       <div className="space-y-2">
         {filteredProducts.map((product) => {
           const stockConfig = stockStatusConfig[product.stockStatus]

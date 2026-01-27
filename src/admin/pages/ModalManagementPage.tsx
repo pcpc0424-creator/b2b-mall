@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Edit2, Trash2, Eye, EyeOff, X, Image } from 'lucide-react'
-import { useAdminStore } from '../store/adminStore'
+import { usePopupModals, useCreatePopupModal, useUpdatePopupModal, useDeletePopupModal, useTogglePopupModalActive } from '../../hooks/queries'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { cn } from '../../lib/utils'
 import { PopupModal, ModalTargetPage } from '../types/admin'
@@ -28,7 +28,11 @@ const defaultModal: Omit<PopupModal, 'id' | 'createdAt' | 'updatedAt'> = {
 }
 
 export function ModalManagementPage() {
-  const { popupModals, addPopupModal, updatePopupModal, deletePopupModal, togglePopupModalActive } = useAdminStore()
+  const { data: popupModals = [], isLoading } = usePopupModals()
+  const createMutation = useCreatePopupModal()
+  const updateMutation = useUpdatePopupModal()
+  const deleteMutation = useDeletePopupModal()
+  const toggleMutation = useTogglePopupModalActive()
   const [isEditing, setIsEditing] = useState(false)
   const [editingModal, setEditingModal] = useState<PopupModal | null>(null)
   const [formData, setFormData] = useState(defaultModal)
@@ -61,7 +65,7 @@ export function ModalManagementPage() {
 
   const handleDelete = (id: string) => {
     if (confirm('정말 삭제하시겠습니까?')) {
-      deletePopupModal(id)
+      deleteMutation.mutate(id)
     }
   }
 
@@ -72,7 +76,7 @@ export function ModalManagementPage() {
     }
 
     if (editingModal) {
-      updatePopupModal(editingModal.id, formData)
+      updateMutation.mutate({ id: editingModal.id, updates: formData })
     } else {
       const newModal: PopupModal = {
         ...formData,
@@ -80,7 +84,7 @@ export function ModalManagementPage() {
         createdAt: new Date(),
         updatedAt: new Date(),
       }
-      addPopupModal(newModal)
+      createMutation.mutate(newModal)
     }
 
     setIsEditing(false)
@@ -128,6 +132,9 @@ export function ModalManagementPage() {
       </div>
 
       {/* Modal List */}
+      {isLoading && (
+        <div className="text-center py-12 text-neutral-500">로딩 중...</div>
+      )}
       <div className="space-y-3">
         {popupModals.map((modal) => (
           <Card key={modal.id}>
@@ -162,7 +169,7 @@ export function ModalManagementPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => togglePopupModalActive(modal.id)}
+                    onClick={() => toggleMutation.mutate({ id: modal.id, currentActive: modal.isActive })}
                     title={modal.isActive ? '비활성화' : '활성화'}
                   >
                     {modal.isActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

@@ -2,22 +2,22 @@ import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, ShoppingCart, Zap, ChevronDown, Truck, Package, X, ZoomIn, ZoomOut, Lock } from 'lucide-react'
 import { useStore, getPriceByTier, getTierLabel, getTierColor } from '../store'
-import { useAdminStore } from '../admin/store/adminStore'
+import { useProducts } from '../hooks/queries'
 import { products as defaultProducts, categories } from '../data'
 import { ProductCard, ProductReviews } from '../components/product'
 import { Button, Badge, NumberStepper, Card, CardContent } from '../components/ui'
 import { formatPrice, cn } from '../lib/utils'
 import { Animated } from '../hooks'
 import { ProductOption } from '../types'
-import { ProductOptionAdmin, OptionValue, QuantityDiscount } from '../admin/types/admin'
+import { ProductOptionAdmin, QuantityDiscount } from '../admin/types/admin'
 
 export function ProductDetailPage() {
   const { productId } = useParams()
   const navigate = useNavigate()
   const { user, addToCart, isLoggedIn } = useStore()
   const [showAddedToast, setShowAddedToast] = useState(false)
-  const { products: adminProducts } = useAdminStore()
-  const [quantity, setQuantity] = useState(0)
+  const { data: adminProducts = [] } = useProducts()
+  const [quantity, setQuantity] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1)
@@ -32,46 +32,7 @@ export function ProductDetailPage() {
     return defaultProducts.find(p => p.id === productId)
   }, [productId, adminProducts])
 
-  // localStorage에서 직접 adminOptions 가져오기 (zustand persist 우회)
-  const getAdminOptionsFromLocalStorage = (pid: string) => {
-    try {
-      const stored = localStorage.getItem('admin-storage')
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        const products = parsed.state?.products
-        if (products) {
-          const product = products.find((p: any) => p.id === pid)
-          return product?.adminOptions || []
-        }
-      }
-    } catch (e) {
-      console.error('localStorage 읽기 에러:', e)
-    }
-    return []
-  }
-
-  // localStorage에서 showOptionImages, quantityDiscounts 가져오기
-  const getProductSettingsFromLocalStorage = (pid: string) => {
-    try {
-      const stored = localStorage.getItem('admin-storage')
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        const products = parsed.state?.products
-        if (products) {
-          const product = products.find((p: any) => p.id === pid)
-          return {
-            showOptionImages: product?.showOptionImages || false,
-            quantityDiscounts: product?.quantityDiscounts || []
-          }
-        }
-      }
-    } catch (e) {
-      console.error('localStorage 읽기 에러:', e)
-    }
-    return { showOptionImages: false, quantityDiscounts: [] }
-  }
-
-  // 상품 설정 가져오기 - adminProducts에서 직접 읽기
+  // 상품 설정 가져오기
   const productSettings = useMemo(() => {
     const adminProduct = adminProducts.find(p => p.id === productId)
     return {
@@ -85,18 +46,7 @@ export function ProductDetailPage() {
     const adminProduct = adminProducts.find(p => p.id === productId)
     const defaultProduct = defaultProducts.find(p => p.id === productId)
 
-    // localStorage에서 직접 읽기 (zustand persist 문제 우회)
-    const localStorageOptions = productId ? getAdminOptionsFromLocalStorage(productId) : []
-
-    // 1. localStorage에서 직접 가져온 adminOptions 우선 사용
-    if (localStorageOptions && localStorageOptions.length > 0) {
-      return localStorageOptions.map((opt: any) => ({
-        id: opt.id,
-        name: opt.name,
-        values: opt.values.map((v: any) => v.value)
-      }))
-    }
-    // 2. zustand store의 adminOptions 사용
+    // 1. zustand store의 adminOptions 사용
     if (adminProduct?.adminOptions && adminProduct.adminOptions.length > 0) {
       return adminProduct.adminOptions.map(opt => ({
         id: opt.id,
@@ -104,45 +54,22 @@ export function ProductDetailPage() {
         values: opt.values.map(v => v.value)
       }))
     }
-    // 3. 기본 상품의 options 확인
+    // 2. 기본 상품의 options 확인
     if (defaultProduct?.options && defaultProduct.options.length > 0) {
       return defaultProduct.options
     }
-    // 4. product.options 폴백
+    // 3. product.options 폴백
     return product?.options || []
   }, [productId, adminProducts, product])
 
-  // 관리자 옵션 원본 (가격 수정자 계산용) - localStorage에서 직접 읽기
+  // 관리자 옵션 원본 (가격 수정자 계산용)
   const adminOptionsMap = useMemo((): ProductOptionAdmin[] => {
-    // localStorage에서 직접 읽기
-    const localStorageOptions = productId ? getAdminOptionsFromLocalStorage(productId) : []
-    if (localStorageOptions && localStorageOptions.length > 0) {
-      return localStorageOptions
-    }
-    // fallback to zustand store
     const adminProduct = adminProducts.find(p => p.id === productId)
     return adminProduct?.adminOptions || []
   }, [productId, adminProducts])
 
-  // 배송비 정보 가져오기 - localStorage에서 직접 읽기
+  // 배송비 정보 가져오기
   const shippingInfo = useMemo(() => {
-    // localStorage에서 직접 읽기
-    try {
-      const stored = localStorage.getItem('admin-storage')
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        const products = parsed.state?.products
-        if (products) {
-          const product = products.find((p: any) => p.id === productId)
-          if (product?.shipping) {
-            return product.shipping
-          }
-        }
-      }
-    } catch (e) {
-      console.error('localStorage shipping 읽기 에러:', e)
-    }
-    // fallback
     const adminProduct = adminProducts.find(p => p.id === productId)
     return adminProduct?.shipping || { type: 'paid' as const, fee: 3000 }
   }, [productId, adminProducts])

@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Save, Truck, Package, MapPin, Plus, Trash2 } from 'lucide-react'
-import { useAdminStore } from '../store/adminStore'
+import { useShippingSettings, useUpdateShippingSettings } from '../../hooks/queries'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { formatPrice, cn } from '../../lib/utils'
 import { ShippingTier, RegionalShipping } from '../types/admin'
 
 export function ShippingSettingsPage() {
-  const { shippingSettings, updateShippingSettings } = useAdminStore()
+  const { data: shippingSettings } = useShippingSettings()
+  const updateMutation = useUpdateShippingSettings()
   const [activeTab, setActiveTab] = useState<'global' | 'tiered' | 'regional'>('global')
   const [isSaving, setIsSaving] = useState(false)
 
@@ -20,9 +21,8 @@ export function ShippingSettingsPage() {
   // 저장
   const handleSave = async () => {
     setIsSaving(true)
-    await new Promise(resolve => setTimeout(resolve, 500))
 
-    updateShippingSettings({
+    await updateMutation.mutateAsync({
       baseFee,
       freeShippingThreshold: enableFreeShipping ? freeThreshold : undefined,
       tiers,

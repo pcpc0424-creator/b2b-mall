@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Grid, List, Filter, ChevronDown } from 'lucide-react'
 import { useStore } from '../store'
-import { useAdminStore } from '../admin/store/adminStore'
+import { useProducts } from '../hooks/queries'
 import { products as defaultProducts, categories } from '../data'
 import { ProductCard, ProductTable } from '../components/product'
 import { Button, Select, Badge, Card, CardContent } from '../components/ui'
@@ -14,7 +14,7 @@ export function ProductListPage() {
   const { categoryId: paramCategoryId } = useParams()
   const [searchParams] = useSearchParams()
   const { viewMode, setViewMode } = useStore()
-  const { products: adminProducts } = useAdminStore()
+  const { data: adminProducts = [] } = useProducts()
 
   // URL path parameter 또는 query parameter에서 categoryId 가져오기
   const categoryId = paramCategoryId || searchParams.get('category')

@@ -1,44 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Search, Eye, ChevronDown } from 'lucide-react'
-import { useAdminStore } from '../store/adminStore'
+import { useOrders, useUpdateOrderStatus } from '../../hooks/queries'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { formatPrice, cn } from '../../lib/utils'
 import { Order, OrderStatus } from '../types/admin'
-
-const mockOrders: Order[] = [
-  {
-    id: 'ord-1', orderNumber: 'ORD-2024-001', userId: 'user-1',
-    user: { id: 'user-1', name: '김철수', email: 'kim@example.com', company: '(주)테스트', tier: 'vip' },
-    items: [{ id: 'item-1', productId: 'p1', productName: '프리미엄 홍삼정과 선물세트', productSku: 'GF-001', quantity: 2, unitPrice: 89000, subtotal: 178000 }],
-    subtotal: 178000, shippingFee: 0, totalAmount: 178000, status: 'pending', paymentStatus: 'paid', paymentMethod: '카드결제',
-    shippingAddress: { recipient: '김철수', phone: '010-1234-5678', postalCode: '12345', address1: '서울시 강남구 테헤란로 123' },
-    createdAt: new Date('2024-01-15'), updatedAt: new Date('2024-01-15'),
-  },
-  {
-    id: 'ord-2', orderNumber: 'ORD-2024-002', userId: 'user-2',
-    user: { id: 'user-2', name: '이영희', email: 'lee@example.com', tier: 'member' },
-    items: [{ id: 'item-2', productId: 'p2', productName: '유기농 과일청 3종 세트', productSku: 'HF-001', quantity: 1, unitPrice: 45000, subtotal: 45000 }],
-    subtotal: 45000, shippingFee: 3000, totalAmount: 48000, status: 'confirmed', paymentStatus: 'paid', paymentMethod: '무통장입금',
-    shippingAddress: { recipient: '이영희', phone: '010-2345-6789', postalCode: '54321', address1: '부산시 해운대구 해운대로 456' },
-    createdAt: new Date('2024-01-14'), updatedAt: new Date('2024-01-14'),
-  },
-  {
-    id: 'ord-3', orderNumber: 'ORD-2024-003', userId: 'user-3',
-    user: { id: 'user-3', name: '박지민', email: 'park@example.com', company: '지민상사', tier: 'premium' },
-    items: [{ id: 'item-3', productId: 'p3', productName: '프리미엄 견과류 선물세트', productSku: 'NT-001', quantity: 10, unitPrice: 35000, subtotal: 350000 }],
-    subtotal: 350000, shippingFee: 0, totalAmount: 350000, status: 'shipped', paymentStatus: 'paid', paymentMethod: '카드결제',
-    shippingAddress: { recipient: '박지민', phone: '010-3456-7890', postalCode: '67890', address1: '대구시 수성구 범어로 789' },
-    trackingNumber: '1234567890', createdAt: new Date('2024-01-13'), updatedAt: new Date('2024-01-14'),
-  },
-  {
-    id: 'ord-4', orderNumber: 'ORD-2024-004', userId: 'user-4',
-    user: { id: 'user-4', name: '최수진', email: 'choi@example.com', tier: 'member' },
-    items: [{ id: 'item-4', productId: 'p4', productName: '수제 잼 & 스프레드 세트', productSku: 'JS-001', quantity: 3, unitPrice: 28000, subtotal: 84000 }],
-    subtotal: 84000, shippingFee: 3000, totalAmount: 87000, status: 'delivered', paymentStatus: 'paid', paymentMethod: '카드결제',
-    shippingAddress: { recipient: '최수진', phone: '010-4567-8901', postalCode: '11111', address1: '인천시 연수구 센트럴로 111' },
-    createdAt: new Date('2024-01-10'), updatedAt: new Date('2024-01-12'),
-  },
-]
 
 const statusConfig: Record<OrderStatus, { label: string; variant: 'default' | 'warning' | 'primary' | 'secondary' | 'success' | 'error' }> = {
   pending: { label: '대기', variant: 'warning' },
@@ -51,12 +16,11 @@ const statusConfig: Record<OrderStatus, { label: string; variant: 'default' | 'w
 }
 
 export function OrderManagementPage() {
-  const { orders, setOrders, updateOrderStatus } = useAdminStore()
+  const { data: orders = [], isLoading } = useOrders()
+  const updateStatusMutation = useUpdateOrderStatus()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'all'>('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-
-  useEffect(() => { setOrders(mockOrders) }, [setOrders])
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -66,7 +30,7 @@ export function OrderManagementPage() {
   })
 
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-    updateOrderStatus(orderId, newStatus)
+    updateStatusMutation.mutate({ orderId, status: newStatus })
   }
 
   return (
@@ -104,6 +68,9 @@ export function OrderManagementPage() {
       </div>
 
       {/* Orders List */}
+      {isLoading && (
+        <div className="text-center py-12 text-neutral-500">로딩 중...</div>
+      )}
       <div className="space-y-2">
         {filteredOrders.map((order) => {
           const config = statusConfig[order.status]

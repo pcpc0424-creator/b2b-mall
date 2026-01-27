@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
-import { useAdminStore } from '../../admin/store/adminStore'
+import { usePopupModals } from '../../hooks/queries'
 import { useStore } from '../../store'
 import { PopupModal, ModalTargetPage } from '../../admin/types/admin'
 import { Button } from '../ui'
@@ -84,7 +84,7 @@ function hideModalToday(id: string) {
 export function PopupModalDisplay() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { popupModals } = useAdminStore()
+  const { data: popupModals = [] } = usePopupModals()
   const { isLoggedIn } = useStore()
   const [currentModal, setCurrentModal] = useState<PopupModal | null>(null)
   const [isVisible, setIsVisible] = useState(false)

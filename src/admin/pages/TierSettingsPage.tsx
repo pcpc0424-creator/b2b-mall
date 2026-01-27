@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Crown, Save, Info } from 'lucide-react'
-import { useAdminStore } from '../store/adminStore'
+import { useTierSettings, useUpdateTierSettings } from '../../hooks/queries'
 import { Button, Card, CardContent } from '../../components/ui'
 import { formatPrice, cn } from '../../lib/utils'
 import { UserTier } from '../../types'
+import { TierSettings } from '../types/admin'
 
 const tierLabels: Record<UserTier, string> = {
   guest: '비회원',
@@ -26,19 +27,45 @@ const periodLabels = {
   cumulative: '누적',
 }
 
+const defaultTierSettings: TierSettings = {
+  isEnabled: true,
+  autoUpgrade: true,
+  autoDowngrade: false,
+  evaluationPeriod: 'cumulative',
+  thresholds: [
+    { tier: 'member', minPurchaseAmount: 0, discountRate: 0, pointRate: 1, freeShipping: false },
+    { tier: 'premium', minPurchaseAmount: 500000, discountRate: 3, pointRate: 2, freeShipping: false },
+    { tier: 'vip', minPurchaseAmount: 2000000, discountRate: 5, pointRate: 3, freeShipping: true },
+  ],
+  updatedAt: new Date(),
+}
+
 export function TierSettingsPage() {
-  const { tierSettings, updateTierSettings, updateTierThreshold } = useAdminStore()
+  const { data: tierSettings = defaultTierSettings } = useTierSettings()
+  const updateMutation = useUpdateTierSettings()
   const [isSaving, setIsSaving] = useState(false)
   const [showSaveMessage, setShowSaveMessage] = useState(false)
 
-  const handleSave = () => {
+  const updateTierSettings = (updates: Partial<TierSettings>) => {
+    updateMutation.mutate({ ...tierSettings, ...updates, updatedAt: new Date() })
+  }
+
+  const updateTierThreshold = (tier: UserTier, updates: Partial<TierSettings['thresholds'][0]>) => {
+    updateMutation.mutate({
+      ...tierSettings,
+      thresholds: tierSettings.thresholds.map(t =>
+        t.tier === tier ? { ...t, ...updates } : t
+      ),
+      updatedAt: new Date(),
+    })
+  }
+
+  const handleSave = async () => {
     setIsSaving(true)
-    // 실제로는 API 호출, 여기서는 이미 zustand persist로 저장됨
-    setTimeout(() => {
-      setIsSaving(false)
-      setShowSaveMessage(true)
-      setTimeout(() => setShowSaveMessage(false), 2000)
-    }, 500)
+    await updateMutation.mutateAsync(tierSettings)
+    setIsSaving(false)
+    setShowSaveMessage(true)
+    setTimeout(() => setShowSaveMessage(false), 2000)
   }
 
   return (

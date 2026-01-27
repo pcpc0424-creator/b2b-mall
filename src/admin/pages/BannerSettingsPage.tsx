@@ -1,10 +1,12 @@
 import { useState, useRef } from 'react'
 import { Save, Image, Link as LinkIcon, Eye, EyeOff, Upload, Trash2 } from 'lucide-react'
-import { useAdminStore } from '../store/adminStore'
+import { useSiteSettings, useUpdateSiteSettings } from '../../hooks/queries'
+import { uploadBase64Image } from '../../services/storage'
 import { Button, Card, CardContent } from '../../components/ui'
 
 export function BannerSettingsPage() {
-  const { siteSettings, updateTopBanner } = useAdminStore()
+  const { data: siteSettings } = useSiteSettings()
+  const updateMutation = useUpdateSiteSettings()
   const [isSaving, setIsSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -50,17 +52,31 @@ export function BannerSettingsPage() {
   // 저장
   const handleSave = async () => {
     setIsSaving(true)
-    await new Promise(resolve => setTimeout(resolve, 500))
 
-    updateTopBanner({
-      image: bannerImage,
-      alt: bannerAlt,
-      link: bannerLink,
-      isActive,
-    })
+    try {
+      // base64 이미지를 Supabase Storage에 업로드
+      let imageUrl = bannerImage
+      if (bannerImage && bannerImage.startsWith('data:')) {
+        imageUrl = await uploadBase64Image('site-images', bannerImage)
+      }
 
-    setIsSaving(false)
-    alert('저장되었습니다.')
+      await updateMutation.mutateAsync({
+        topBanner: {
+          image: imageUrl,
+          alt: bannerAlt,
+          link: bannerLink,
+          isActive,
+        },
+        updatedAt: new Date(),
+      })
+
+      setBannerImage(imageUrl)
+      alert('저장되었습니다.')
+    } catch {
+      alert('저장에 실패했습니다.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // 기본 배너 URL
