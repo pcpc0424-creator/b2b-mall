@@ -49,9 +49,9 @@ export function AnalyticsPage() {
 
     const catMap = new Map<number, number>()
     orders.forEach(o => {
-      o.items.forEach((item: { productId: string; totalPrice: number }) => {
+      o.items.forEach((item) => {
         const catId = productCategoryMap.get(item.productId) || 0
-        catMap.set(catId, (catMap.get(catId) || 0) + item.totalPrice)
+        catMap.set(catId, (catMap.get(catId) || 0) + item.subtotal)
       })
     })
 
@@ -65,17 +65,17 @@ export function AnalyticsPage() {
   const productSalesData = useMemo(() => {
     const prodMap = new Map<string, { name: string; sku: string; quantity: number; amount: number }>()
     orders.forEach(o => {
-      o.items.forEach((item: { productId: string; productName?: string; sku?: string; quantity: number; totalPrice: number }) => {
+      o.items.forEach((item) => {
         const existing = prodMap.get(item.productId)
         if (existing) {
           existing.quantity += item.quantity
-          existing.amount += item.totalPrice
+          existing.amount += item.subtotal
         } else {
           prodMap.set(item.productId, {
             name: (item.productName || '알 수 없는 상품'),
-            sku: item.sku || '',
+            sku: item.productSku || '',
             quantity: item.quantity,
-            amount: item.totalPrice,
+            amount: item.subtotal,
           })
         }
       })

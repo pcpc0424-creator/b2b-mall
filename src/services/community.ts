@@ -35,13 +35,14 @@ export async function fetchNotices(): Promise<Notice[]> {
 }
 
 export async function incrementNoticeViewCount(id: string): Promise<void> {
-  await supabase.rpc('increment_view_count', { notice_id: id }).catch(() => {
+  const { error } = await supabase.rpc('increment_view_count', { notice_id: id })
+  if (error) {
     // rpc가 없으면 직접 업데이트
-    supabase
-      .from('notices')
-      .update({ view_count: supabase.rpc ? undefined : 0 })
-      .eq('id', id)
-  })
+    const { data } = await supabase.from('notices').select('view_count').eq('id', id).single()
+    if (data) {
+      await supabase.from('notices').update({ view_count: (data.view_count || 0) + 1 }).eq('id', id)
+    }
+  }
 }
 
 // ===========================
