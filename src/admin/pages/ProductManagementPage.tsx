@@ -58,6 +58,21 @@ export function ProductManagementPage() {
     out_of_stock: { label: '품절', variant: 'error' as const },
   }
 
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-bold text-neutral-900">상품 관리</h1>
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => (
+            <Card key={i}><CardContent className="p-3"><div className="h-16 bg-neutral-100 animate-pulse rounded" /></CardContent></Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* 토스트 알림 */}

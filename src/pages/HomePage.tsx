@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Zap, ArrowRight, Clock, ShoppingCart, Lock } from 'lucide-react'
 import { useStore, getTierLabel, getPriceByTier } from '../store'
-import { useProducts, usePromotions, useSiteSettings, useCategories } from '../hooks/queries'
+import { useProducts, usePromotions, useSiteSettings, useCategories, useHomeSections } from '../hooks/queries'
 import { ProductCard } from '../components/product'
 import { Button, Badge, Card, CardContent } from '../components/ui'
 import { cn, formatPrice } from '../lib/utils'
@@ -23,6 +23,35 @@ export function HomePage() {
   const itemsPerView = 5 // 한 번에 보여줄 상품 수
 
   const tier = user?.tier || 'guest'
+  const { data: homeSections = [] } = useHomeSections()
+
+  // 큐레이션 상품 배열 (관리자가 등록한 순서대로, 없으면 기존 폴백)
+  const bestProducts = useMemo(() => {
+    const curated = homeSections
+      .filter((s) => s.sectionType === 'best')
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((s) => products.find((p) => p.id === s.productId))
+      .filter(Boolean) as typeof products
+    return curated.length > 0 ? curated : products.slice(0, 10)
+  }, [homeSections, products])
+
+  const newProducts = useMemo(() => {
+    const curated = homeSections
+      .filter((s) => s.sectionType === 'new')
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((s) => products.find((p) => p.id === s.productId))
+      .filter(Boolean) as typeof products
+    return curated.length > 0 ? curated : products.slice(5, 15)
+  }, [homeSections, products])
+
+  const saleProducts = useMemo(() => {
+    const curated = homeSections
+      .filter((s) => s.sectionType === 'sale')
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((s) => products.find((p) => p.id === s.productId))
+      .filter(Boolean) as typeof products
+    return curated.length > 0 ? curated : products.slice(10, 20)
+  }, [homeSections, products])
 
   // Filter promotions based on user tier and active status
   // isActive가 true인 프로모션만 표시
@@ -78,6 +107,7 @@ export function HomePage() {
       )}
 
       {/* Hero Section - 캐러셀 스타일 */}
+      {heroPromotions.length > 0 && (
       <section className="relative bg-neutral-100 py-2 md:py-6 overflow-hidden">
         <div className="relative max-w-7xl mx-auto px-2 md:px-4">
           <div className="relative h-[200px] md:h-[400px]">
@@ -173,6 +203,7 @@ export function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* 베스트연구실 */}
       <section className="py-6 md:py-10 bg-neutral-50">
@@ -204,7 +235,7 @@ export function HomePage() {
                 {/* 모바일: 터치 스크롤, 데스크탑: 캐러셀 */}
                 {/* 모바일 전용 스크롤 */}
                 <div className="flex md:hidden gap-2 overflow-x-auto scrollbar-hide px-3 snap-x snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
-                  {products.slice(0, 10).map((product) => {
+                  {bestProducts.map((product) => {
                     const retailPrice = product.prices.retail
                     const memberPrice = product.prices.member
                     const currentPrice = getPriceByTier(product, tier)
@@ -255,7 +286,7 @@ export function HomePage() {
                     className="flex gap-4 transition-transform duration-300 ease-in-out"
                     style={{ transform: `translateX(-${productSlide1 * 188}px)` }}
                   >
-                    {products.slice(0, 10).map((product) => {
+                    {bestProducts.map((product) => {
                       const retailPrice = product.prices.retail
                       const memberPrice = product.prices.member
                       const currentPrice = getPriceByTier(product, tier)
@@ -303,18 +334,18 @@ export function HomePage() {
                 </div>
                 {/* 우측 화살표 - 데스크탑만 */}
                 <button
-                  onClick={() => setProductSlide1(Math.min(products.slice(0, 10).length - itemsPerView, productSlide1 + 1))}
+                  onClick={() => setProductSlide1(Math.min(bestProducts.length - itemsPerView, productSlide1 + 1))}
                   className={cn(
                     "hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg items-center justify-center transition-all",
-                    productSlide1 >= products.slice(0, 10).length - itemsPerView ? "opacity-30 cursor-not-allowed" : "hover:bg-neutral-100"
+                    productSlide1 >= bestProducts.length - itemsPerView ? "opacity-30 cursor-not-allowed" : "hover:bg-neutral-100"
                   )}
-                  disabled={productSlide1 >= products.slice(0, 10).length - itemsPerView}
+                  disabled={productSlide1 >= bestProducts.length - itemsPerView}
                 >
                   <ChevronRight className="w-6 h-6 text-neutral-600" />
                 </button>
                 {/* 페이지네이션 dots - 데스크탑만 */}
                 <div className="hidden md:flex justify-center gap-2 mt-4">
-                  {Array.from({ length: products.slice(0, 10).length - itemsPerView + 1 }).map((_, index) => (
+                  {Array.from({ length: bestProducts.length - itemsPerView + 1 }).map((_, index) => (
                     <button
                       key={index}
                       onClick={() => setProductSlide1(index)}
@@ -360,7 +391,7 @@ export function HomePage() {
                 </button>
                 {/* 모바일 전용 스크롤 */}
                 <div className="flex md:hidden gap-2 overflow-x-auto scrollbar-hide px-3 snap-x snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
-                  {products.slice(5, 15).map((product) => {
+                  {newProducts.map((product) => {
                     const retailPrice = product.prices.retail
                     const memberPrice = product.prices.member
                     const currentPrice = getPriceByTier(product, tier)
@@ -411,7 +442,7 @@ export function HomePage() {
                     className="flex gap-4 transition-transform duration-300 ease-in-out"
                     style={{ transform: `translateX(-${productSlide2 * 188}px)` }}
                   >
-                    {products.slice(5, 15).map((product) => {
+                    {newProducts.map((product) => {
                       const retailPrice = product.prices.retail
                       const memberPrice = product.prices.member
                       const currentPrice = getPriceByTier(product, tier)
@@ -459,18 +490,18 @@ export function HomePage() {
                 </div>
                 {/* 우측 화살표 - 데스크탑만 */}
                 <button
-                  onClick={() => setProductSlide2(Math.min(products.slice(5, 15).length - itemsPerView, productSlide2 + 1))}
+                  onClick={() => setProductSlide2(Math.min(newProducts.length - itemsPerView, productSlide2 + 1))}
                   className={cn(
                     "hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg items-center justify-center transition-all",
-                    productSlide2 >= products.slice(5, 15).length - itemsPerView ? "opacity-30 cursor-not-allowed" : "hover:bg-neutral-100"
+                    productSlide2 >= newProducts.length - itemsPerView ? "opacity-30 cursor-not-allowed" : "hover:bg-neutral-100"
                   )}
-                  disabled={productSlide2 >= products.slice(5, 15).length - itemsPerView}
+                  disabled={productSlide2 >= newProducts.length - itemsPerView}
                 >
                   <ChevronRight className="w-6 h-6 text-neutral-600" />
                 </button>
                 {/* 페이지네이션 dots - 데스크탑만 */}
                 <div className="hidden md:flex justify-center gap-2 mt-4">
-                  {Array.from({ length: products.slice(5, 15).length - itemsPerView + 1 }).map((_, index) => (
+                  {Array.from({ length: newProducts.length - itemsPerView + 1 }).map((_, index) => (
                     <button
                       key={index}
                       onClick={() => setProductSlide2(index)}
@@ -516,7 +547,7 @@ export function HomePage() {
                 </button>
                 {/* 모바일 전용 스크롤 */}
                 <div className="flex md:hidden gap-2 overflow-x-auto scrollbar-hide px-3 snap-x snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
-                  {products.slice(10, 20).map((product) => {
+                  {saleProducts.map((product) => {
                     const retailPrice = product.prices.retail
                     const memberPrice = product.prices.member
                     const currentPrice = getPriceByTier(product, tier)
@@ -567,7 +598,7 @@ export function HomePage() {
                     className="flex gap-4 transition-transform duration-300 ease-in-out"
                     style={{ transform: `translateX(-${productSlide3 * 188}px)` }}
                   >
-                    {products.slice(10, 20).map((product) => {
+                    {saleProducts.map((product) => {
                       const retailPrice = product.prices.retail
                       const memberPrice = product.prices.member
                       const currentPrice = getPriceByTier(product, tier)
@@ -615,18 +646,18 @@ export function HomePage() {
                 </div>
                 {/* 우측 화살표 - 데스크탑만 */}
                 <button
-                  onClick={() => setProductSlide3(Math.min(products.slice(10, 20).length - itemsPerView, productSlide3 + 1))}
+                  onClick={() => setProductSlide3(Math.min(saleProducts.length - itemsPerView, productSlide3 + 1))}
                   className={cn(
                     "hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg items-center justify-center transition-all",
-                    productSlide3 >= products.slice(10, 20).length - itemsPerView ? "opacity-30 cursor-not-allowed" : "hover:bg-neutral-100"
+                    productSlide3 >= saleProducts.length - itemsPerView ? "opacity-30 cursor-not-allowed" : "hover:bg-neutral-100"
                   )}
-                  disabled={productSlide3 >= products.slice(10, 20).length - itemsPerView}
+                  disabled={productSlide3 >= saleProducts.length - itemsPerView}
                 >
                   <ChevronRight className="w-6 h-6 text-neutral-600" />
                 </button>
                 {/* 페이지네이션 dots - 데스크탑만 */}
                 <div className="hidden md:flex justify-center gap-2 mt-4">
-                  {Array.from({ length: products.slice(10, 20).length - itemsPerView + 1 }).map((_, index) => (
+                  {Array.from({ length: saleProducts.length - itemsPerView + 1 }).map((_, index) => (
                     <button
                       key={index}
                       onClick={() => setProductSlide3(index)}

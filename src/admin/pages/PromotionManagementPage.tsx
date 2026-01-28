@@ -93,6 +93,21 @@ export function PromotionManagementPage() {
     return d.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
   }
 
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-bold text-neutral-900">프로모션 관리</h1>
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => (
+            <Card key={i}><CardContent className="p-3"><div className="h-16 bg-neutral-100 animate-pulse rounded" /></CardContent></Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}

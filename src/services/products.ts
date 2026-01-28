@@ -117,19 +117,16 @@ export async function createProduct(product: Partial<AdminProduct>): Promise<Adm
 export async function updateProduct(
   id: string,
   updates: Partial<AdminProduct>
-): Promise<AdminProduct> {
+): Promise<void> {
   const row = toRow(updates)
   row.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('products')
     .update(row)
     .eq('id', id)
-    .select()
-    .single()
 
-  if (error) throw error
-  return toProduct(data)
+  if (error) throw new Error(`상품 수정 실패: ${error.message}`)
 }
 
 /** 상품 삭제 */

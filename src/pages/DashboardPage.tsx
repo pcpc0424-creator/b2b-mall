@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   TrendingUp, TrendingDown, ShoppingBag, FileText, DollarSign, Package,
-  Download, Calendar, ArrowRight, Gift, Star, Clock, Loader2
+  Download, Calendar, ArrowRight, Gift, Star, Clock, Loader2, AlertTriangle
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { useStore, getTierLabel, getTierColor } from '../store'
@@ -10,13 +10,32 @@ import { Button, Card, CardContent, Badge, Select, Tabs } from '../components/ui
 import { formatPrice, formatNumber, cn } from '../lib/utils'
 import { Animated } from '../hooks'
 import { useUserOrders, useProducts, usePromotions } from '../hooks/queries'
+import { withdrawAccount } from '../services/auth'
 
 export function DashboardPage() {
-  const { user } = useStore()
+  const { user, logout } = useStore()
+  const navigate = useNavigate()
   const [period, setPeriod] = useState('month')
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false)
+  const [isWithdrawing, setIsWithdrawing] = useState(false)
   const { data: orders = [], isLoading: ordersLoading } = useUserOrders(user?.id)
   const { data: allProducts = [], isLoading: productsLoading } = useProducts()
   const { data: allPromotions = [] } = usePromotions()
+
+  const handleWithdraw = async () => {
+    if (!user) return
+    setIsWithdrawing(true)
+    const result = await withdrawAccount(user.id)
+    if (result.success) {
+      logout()
+      navigate('/')
+      alert('회원 탈퇴가 완료되었습니다.')
+    } else {
+      alert(result.error || '탈퇴 처리 중 오류가 발생했습니다.')
+    }
+    setIsWithdrawing(false)
+    setShowWithdrawModal(false)
+  }
 
   if (!user) {
     return (
@@ -343,6 +362,57 @@ export function DashboardPage() {
         </Card>
       </div>
       </Animated>
+
+      {/* 회원 탈퇴 */}
+      <div className="mt-16 pt-8 border-t border-neutral-200">
+        <button
+          onClick={() => setShowWithdrawModal(true)}
+          className="text-sm text-neutral-400 hover:text-red-500 transition-colors"
+        >
+          회원 탈퇴
+        </button>
+      </div>
+
+      {/* 탈퇴 확인 모달 */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-neutral-900">회원 탈퇴</h3>
+            </div>
+            <p className="text-sm text-neutral-600 mb-4">
+              정말 탈퇴하시겠습니까?
+            </p>
+            <ul className="text-xs text-neutral-500 space-y-1 mb-6 bg-neutral-50 rounded-lg p-3">
+              <li>• 탈퇴 후 계정 복구가 불가능합니다.</li>
+              <li>• 주문 내역, 쿠폰, 적립금이 모두 삭제됩니다.</li>
+              <li>• 개인정보는 즉시 익명 처리됩니다.</li>
+            </ul>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowWithdrawModal(false)}
+                disabled={isWithdrawing}
+              >
+                취소
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleWithdraw}
+                disabled={isWithdrawing}
+              >
+                {isWithdrawing ? (
+                  <><Loader2 className="w-4 h-4 animate-spin mr-1" />처리 중</>
+                ) : '탈퇴하기'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

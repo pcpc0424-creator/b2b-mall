@@ -19,6 +19,7 @@ const statusConfig: Record<MemberStatus, { label: string; variant: 'success' | '
   inactive: { label: '비활성', variant: 'default' },
   suspended: { label: '정지', variant: 'error' },
   pending_approval: { label: '승인대기', variant: 'warning' },
+  withdrawn: { label: '탈퇴', variant: 'error' },
 }
 
 export function MemberManagementPage() {
@@ -37,7 +38,9 @@ export function MemberManagementPage() {
       member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (member.company?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
     const matchesTier = tierFilter === 'all' || member.tier === tierFilter
-    const matchesStatus = statusFilter === 'all' || member.status === statusFilter
+    const matchesStatus = statusFilter === 'all'
+      ? member.status !== 'withdrawn'
+      : member.status === statusFilter
 
     return matchesSearch && matchesTier && matchesStatus
   })
@@ -112,8 +115,21 @@ export function MemberManagementPage() {
         </div>
       )}
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-3">
+                <div className="h-12 bg-neutral-100 animate-pulse rounded" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {/* Members List */}
-      <div className="space-y-2">
+      {!isLoading && <div className="space-y-2">
         {filteredMembers.map((member) => {
           const tier = tierConfig[member.tier]
           const status = statusConfig[member.status]
@@ -158,9 +174,9 @@ export function MemberManagementPage() {
             </Card>
           )
         })}
-      </div>
+      </div>}
 
-      {filteredMembers.length === 0 && (
+      {!isLoading && filteredMembers.length === 0 && (
         <div className="text-center py-12 text-neutral-500">검색 결과가 없습니다.</div>
       )}
 

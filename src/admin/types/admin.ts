@@ -165,7 +165,7 @@ export interface ShippingAddress {
 }
 
 // 회원 관리
-export type MemberStatus = 'active' | 'inactive' | 'suspended' | 'pending_approval'
+export type MemberStatus = 'active' | 'inactive' | 'suspended' | 'pending_approval' | 'withdrawn'
 
 export interface MemberListItem {
   id: string
@@ -289,6 +289,18 @@ export interface TierSettings {
   autoDowngrade: boolean                // 자동 등급 강등 활성화
   evaluationPeriod: 'monthly' | 'quarterly' | 'yearly' | 'cumulative'  // 평가 기간
   thresholds: TierThreshold[]           // 등급별 기준
+  updatedAt: Date
+}
+
+// 홈 섹션 관리
+export type HomeSectionType = 'best' | 'new' | 'sale'
+
+export interface HomeSection {
+  id: string
+  sectionType: HomeSectionType
+  productId: string
+  displayOrder: number
+  createdAt: Date
   updatedAt: Date
 }
 

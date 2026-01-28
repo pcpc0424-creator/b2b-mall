@@ -88,19 +88,16 @@ export async function createPopupModal(
 export async function updatePopupModal(
   id: string,
   updates: Partial<PopupModal>
-): Promise<PopupModal> {
+): Promise<void> {
   const row = toRow(updates)
   row.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('popup_modals')
     .update(row)
     .eq('id', id)
-    .select()
-    .single()
 
-  if (error) throw error
-  return toModal(data)
+  if (error) throw new Error(`모달 수정 실패: ${error.message}`)
 }
 
 /** 팝업 모달 삭제 */
@@ -117,17 +114,14 @@ export async function deletePopupModal(id: string): Promise<void> {
 export async function togglePopupModalActive(
   id: string,
   currentActive: boolean
-): Promise<PopupModal> {
-  const { data, error } = await supabase
+): Promise<void> {
+  const { error } = await supabase
     .from('popup_modals')
     .update({
       is_active: !currentActive,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .select()
-    .single()
 
-  if (error) throw error
-  return toModal(data)
+  if (error) throw new Error(`모달 토글 실패: ${error.message}`)
 }

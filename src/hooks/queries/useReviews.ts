@@ -22,6 +22,7 @@ export function useCreateReview() {
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['reviews', variables.productId] })
     },
+    onError: (err) => console.error('리뷰 작성 실패:', err),
   })
 }
 
@@ -34,5 +35,6 @@ export function useIncrementHelpful() {
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['reviews', variables.productId] })
     },
+    onError: (err) => console.error('도움이 돼요 실패:', err),
   })
 }

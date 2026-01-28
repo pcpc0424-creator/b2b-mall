@@ -25,5 +25,6 @@ export function useSaveQuote() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['quotes'] })
     },
+    onError: (err) => console.error('견적서 저장 실패:', err),
   })
 }

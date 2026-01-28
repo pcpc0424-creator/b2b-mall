@@ -17,6 +17,7 @@ export function useCreatePromotion() {
   return useMutation({
     mutationFn: createPromotion,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['promotions'] }),
+    onError: (err) => console.error('프로모션 생성 실패:', err),
   })
 }
 
@@ -26,6 +27,7 @@ export function useUpdatePromotion() {
     mutationFn: ({ id, updates }: { id: string; updates: Partial<AdminPromotion> }) =>
       updatePromotion(id, updates),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['promotions'] }),
+    onError: (err) => console.error('프로모션 수정 실패:', err),
   })
 }
 
@@ -34,6 +36,7 @@ export function useDeletePromotion() {
   return useMutation({
     mutationFn: deletePromotion,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['promotions'] }),
+    onError: (err) => console.error('프로모션 삭제 실패:', err),
   })
 }
 
@@ -43,5 +46,6 @@ export function useTogglePromotionActive() {
     mutationFn: ({ id, currentActive }: { id: string; currentActive: boolean }) =>
       togglePromotionActive(id, currentActive),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['promotions'] }),
+    onError: (err) => console.error('프로모션 토글 실패:', err),
   })
 }

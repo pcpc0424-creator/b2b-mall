@@ -15,12 +15,13 @@ import { Card, CardContent, Badge } from '../../components/ui'
 import { formatPrice } from '../../lib/utils'
 
 export function AdminDashboard() {
-  const { data: orders = [], isLoading: ordersLoading } = useOrders()
-  const { data: products = [], isLoading: productsLoading } = useProducts()
-  const { data: members = [], isLoading: membersLoading } = useMembers()
-  const { data: promotions = [], isLoading: promotionsLoading } = usePromotions()
+  const { data: orders = [], isLoading: ordersLoading, error: ordersError } = useOrders()
+  const { data: products = [], isLoading: productsLoading, error: productsError } = useProducts()
+  const { data: members = [], isLoading: membersLoading, error: membersError } = useMembers()
+  const { data: promotions = [], isLoading: promotionsLoading, error: promotionsError } = usePromotions()
 
   const isLoading = ordersLoading || productsLoading || membersLoading || promotionsLoading
+  const hasError = ordersError || productsError || membersError || promotionsError
 
   const dashboardStats = useMemo(() => {
     const today = new Date()
@@ -32,6 +33,7 @@ export function AdminDashboard() {
     const pendingOrders = orders.filter(o => o.status === 'pending').length
     const lowStockProducts = products.filter(p => p.stockStatus === 'low' || p.stockStatus === 'out_of_stock').length
     const activePromotions = promotions.filter(p => p.isActive).length
+    const nonWithdrawnMembers = members.filter(m => m.status !== 'withdrawn')
     const activeMembers = members.filter(m => m.status === 'active').length
 
     return {
@@ -42,7 +44,7 @@ export function AdminDashboard() {
       pendingOrders,
       totalProducts: products.length,
       lowStockProducts,
-      totalMembers: members.length,
+      totalMembers: nonWithdrawnMembers.length,
       activeMembers,
       activePromotions,
     }
@@ -63,6 +65,19 @@ export function AdminDashboard() {
     { label: '활성 프로모션', value: dashboardStats.activePromotions, suffix: '개', icon: Megaphone, color: 'bg-pink-500', link: '/admin/promotions' },
     { label: '활성 회원', value: dashboardStats.activeMembers, suffix: '명', icon: Users, color: 'bg-teal-500', link: '/admin/members' },
   ]
+
+  if (hasError) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-bold text-neutral-900">대시보드</h1>
+        </div>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          데이터를 불러오는 중 오류가 발생했습니다. 페이지를 새로고침해주세요.
+        </div>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

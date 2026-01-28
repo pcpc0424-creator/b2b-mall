@@ -17,6 +17,7 @@ export function useCreatePopupModal() {
   return useMutation({
     mutationFn: createPopupModal,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['popupModals'] }),
+    onError: (err) => console.error('모달 생성 실패:', err),
   })
 }
 
@@ -26,6 +27,7 @@ export function useUpdatePopupModal() {
     mutationFn: ({ id, updates }: { id: string; updates: Partial<PopupModal> }) =>
       updatePopupModal(id, updates),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['popupModals'] }),
+    onError: (err) => console.error('모달 수정 실패:', err),
   })
 }
 
@@ -34,6 +36,7 @@ export function useDeletePopupModal() {
   return useMutation({
     mutationFn: deletePopupModal,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['popupModals'] }),
+    onError: (err) => console.error('모달 삭제 실패:', err),
   })
 }
 
@@ -43,5 +46,6 @@ export function useTogglePopupModalActive() {
     mutationFn: ({ id, currentActive }: { id: string; currentActive: boolean }) =>
       togglePopupModalActive(id, currentActive),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['popupModals'] }),
+    onError: (err) => console.error('모달 토글 실패:', err),
   })
 }

@@ -84,19 +84,16 @@ export async function createPromotion(
 export async function updatePromotion(
   id: string,
   updates: Partial<AdminPromotion>
-): Promise<AdminPromotion> {
+): Promise<void> {
   const row = toRow(updates)
   row.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('promotions')
     .update(row)
     .eq('id', id)
-    .select()
-    .single()
 
-  if (error) throw error
-  return toPromotion(data)
+  if (error) throw new Error(`프로모션 수정 실패: ${error.message}`)
 }
 
 /** 프로모션 삭제 */
@@ -113,17 +110,14 @@ export async function deletePromotion(id: string): Promise<void> {
 export async function togglePromotionActive(
   id: string,
   currentActive: boolean
-): Promise<AdminPromotion> {
-  const { data, error } = await supabase
+): Promise<void> {
+  const { error } = await supabase
     .from('promotions')
     .update({
       is_active: !currentActive,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .select()
-    .single()
 
-  if (error) throw error
-  return toPromotion(data)
+  if (error) throw new Error(`프로모션 토글 실패: ${error.message}`)
 }

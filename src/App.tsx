@@ -45,6 +45,7 @@ import {
   TierSettingsPage,
   ModalManagementPage,
   BannerSettingsPage,
+  HomeSectionManagementPage,
 } from './admin/pages'
 
 // 페이지 전환 시 스크롤을 상단으로 이동
@@ -112,7 +113,7 @@ function App() {
   }, [])
 
   return (
-    <BrowserRouter basename="">
+    <BrowserRouter>
       <ScrollToTop />
       <Routes>
         {/* Public Routes - 비로그인 접근 가능 */}
@@ -164,6 +165,7 @@ function App() {
           <Route path="settings/tiers" element={<TierSettingsPage />} />
           <Route path="settings/modals" element={<ModalManagementPage />} />
           <Route path="settings/banner" element={<BannerSettingsPage />} />
+          <Route path="home-sections" element={<HomeSectionManagementPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

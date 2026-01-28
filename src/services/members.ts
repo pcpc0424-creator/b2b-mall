@@ -28,64 +28,20 @@ export function toMember(row: DbRow): MemberListItem {
   }
 }
 
-/** 테스트 회원 시드 데이터 */
-const TEST_MEMBERS_SEED = [
-  {
-    id: 'test-member-001',
-    name: '테스트 사용자',
-    email: 'test@test.com',
-    tier: 'member',
-    status: 'active',
-    provider: 'email',
-    total_orders: 0,
-    total_spent: 0,
-    created_at: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: 'test-vip-001',
-    name: 'VIP 테스트',
-    email: 'vip@test.com',
-    tier: 'vip',
-    status: 'active',
-    provider: 'email',
-    total_orders: 5,
-    total_spent: 500000,
-    created_at: '2024-01-01T00:00:00Z',
-  },
-]
-
-/** 테스트 회원 시드 (Supabase) */
-let seeded = false
-async function ensureTestMembers(): Promise<void> {
-  if (seeded) return
-  seeded = true
-
-  try {
-    const { error } = await supabase
-      .from('members')
-      .upsert(TEST_MEMBERS_SEED, { onConflict: 'id' })
-    if (error) {
-      console.error('테스트 회원 시드 실패:', error.message)
-    }
-  } catch (err) {
-    console.error('테스트 회원 시드 중 예외 발생:', err)
-  }
-}
-
 /** 전체 회원 목록 조회 (생성일 내림차순) */
 export async function fetchMembers(): Promise<MemberListItem[]> {
-  await ensureTestMembers()
+  // 테스트 데이터 자동 삭제 (이전 캐시된 코드로 생성된 데이터 정리)
+  await supabase
+    .from('members')
+    .delete()
+    .or('id.like.test-%,email.like.%@test.com')
 
   const { data, error } = await supabase
     .from('members')
     .select('*')
     .order('created_at', { ascending: false })
 
-  if (error) {
-    console.error('회원 목록 조회 실패:', error.message)
-    return []
-  }
-
+  if (error) throw error
   return (data || []).map(toMember)
 }
 
@@ -93,30 +49,44 @@ export async function fetchMembers(): Promise<MemberListItem[]> {
 export async function updateMemberTier(
   memberId: string,
   tier: UserTier
-): Promise<MemberListItem> {
-  const { data, error } = await supabase
+): Promise<void> {
+  const { error } = await supabase
     .from('members')
     .update({ tier })
     .eq('id', memberId)
-    .select()
-    .single()
 
-  if (error) throw error
-  return toMember(data)
+  if (error) throw new Error(`등급 변경 실패: ${error.message}`)
 }
 
 /** 회원 상태 변경 */
 export async function updateMemberStatus(
   memberId: string,
   status: MemberStatus
-): Promise<MemberListItem> {
-  const { data, error } = await supabase
+): Promise<void> {
+  const { error } = await supabase
     .from('members')
     .update({ status })
     .eq('id', memberId)
-    .select()
-    .single()
 
-  if (error) throw error
-  return toMember(data)
+  if (error) throw new Error(`상태 변경 실패: ${error.message}`)
+}
+
+/** 회원 삭제 */
+export async function deleteMember(memberId: string): Promise<void> {
+  const { error } = await supabase
+    .from('members')
+    .delete()
+    .eq('id', memberId)
+
+  if (error) throw new Error(`회원 삭제 실패: ${error.message}`)
+}
+
+/** 테스트 회원 일괄 삭제 */
+export async function deleteTestMembers(): Promise<void> {
+  const { error } = await supabase
+    .from('members')
+    .delete()
+    .or('id.like.test-%,email.like.%@test.com')
+
+  if (error) throw new Error(`테스트 회원 삭제 실패: ${error.message}`)
 }

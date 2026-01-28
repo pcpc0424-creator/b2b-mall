@@ -61,19 +61,16 @@ export async function fetchShippingSettings(): Promise<ShippingSettings> {
 /** 배송비 설정 upsert (id='default') */
 export async function upsertShippingSettings(
   settings: Partial<ShippingSettings>
-): Promise<ShippingSettings> {
+): Promise<void> {
   const row = shippingToRow(settings)
   row.id = 'default'
   row.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('shipping_settings')
     .upsert(row)
-    .select()
-    .single()
 
-  if (error) throw error
-  return toShippingSettings(data)
+  if (error) throw new Error(`배송비 설정 저장 실패: ${error.message}`)
 }
 
 // ──────────────────────────────────────────────
@@ -120,19 +117,16 @@ export async function fetchTierSettings(): Promise<TierSettings> {
 /** 등급 설정 upsert (id='default') */
 export async function upsertTierSettings(
   settings: Partial<TierSettings>
-): Promise<TierSettings> {
+): Promise<void> {
   const row = tierToRow(settings)
   row.id = 'default'
   row.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('tier_settings')
     .upsert(row)
-    .select()
-    .single()
 
-  if (error) throw error
-  return toTierSettings(data)
+  if (error) throw new Error(`등급 설정 저장 실패: ${error.message}`)
 }
 
 // ──────────────────────────────────────────────
@@ -175,17 +169,14 @@ export async function fetchSiteSettings(): Promise<SiteSettings> {
 /** 사이트 설정 upsert (id='default') */
 export async function upsertSiteSettings(
   settings: Partial<SiteSettings>
-): Promise<SiteSettings> {
+): Promise<void> {
   const row = siteToRow(settings)
   row.id = 'default'
   row.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('site_settings')
     .upsert(row)
-    .select()
-    .single()
 
-  if (error) throw error
-  return toSiteSettings(data)
+  if (error) throw new Error(`사이트 설정 저장 실패: ${error.message}`)
 }

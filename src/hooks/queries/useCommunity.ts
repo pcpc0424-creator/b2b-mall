@@ -38,5 +38,6 @@ export function useCreateQnA() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['qna'] })
     },
+    onError: (err) => console.error('Q&A 작성 실패:', err),
   })
 }

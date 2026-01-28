@@ -33,6 +33,21 @@ export function OrderManagementPage() {
     updateStatusMutation.mutate({ orderId, status: newStatus })
   }
 
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-bold text-neutral-900">주문 관리</h1>
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => (
+            <Card key={i}><CardContent className="p-3"><div className="h-16 bg-neutral-100 animate-pulse rounded" /></CardContent></Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* Header - 한 줄 */}
@@ -68,9 +83,6 @@ export function OrderManagementPage() {
       </div>
 
       {/* Orders List */}
-      {isLoading && (
-        <div className="text-center py-12 text-neutral-500">로딩 중...</div>
-      )}
       <div className="space-y-2">
         {filteredOrders.map((order) => {
           const config = statusConfig[order.status]

@@ -4,7 +4,11 @@ import type { MemberStatus } from '../../admin/types/admin'
 import type { UserTier } from '../../types'
 
 export function useMembers() {
-  return useQuery({ queryKey: ['members'], queryFn: fetchMembers })
+  return useQuery({
+    queryKey: ['members'],
+    queryFn: fetchMembers,
+    refetchInterval: 60000, // 60초마다 자동 새로고침
+  })
 }
 
 export function useUpdateMemberTier() {
@@ -13,6 +17,7 @@ export function useUpdateMemberTier() {
     mutationFn: ({ memberId, tier }: { memberId: string; tier: UserTier }) =>
       updateMemberTier(memberId, tier),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['members'] }),
+    onError: (err) => console.error('등급 변경 실패:', err),
   })
 }
 
@@ -22,5 +27,6 @@ export function useUpdateMemberStatus() {
     mutationFn: ({ memberId, status }: { memberId: string; status: MemberStatus }) =>
       updateMemberStatus(memberId, status),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['members'] }),
+    onError: (err) => console.error('상태 변경 실패:', err),
   })
 }

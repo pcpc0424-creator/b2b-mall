@@ -24,6 +24,7 @@ export function useRegisterCoupon() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user-coupons'] })
     },
+    onError: (err) => console.error('쿠폰 등록 실패:', err),
   })
 }
 
@@ -35,6 +36,7 @@ export function useClaimAllCoupons() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user-coupons'] })
     },
+    onError: (err) => console.error('쿠폰 발급 실패:', err),
   })
 }
 
@@ -46,5 +48,6 @@ export function useMarkCouponUsed() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user-coupons'] })
     },
+    onError: (err) => console.error('쿠폰 사용 처리 실패:', err),
   })
 }

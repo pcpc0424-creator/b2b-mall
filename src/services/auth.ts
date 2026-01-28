@@ -50,7 +50,7 @@ function toUser(row: DbRow): User {
     profileImage: row.profile_image,
     createdAt: new Date(row.created_at),
     lastLoginAt: row.last_login_at ? new Date(row.last_login_at) : undefined,
-    isActive: row.status !== 'inactive' && row.status !== 'suspended',
+    isActive: row.status !== 'inactive' && row.status !== 'suspended' && row.status !== 'withdrawn',
     marketingConsent: row.marketing_consent,
   }
 }
@@ -257,6 +257,7 @@ export async function loginWithSocial(
     provider: provider as 'kakao' | 'google',
     options: {
       redirectTo: `${window.location.origin}/`,
+      scopes: provider === 'kakao' ? 'profile_nickname profile_image' : undefined,
     },
   })
 
@@ -277,15 +278,23 @@ export async function getCurrentUser(): Promise<User | null> {
 
   if (!session?.user) return null
 
-  let user = await fetchMemberProfile(session.user.id)
+  // 먼저 members 테이블에서 raw 데이터 조회
+  const { data: memberData } = await supabase
+    .from('members')
+    .select('*')
+    .eq('id', session.user.id)
+    .single()
 
-  if (!user) {
-    // Auth는 있지만 members 프로필 없음 → 자동 생성 (OAuth 최초 로그인 등)
-    const meta = session.user.user_metadata || {}
+  const meta = session.user.user_metadata || {}
+  const provider = session.user.app_metadata?.provider || 'email'
+
+  // 프로필이 없거나, 탈퇴 회원이 다시 로그인한 경우 → 프로필 생성/재활성화
+  if (!memberData || memberData.status === 'withdrawn') {
     await upsertMemberProfile({
       id: session.user.id,
       email: session.user.email,
       name:
+        meta.nickname ||
         meta.full_name ||
         meta.name ||
         meta.preferred_username ||
@@ -294,16 +303,16 @@ export async function getCurrentUser(): Promise<User | null> {
       phone: meta.phone,
       tier: 'member',
       status: 'active',
-      provider: session.user.app_metadata?.provider || 'email',
+      provider: provider,
       profile_image: meta.avatar_url || meta.picture,
-      total_orders: 0,
-      total_spent: 0,
-      created_at: session.user.created_at || new Date().toISOString(),
+      total_orders: memberData?.total_orders || 0,
+      total_spent: memberData?.total_spent || 0,
+      created_at: memberData?.created_at || session.user.created_at || new Date().toISOString(),
       last_login_at: new Date().toISOString(),
     })
-    user = await fetchMemberProfile(session.user.id)
   }
 
+  const user = await fetchMemberProfile(session.user.id)
   return user
 }
 
@@ -311,6 +320,25 @@ export async function getCurrentUser(): Promise<User | null> {
 
 export async function logoutUser(): Promise<void> {
   await supabase.auth.signOut()
+}
+
+// ── 회원 탈퇴 ──────────────────────────────────────────
+
+export async function withdrawAccount(
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  // members 테이블에서 삭제
+  const { error } = await supabase
+    .from('members')
+    .delete()
+    .eq('id', userId)
+
+  if (error) {
+    return { success: false, error: `탈퇴 처리 실패: ${error.message}` }
+  }
+
+  await supabase.auth.signOut()
+  return { success: true }
 }
 
 // ── 회원 정보 업데이트 ─────────────────────────────────

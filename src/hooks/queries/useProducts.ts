@@ -25,6 +25,7 @@ export function useCreateProduct() {
   return useMutation({
     mutationFn: createProduct,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+    onError: (err) => console.error('상품 생성 실패:', err),
   })
 }
 
@@ -34,6 +35,7 @@ export function useUpdateProduct() {
     mutationFn: ({ id, updates }: { id: string; updates: Partial<AdminProduct> }) =>
       updateProduct(id, updates),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+    onError: (err) => console.error('상품 수정 실패:', err),
   })
 }
 
@@ -42,5 +44,6 @@ export function useDeleteProduct() {
   return useMutation({
     mutationFn: deleteProduct,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+    onError: (err) => console.error('상품 삭제 실패:', err),
   })
 }

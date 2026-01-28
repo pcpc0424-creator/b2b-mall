@@ -25,6 +25,7 @@ export function useCreateOrder() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['orders'] })
     },
+    onError: (err) => console.error('주문 생성 실패:', err),
   })
 }
 
@@ -35,5 +36,6 @@ export function useUpdateOrderStatus() {
     mutationFn: ({ orderId, status }: { orderId: string; status: OrderStatus }) =>
       updateOrderStatus(orderId, status),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['orders'] }),
+    onError: (err) => console.error('주문 상태 변경 실패:', err),
   })
 }

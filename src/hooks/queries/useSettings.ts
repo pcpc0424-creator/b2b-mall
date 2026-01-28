@@ -20,6 +20,7 @@ export function useUpdateShippingSettings() {
   return useMutation({
     mutationFn: (settings: Partial<ShippingSettings>) => upsertShippingSettings(settings),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['shippingSettings'] }),
+    onError: (err) => console.error('배송비 설정 저장 실패:', err),
   })
 }
 
@@ -34,6 +35,7 @@ export function useUpdateTierSettings() {
   return useMutation({
     mutationFn: (settings: Partial<TierSettings>) => upsertTierSettings(settings),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tierSettings'] }),
+    onError: (err) => console.error('등급 설정 저장 실패:', err),
   })
 }
 
@@ -48,5 +50,6 @@ export function useUpdateSiteSettings() {
   return useMutation({
     mutationFn: (settings: Partial<SiteSettings>) => upsertSiteSettings(settings),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['siteSettings'] }),
+    onError: (err) => console.error('사이트 설정 저장 실패:', err),
   })
 }

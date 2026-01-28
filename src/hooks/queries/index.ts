@@ -72,3 +72,10 @@ export {
 export {
   useCategories,
 } from './useCategories'
+
+export {
+  useHomeSections,
+  useAddHomeSection,
+  useRemoveHomeSection,
+  useReorderHomeSections,
+} from './useHomeSections'

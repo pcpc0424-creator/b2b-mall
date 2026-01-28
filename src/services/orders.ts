@@ -113,17 +113,14 @@ export async function fetchUserOrders(userId: string): Promise<Order[]> {
 export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus
-): Promise<Order> {
-  const { data, error } = await supabase
+): Promise<void> {
+  const { error } = await supabase
     .from('orders')
     .update({
       status,
       updated_at: new Date().toISOString(),
     })
     .eq('id', orderId)
-    .select()
-    .single()
 
-  if (error) throw error
-  return toOrder(data)
+  if (error) throw new Error(`주문 상태 변경 실패: ${error.message}`)
 }
