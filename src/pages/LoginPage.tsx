@@ -113,26 +113,6 @@ export function LoginPage() {
                 카카오로 로그인
               </button>
 
-              {/* 네이버 */}
-              <button
-                type="button"
-                onClick={() => handleSocialLogin('naver')}
-                disabled={socialLoading !== null}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#03C75A] hover:bg-[#02b351] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
-              >
-                {socialLoading === 'naver' ? (
-                  <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/>
-                  </svg>
-                )}
-                네이버로 로그인
-              </button>
-
               {/* 구글 */}
               <button
                 type="button"
@@ -242,46 +222,7 @@ export function LoginPage() {
               </Button>
             </form>
 
-            {/* 테스트 계정 안내 */}
-            <div className="mt-6 pt-6 border-t border-neutral-200">
-              <p className="text-xs text-neutral-400 text-center mb-2">테스트 계정 (클릭 시 바로 로그인)</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const result = await loginWithEmail('test@test.com', 'test1234')
-                    if (result.success && result.user) {
-                      login(result.user)
-                      navigate(from, { replace: true })
-                    } else {
-                      setErrors({ general: result.error || '테스트 로그인 실패' })
-                    }
-                  }}
-                  className="p-2 bg-neutral-50 hover:bg-neutral-100 rounded-lg text-left transition-colors"
-                >
-                  <p className="text-xs font-medium text-neutral-700">일반회원</p>
-                  <p className="text-xs text-neutral-400">test@test.com</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const result = await loginWithEmail('vip@test.com', 'test1234')
-                    if (result.success && result.user) {
-                      login(result.user)
-                      navigate(from, { replace: true })
-                    } else {
-                      setErrors({ general: result.error || '테스트 로그인 실패' })
-                    }
-                  }}
-                  className="p-2 bg-neutral-50 hover:bg-neutral-100 rounded-lg text-left transition-colors"
-                >
-                  <p className="text-xs font-medium text-neutral-700">VIP회원</p>
-                  <p className="text-xs text-neutral-400">vip@test.com</p>
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-4 text-center">
+            <div className="mt-6 text-center">
               <p className="text-neutral-600">
                 아직 회원이 아니신가요?{' '}
                 <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">

@@ -160,26 +160,6 @@ export function RegisterPage() {
                 카카오로 시작하기
               </button>
 
-              {/* 네이버 */}
-              <button
-                type="button"
-                onClick={() => handleSocialLogin('naver')}
-                disabled={socialLoading !== null}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#03C75A] hover:bg-[#02b351] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
-              >
-                {socialLoading === 'naver' ? (
-                  <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/>
-                  </svg>
-                )}
-                네이버로 시작하기
-              </button>
-
               {/* 구글 */}
               <button
                 type="button"

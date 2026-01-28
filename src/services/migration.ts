@@ -30,8 +30,6 @@ export async function migrateLocalStorageToSupabase(): Promise<void> {
     return
   }
 
-  console.log(`[migration] localStorage에서 ${products.length}개 상품 발견. Supabase로 마이그레이션 시작...`)
-
   let migrated = 0
   for (const product of products) {
     try {
@@ -115,14 +113,11 @@ export async function migrateLocalStorageToSupabase(): Promise<void> {
 
       if (error) {
         console.error('[migration] 배송비 설정 마이그레이션 실패:', error)
-      } else {
-        console.log('[migration] 배송비 설정 마이그레이션 완료')
       }
     } catch (e) {
       console.error('[migration] 배송비 설정 처리 중 에러:', e)
     }
   }
 
-  console.log(`[migration] 완료: ${migrated}/${products.length}개 상품 마이그레이션됨`)
   localStorage.setItem(MIGRATION_FLAG, 'true')
 }
