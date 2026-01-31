@@ -30,6 +30,24 @@ export function Footer() {
             </div>
           </div>
         </div>
+
+        {/* Business Info */}
+        <div className="border-t border-neutral-800 mt-6 pt-4">
+          <div className="text-xs text-neutral-500 space-y-1">
+            <p>
+              <span className="text-neutral-400">상호명:</span> 정담 |{' '}
+              <span className="text-neutral-400">대표:</span> 김선애 |{' '}
+              <span className="text-neutral-400">사업자등록번호:</span> 597-06-02858
+            </p>
+            <p>
+              <span className="text-neutral-400">사업장소재지:</span> 경기도 남양주시 진건읍 진관로387번길 48 |{' '}
+              <span className="text-neutral-400">이메일:</span> lee0608min@naver.com
+            </p>
+            <p className="text-neutral-600 mt-2">
+              © 2023 정담. All rights reserved.
+            </p>
+          </div>
+        </div>
       </div>
     </footer>
   )

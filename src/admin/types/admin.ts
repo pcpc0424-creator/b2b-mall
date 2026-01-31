@@ -311,6 +311,7 @@ export interface SiteSettings {
     alt: string              // 대체 텍스트
     link?: string            // 클릭 시 이동할 링크
     isActive: boolean        // 배너 표시 여부
+    height?: number          // 배너 높이 (px), 0이면 auto
   }
   updatedAt: Date
 }

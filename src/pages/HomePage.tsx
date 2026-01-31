@@ -82,6 +82,7 @@ export function HomePage() {
   const bannerAlt = siteSettings?.topBanner?.alt || '가성비연구소 PRICE LAB'
   const bannerLink = siteSettings?.topBanner?.link
   const isBannerActive = siteSettings?.topBanner?.isActive ?? true
+  const bannerHeight = siteSettings?.topBanner?.height || 0
 
   return (
     <div>
@@ -93,14 +94,16 @@ export function HomePage() {
               <img
                 src={bannerImage}
                 alt={bannerAlt}
-                className="w-full h-auto object-cover"
+                className="w-full object-cover"
+                style={{ height: bannerHeight > 0 ? `${bannerHeight}px` : 'auto' }}
               />
             </a>
           ) : (
             <img
               src={bannerImage}
               alt={bannerAlt}
-              className="w-full h-auto object-cover"
+              className="w-full object-cover"
+              style={{ height: bannerHeight > 0 ? `${bannerHeight}px` : 'auto' }}
             />
           )}
         </section>

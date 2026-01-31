@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { Save, Image, Link as LinkIcon, Eye, EyeOff, Upload, Trash2 } from 'lucide-react'
+import { Save, Image, Link as LinkIcon, Eye, EyeOff, Upload, Trash2, Maximize2 } from 'lucide-react'
 import { useSiteSettings, useUpdateSiteSettings } from '../../hooks/queries'
 import { uploadBase64Image } from '../../services/storage'
 import { Button, Card, CardContent } from '../../components/ui'
@@ -15,6 +15,7 @@ export function BannerSettingsPage() {
   const [bannerAlt, setBannerAlt] = useState(siteSettings?.topBanner?.alt || '가성비연구소 PRICE LAB')
   const [bannerLink, setBannerLink] = useState(siteSettings?.topBanner?.link || '')
   const [isActive, setIsActive] = useState(siteSettings?.topBanner?.isActive ?? true)
+  const [bannerHeight, setBannerHeight] = useState(siteSettings?.topBanner?.height || 0)
 
   // 이미지 파일 업로드 핸들러
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,6 +67,7 @@ export function BannerSettingsPage() {
           alt: bannerAlt,
           link: bannerLink,
           isActive,
+          height: bannerHeight,
         },
         updatedAt: new Date(),
       })
@@ -134,7 +136,8 @@ export function BannerSettingsPage() {
             <img
               src={displayImage}
               alt={bannerAlt}
-              className="w-full h-auto object-cover"
+              className="w-full object-cover"
+              style={{ height: bannerHeight > 0 ? `${bannerHeight}px` : 'auto' }}
             />
             {!bannerImage && (
               <div className="absolute bottom-2 right-2">
@@ -143,6 +146,78 @@ export function BannerSettingsPage() {
                 </span>
               </div>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 배너 크기 설정 */}
+      <Card>
+        <CardContent className="p-3 space-y-3">
+          <div className="flex items-center gap-2">
+            <Maximize2 className="w-4 h-4 text-neutral-500" />
+            <span className="text-sm font-medium text-neutral-900">배너 크기</span>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-neutral-500 mb-1">
+                높이 설정 (0 = 자동)
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="500"
+                  step="10"
+                  value={bannerHeight}
+                  onChange={(e) => setBannerHeight(Number(e.target.value))}
+                  className="flex-1 h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    max="1000"
+                    value={bannerHeight}
+                    onChange={(e) => setBannerHeight(Number(e.target.value))}
+                    className="w-16 px-2 py-1 text-sm text-center border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <span className="text-xs text-neutral-500">px</span>
+                </div>
+              </div>
+              <p className="text-xs text-neutral-400 mt-1">
+                {bannerHeight === 0 ? '자동: 이미지 원본 비율 유지' : `고정 높이: ${bannerHeight}px`}
+              </p>
+            </div>
+
+            {/* 빠른 선택 버튼 */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setBannerHeight(0)}
+                className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                  bannerHeight === 0
+                    ? 'bg-primary-600 text-white border-primary-600'
+                    : 'bg-white text-neutral-600 border-neutral-300 hover:border-primary-400'
+                }`}
+              >
+                자동
+              </button>
+              {[100, 150, 200, 250, 300].map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => setBannerHeight(h)}
+                  className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                    bannerHeight === h
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white text-neutral-600 border-neutral-300 hover:border-primary-400'
+                  }`}
+                >
+                  {h}px
+                </button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
