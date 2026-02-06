@@ -22,7 +22,7 @@ export async function uploadImage(
 
   if (error) {
     console.error('이미지 업로드 실패:', error)
-    return ''
+    throw new Error(`이미지 업로드 실패: ${error.message}`)
   }
 
   const { data: urlData } = supabase.storage

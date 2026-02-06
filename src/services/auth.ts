@@ -31,6 +31,12 @@ interface SocialLoginResponse {
   error?: string
 }
 
+interface GetCurrentUserResponse {
+  user: User | null
+  error?: string
+  status?: 'withdrawn' | 'pending_approval'
+}
+
 // ── DB → App 변환 ──────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -332,12 +338,12 @@ export async function loginWithSocial(
 
 // ── 현재 세션 사용자 조회 ──────────────────────────────
 
-export async function getCurrentUser(): Promise<User | null> {
+export async function getCurrentUser(): Promise<GetCurrentUserResponse> {
   const {
     data: { session },
   } = await supabase.auth.getSession()
 
-  if (!session?.user) return null
+  if (!session?.user) return { user: null }
 
   // 먼저 members 테이블에서 raw 데이터 조회
   const { data: memberData } = await supabase
@@ -361,13 +367,21 @@ export async function getCurrentUser(): Promise<User | null> {
 
     // 로그아웃 처리 (승인 대기 상태)
     await supabase.auth.signOut()
-    return null
+    return {
+      user: null,
+      status: 'withdrawn',
+      error: '탈퇴한 계정입니다. 관리자 승인 후 다시 이용 가능합니다. 승인 요청이 전송되었습니다.'
+    }
   }
 
   // 승인 대기 상태인 경우 → 로그아웃
   if (memberData?.status === 'pending_approval') {
     await supabase.auth.signOut()
-    return null
+    return {
+      user: null,
+      status: 'pending_approval',
+      error: '가입 승인 대기 중입니다. 관리자 승인 후 로그인 가능합니다.'
+    }
   }
 
   // 프로필이 없는 경우 → 신규 생성
@@ -395,7 +409,7 @@ export async function getCurrentUser(): Promise<User | null> {
   }
 
   const user = await fetchMemberProfile(session.user.id)
-  return user
+  return { user }
 }
 
 // ── 로그아웃 ───────────────────────────────────────────

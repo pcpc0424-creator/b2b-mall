@@ -35,8 +35,8 @@ function getProductShipping(productId: string, adminProducts: AdminProduct[]) {
   return { type: 'paid' as const, fee: 3000, bundleShipping: true }
 }
 
-// 토스페이먼츠 테스트 클라이언트 키
-const TOSS_CLIENT_KEY = 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq'
+// 토스페이먼츠 클라이언트 키
+const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY
 
 export function CartPage() {
   const {
@@ -201,13 +201,14 @@ export function CartPage() {
       localStorage.setItem('pendingOrderData', JSON.stringify(pendingOrderData))
 
       // 결제 요청
+      const baseUrl = `${window.location.origin}/b2b-mall`
       await tossPayments.requestPayment('카드', {
         amount: grandTotal,
         orderId,
         orderName,
         customerName: user?.name || '고객',
-        successUrl: `${window.location.origin}/payment/success`,
-        failUrl: `${window.location.origin}/payment/fail`,
+        successUrl: `${baseUrl}/payment/success`,
+        failUrl: `${baseUrl}/payment/fail`,
       })
     } catch (error: any) {
       // 사용자 취소 시 무시

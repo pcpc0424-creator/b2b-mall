@@ -12,7 +12,7 @@ export function HomePage() {
   const { user, isLoggedIn } = useStore()
   const { data: products = [] } = useProducts()
   const { data: promotions = [] } = usePromotions()
-  const { data: siteSettings } = useSiteSettings()
+  const { data: siteSettings, isLoading: isSettingsLoading } = useSiteSettings()
   const { data: categories = [] } = useCategories()
   const [currentSlide, setCurrentSlide] = useState(0)
 
@@ -87,7 +87,7 @@ export function HomePage() {
   return (
     <div>
       {/* Top Banner - 가성비연구소 */}
-      {isBannerActive && (
+      {!isSettingsLoading && isBannerActive && (
         <section className="w-full">
           {bannerLink ? (
             <a href={bannerLink} className="block">

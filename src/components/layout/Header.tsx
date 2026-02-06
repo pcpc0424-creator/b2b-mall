@@ -62,10 +62,10 @@ export function Header() {
       {/* Main Header - 정담B2B 로고, 검색, 장바구니 */}
       <div className="border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between h-16 gap-4 md:gap-8">
+        <div className="flex items-center justify-between h-24 md:h-28 gap-4 md:gap-8">
           {/* Logo */}
           <Link to="/" className="flex-shrink-0">
-            <h1 className="text-xl font-bold text-primary-600">가성비연구소</h1>
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="가성비연구소" className="h-20 md:h-24 w-auto" />
           </Link>
 
           {/* Search */}

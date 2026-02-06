@@ -5,17 +5,51 @@ import { uploadBase64Image } from '../../services/storage'
 import { Button, Card, CardContent } from '../../components/ui'
 
 export function BannerSettingsPage() {
-  const { data: siteSettings } = useSiteSettings()
+  const { data: siteSettings, isLoading } = useSiteSettings()
+
+  // 로딩 중이면 로딩 UI 표시
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <span className="text-neutral-500">로딩 중...</span>
+      </div>
+    )
+  }
+
+  return (
+    <BannerSettingsForm
+      initialImage={siteSettings?.topBanner?.image || ''}
+      initialAlt={siteSettings?.topBanner?.alt || '가성비연구소 PRICE LAB'}
+      initialLink={siteSettings?.topBanner?.link || ''}
+      initialIsActive={siteSettings?.topBanner?.isActive ?? true}
+      initialHeight={siteSettings?.topBanner?.height || 0}
+    />
+  )
+}
+
+function BannerSettingsForm({
+  initialImage,
+  initialAlt,
+  initialLink,
+  initialIsActive,
+  initialHeight,
+}: {
+  initialImage: string
+  initialAlt: string
+  initialLink: string
+  initialIsActive: boolean
+  initialHeight: number
+}) {
   const updateMutation = useUpdateSiteSettings()
   const [isSaving, setIsSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // 로컬 상태
-  const [bannerImage, setBannerImage] = useState(siteSettings?.topBanner?.image || '')
-  const [bannerAlt, setBannerAlt] = useState(siteSettings?.topBanner?.alt || '가성비연구소 PRICE LAB')
-  const [bannerLink, setBannerLink] = useState(siteSettings?.topBanner?.link || '')
-  const [isActive, setIsActive] = useState(siteSettings?.topBanner?.isActive ?? true)
-  const [bannerHeight, setBannerHeight] = useState(siteSettings?.topBanner?.height || 0)
+  // 로컬 상태 (초기값은 props에서 한 번만 설정됨)
+  const [bannerImage, setBannerImage] = useState(initialImage)
+  const [bannerAlt, setBannerAlt] = useState(initialAlt)
+  const [bannerLink, setBannerLink] = useState(initialLink)
+  const [isActive, setIsActive] = useState(initialIsActive)
+  const [bannerHeight, setBannerHeight] = useState(initialHeight)
 
   // 이미지 파일 업로드 핸들러
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,10 +91,19 @@ export function BannerSettingsPage() {
     try {
       // base64 이미지를 Supabase Storage에 업로드
       let imageUrl = bannerImage
+      console.log('저장 시작 - bannerImage:', bannerImage?.substring(0, 100))
+
       if (bannerImage && bannerImage.startsWith('data:')) {
+        console.log('이미지 업로드 시도...')
         imageUrl = await uploadBase64Image('site-images', bannerImage)
+        console.log('업로드 결과 imageUrl:', imageUrl)
       }
 
+      if (!imageUrl && bannerImage) {
+        throw new Error('이미지 업로드에 실패했습니다. Storage 버킷을 확인해주세요.')
+      }
+
+      console.log('DB 저장 시도...')
       await updateMutation.mutateAsync({
         topBanner: {
           image: imageUrl,
@@ -74,8 +117,9 @@ export function BannerSettingsPage() {
 
       setBannerImage(imageUrl)
       alert('저장되었습니다.')
-    } catch {
-      alert('저장에 실패했습니다.')
+    } catch (error) {
+      console.error('배너 저장 실패:', error)
+      alert(error instanceof Error ? error.message : '저장에 실패했습니다.')
     } finally {
       setIsSaving(false)
     }

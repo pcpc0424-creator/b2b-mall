@@ -113,7 +113,12 @@ export function MemberManagementPage() {
       {/* 탭: 회원 목록 / 탈퇴 회원 */}
       <div className="flex border-b border-neutral-200">
         <button
-          onClick={() => setShowWithdrawn(false)}
+          onClick={() => {
+            setShowWithdrawn(false)
+            setStatusFilter('all')
+            setTierFilter('all')
+            setSearchTerm('')
+          }}
           className={cn(
             'px-4 py-2 text-sm font-medium border-b-2 -mb-px',
             !showWithdrawn
@@ -173,6 +178,21 @@ export function MemberManagementPage() {
             <option key={status} value={status}>{config.label}</option>
           ))}
         </select>
+        {/* 필터 초기화 버튼 */}
+        {(searchTerm || tierFilter !== 'all' || statusFilter !== 'all') && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSearchTerm('')
+              setTierFilter('all')
+              setStatusFilter('all')
+            }}
+            className="text-neutral-500 hover:text-neutral-700"
+          >
+            초기화
+          </Button>
+        )}
       </div>
 
       {/* Error Message */}
