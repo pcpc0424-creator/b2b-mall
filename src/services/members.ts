@@ -25,6 +25,9 @@ export function toMember(row: DbRow): MemberListItem {
     createdAt: new Date(row.created_at),
     lastOrderAt: row.last_order_at ? new Date(row.last_order_at) : undefined,
     provider: row.provider,
+    withdrawnAt: row.withdrawn_at ? new Date(row.withdrawn_at) : undefined,
+    withdrawnBy: row.withdrawn_by,
+    rejoinedAt: row.rejoined_at ? new Date(row.rejoined_at) : undefined,
   }
 }
 
@@ -71,14 +74,19 @@ export async function updateMemberStatus(
   if (error) throw new Error(`상태 변경 실패: ${error.message}`)
 }
 
-/** 회원 삭제 */
+/** 회원 삭제 (탈퇴 처리 - 데이터 보관) */
 export async function deleteMember(memberId: string): Promise<void> {
+  // 실제 삭제하지 않고 withdrawn 상태로 변경 (데이터 보관)
   const { error } = await supabase
     .from('members')
-    .delete()
+    .update({
+      status: 'withdrawn',
+      withdrawn_at: new Date().toISOString(),
+      withdrawn_by: 'admin' // 관리자 탈퇴 처리
+    })
     .eq('id', memberId)
 
-  if (error) throw new Error(`회원 삭제 실패: ${error.message}`)
+  if (error) throw new Error(`회원 탈퇴 처리 실패: ${error.message}`)
 }
 
 /** 테스트 회원 일괄 삭제 */

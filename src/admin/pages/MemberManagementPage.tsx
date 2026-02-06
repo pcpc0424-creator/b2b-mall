@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Search, Eye, RefreshCw } from 'lucide-react'
+import { Search, Eye, RefreshCw, UserCheck, UserX } from 'lucide-react'
 import { useMembers, useUpdateMemberTier, useUpdateMemberStatus } from '../../hooks/queries'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { formatPrice, cn } from '../../lib/utils'
 import { MemberListItem, MemberStatus } from '../types/admin'
-import { UserTier, SocialProvider } from '../../types'
+import { UserTier } from '../../types'
 import { getProviderName } from '../../services/auth'
 
 const tierConfig: Record<UserTier, { label: string; color: string }> = {
@@ -30,6 +30,11 @@ export function MemberManagementPage() {
   const [tierFilter, setTierFilter] = useState<UserTier | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<MemberStatus | 'all'>('all')
   const [selectedMember, setSelectedMember] = useState<MemberListItem | null>(null)
+  const [showWithdrawn, setShowWithdrawn] = useState(false)
+
+  // 승인 대기 및 탈퇴 회원 카운트
+  const pendingCount = members.filter(m => m.status === 'pending_approval').length
+  const withdrawnCount = members.filter(m => m.status === 'withdrawn').length
 
   // 필터링
   const filteredMembers = members.filter(member => {
@@ -38,12 +43,23 @@ export function MemberManagementPage() {
       member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (member.company?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
     const matchesTier = tierFilter === 'all' || member.tier === tierFilter
+
+    // 탈퇴 회원 보기 모드
+    if (showWithdrawn) {
+      return matchesSearch && matchesTier && member.status === 'withdrawn'
+    }
+
     const matchesStatus = statusFilter === 'all'
       ? member.status !== 'withdrawn'
       : member.status === statusFilter
 
     return matchesSearch && matchesTier && matchesStatus
   })
+
+  // 빠른 승인 처리
+  const handleQuickApprove = (memberId: string) => {
+    updateStatusMutation.mutate({ memberId, status: 'active' })
+  }
 
   // 등급 변경
   const handleTierChange = (memberId: string, newTier: UserTier) => {
@@ -72,6 +88,57 @@ export function MemberManagementPage() {
           <RefreshCw className={cn("w-4 h-4 mr-1", isLoading && "animate-spin")} />
           새로고침
         </Button>
+      </div>
+
+      {/* 승인 대기 알림 */}
+      {pendingCount > 0 && !showWithdrawn && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-amber-600" />
+            <span className="text-sm text-amber-800">
+              <strong>{pendingCount}명</strong>의 회원이 가입 승인을 기다리고 있습니다.
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setStatusFilter('pending_approval')}
+            className="text-amber-700 border-amber-300 hover:bg-amber-100"
+          >
+            승인 대기 보기
+          </Button>
+        </div>
+      )}
+
+      {/* 탭: 회원 목록 / 탈퇴 회원 */}
+      <div className="flex border-b border-neutral-200">
+        <button
+          onClick={() => setShowWithdrawn(false)}
+          className={cn(
+            'px-4 py-2 text-sm font-medium border-b-2 -mb-px',
+            !showWithdrawn
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-neutral-500 hover:text-neutral-700'
+          )}
+        >
+          회원 목록
+        </button>
+        <button
+          onClick={() => setShowWithdrawn(true)}
+          className={cn(
+            'px-4 py-2 text-sm font-medium border-b-2 -mb-px flex items-center gap-1',
+            showWithdrawn
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-neutral-500 hover:text-neutral-700'
+          )}
+        >
+          탈퇴 회원
+          {withdrawnCount > 0 && (
+            <span className="px-1.5 py-0.5 text-xs rounded-full bg-red-100 text-red-600">
+              {withdrawnCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Filters - 한 줄 */}
@@ -158,13 +225,39 @@ export function MemberManagementPage() {
                   </div>
                   <Badge variant={status.variant} size="sm">{status.label}</Badge>
                 </div>
-                {/* 둘째 줄: 이메일 + 금액 + 상세버튼 */}
+                {/* 둘째 줄: 이메일 + 금액 + 버튼들 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-neutral-500 min-w-0">
                     <span className="truncate">{member.email}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-sm font-bold text-neutral-900">{formatPrice(member.totalSpent)}</span>
+                    {/* 승인 대기 회원: 빠른 승인 버튼 */}
+                    {member.status === 'pending_approval' && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleQuickApprove(member.id)}
+                        disabled={updateStatusMutation.isPending}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <UserCheck className="w-4 h-4 mr-1" />
+                        승인
+                      </Button>
+                    )}
+                    {/* 탈퇴 회원: 재가입 승인 버튼 */}
+                    {member.status === 'withdrawn' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuickApprove(member.id)}
+                        disabled={updateStatusMutation.isPending}
+                        className="text-green-600 border-green-300 hover:bg-green-50"
+                      >
+                        <UserCheck className="w-4 h-4 mr-1" />
+                        복구
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" onClick={() => setSelectedMember(member)}>
                       <Eye className="w-4 h-4" />
                     </Button>
@@ -268,6 +361,51 @@ export function MemberManagementPage() {
                   {selectedMember.lastOrderAt && <div className="flex justify-between"><span className="text-neutral-500">최근주문</span><span>{new Date(selectedMember.lastOrderAt).toLocaleDateString('ko-KR')}</span></div>}
                 </div>
               </div>
+
+              {/* 탈퇴/재가입 정보 (탈퇴 회원 또는 승인 대기 회원인 경우) */}
+              {(selectedMember.status === 'withdrawn' || selectedMember.status === 'pending_approval') && (
+                <div>
+                  <span className="text-sm font-medium text-neutral-900 block mb-2">
+                    {selectedMember.status === 'withdrawn' ? '탈퇴 정보' : '재가입 정보'}
+                  </span>
+                  <div className="bg-red-50 rounded-lg p-3 text-sm space-y-1">
+                    {selectedMember.withdrawnAt && (
+                      <div className="flex justify-between">
+                        <span className="text-red-600">탈퇴일</span>
+                        <span className="text-red-700">{new Date(selectedMember.withdrawnAt).toLocaleDateString('ko-KR')}</span>
+                      </div>
+                    )}
+                    {selectedMember.withdrawnBy && (
+                      <div className="flex justify-between">
+                        <span className="text-red-600">탈퇴 유형</span>
+                        <span className="text-red-700">{selectedMember.withdrawnBy === 'self' ? '본인 탈퇴' : '관리자 탈퇴'}</span>
+                      </div>
+                    )}
+                    {selectedMember.rejoinedAt && (
+                      <div className="flex justify-between">
+                        <span className="text-amber-600">재가입 신청일</span>
+                        <span className="text-amber-700">{new Date(selectedMember.rejoinedAt).toLocaleDateString('ko-KR')}</span>
+                      </div>
+                    )}
+                    {selectedMember.status === 'pending_approval' && (
+                      <div className="mt-2 pt-2 border-t border-red-200">
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            handleStatusChange(selectedMember.id, 'active')
+                            setSelectedMember({ ...selectedMember, status: 'active' })
+                          }}
+                          className="w-full bg-green-600 hover:bg-green-700"
+                        >
+                          <UserCheck className="w-4 h-4 mr-1" />
+                          가입 승인하기
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

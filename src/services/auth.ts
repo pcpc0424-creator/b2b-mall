@@ -90,6 +90,16 @@ export async function registerWithEmail(
   phone: string,
   marketingConsent: boolean = false
 ): Promise<RegisterResponse> {
+  // 0. 탈퇴한 회원인지 먼저 확인
+  const { data: withdrawnMember } = await supabase
+    .from('members')
+    .select('id, status')
+    .eq('email', email.toLowerCase())
+    .eq('status', 'withdrawn')
+    .single()
+
+  const isRejoiningMember = !!withdrawnMember
+
   // 1. Supabase Auth 계정 생성
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
@@ -101,6 +111,13 @@ export async function registerWithEmail(
       authError.message.includes('already registered') ||
       authError.message.includes('User already registered')
     ) {
+      // 탈퇴 회원이 재가입 시도하는 경우 - 기존 Auth 계정으로 로그인 시도
+      if (isRejoiningMember) {
+        return {
+          success: false,
+          error: '탈퇴한 계정입니다. 기존 비밀번호로 로그인하시면 관리자 승인 후 다시 이용하실 수 있습니다.'
+        }
+      }
       return { success: false, error: '이미 가입된 이메일입니다.' }
     }
     return { success: false, error: `회원가입 실패: ${authError.message}` }
@@ -111,22 +128,33 @@ export async function registerWithEmail(
   }
 
   // 2. members 테이블에 프로필 저장
+  // 탈퇴 후 재가입하는 경우: pending_approval 상태로 설정 (관리자 승인 필요)
   const profileData = {
     id: authData.user.id,
     email,
     name,
     phone,
     tier: 'member',
-    status: 'active',
+    status: isRejoiningMember ? 'pending_approval' : 'active',
     provider: 'email',
     marketing_consent: marketingConsent,
     total_orders: 0,
     total_spent: 0,
     created_at: new Date().toISOString(),
     last_login_at: new Date().toISOString(),
+    rejoined_at: isRejoiningMember ? new Date().toISOString() : null,
   }
 
   await upsertMemberProfile(profileData)
+
+  // 탈퇴 회원 재가입 시 안내 메시지
+  if (isRejoiningMember) {
+    await supabase.auth.signOut()
+    return {
+      success: true,
+      error: '회원가입이 완료되었습니다. 이전에 탈퇴한 이력이 있어 관리자 승인 후 이용 가능합니다.'
+    }
+  }
 
   const user = await fetchMemberProfile(authData.user.id)
   return { success: true, user: user || undefined }
@@ -145,7 +173,40 @@ export async function loginWithEmail(
   })
 
   if (!error && data.user) {
-    // 로그인 성공 → 프로필 조회/생성
+    // 로그인 성공 → 먼저 회원 상태 확인
+    const { data: memberData } = await supabase
+      .from('members')
+      .select('status')
+      .eq('id', data.user.id)
+      .single()
+
+    // 탈퇴한 회원이 다시 로그인 시도하는 경우 → pending_approval로 변경
+    if (memberData?.status === 'withdrawn') {
+      await supabase
+        .from('members')
+        .update({
+          status: 'pending_approval',
+          rejoined_at: new Date().toISOString(),
+        })
+        .eq('id', data.user.id)
+
+      await supabase.auth.signOut()
+      return {
+        success: false,
+        error: '탈퇴한 계정입니다. 관리자 승인 후 다시 이용 가능합니다. 승인 요청이 전송되었습니다.'
+      }
+    }
+
+    // 승인 대기 상태인 경우
+    if (memberData?.status === 'pending_approval') {
+      await supabase.auth.signOut()
+      return {
+        success: false,
+        error: '가입 승인 대기 중입니다. 관리자 승인 후 로그인 가능합니다.'
+      }
+    }
+
+    // 로그인 시간 업데이트
     await supabase
       .from('members')
       .update({ last_login_at: new Date().toISOString() })
@@ -288,8 +349,29 @@ export async function getCurrentUser(): Promise<User | null> {
   const meta = session.user.user_metadata || {}
   const provider = session.user.app_metadata?.provider || 'email'
 
-  // 프로필이 없거나, 탈퇴 회원이 다시 로그인한 경우 → 프로필 생성/재활성화
-  if (!memberData || memberData.status === 'withdrawn') {
+  // 탈퇴 회원이 다시 로그인한 경우 → pending_approval 상태로 변경 (관리자 승인 필요)
+  if (memberData?.status === 'withdrawn') {
+    await supabase
+      .from('members')
+      .update({
+        status: 'pending_approval',
+        rejoined_at: new Date().toISOString(),
+      })
+      .eq('id', session.user.id)
+
+    // 로그아웃 처리 (승인 대기 상태)
+    await supabase.auth.signOut()
+    return null
+  }
+
+  // 승인 대기 상태인 경우 → 로그아웃
+  if (memberData?.status === 'pending_approval') {
+    await supabase.auth.signOut()
+    return null
+  }
+
+  // 프로필이 없는 경우 → 신규 생성
+  if (!memberData) {
     await upsertMemberProfile({
       id: session.user.id,
       email: session.user.email,
@@ -305,9 +387,9 @@ export async function getCurrentUser(): Promise<User | null> {
       status: 'active',
       provider: provider,
       profile_image: meta.avatar_url || meta.picture,
-      total_orders: memberData?.total_orders || 0,
-      total_spent: memberData?.total_spent || 0,
-      created_at: memberData?.created_at || session.user.created_at || new Date().toISOString(),
+      total_orders: 0,
+      total_spent: 0,
+      created_at: session.user.created_at || new Date().toISOString(),
       last_login_at: new Date().toISOString(),
     })
   }
@@ -327,10 +409,14 @@ export async function logoutUser(): Promise<void> {
 export async function withdrawAccount(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
-  // members 테이블에서 삭제
+  // members 테이블에서 삭제하지 않고 withdrawn 상태로 변경 (데이터 보관)
   const { error } = await supabase
     .from('members')
-    .delete()
+    .update({
+      status: 'withdrawn',
+      withdrawn_at: new Date().toISOString(),
+      withdrawn_by: 'self' // 본인 탈퇴
+    })
     .eq('id', userId)
 
   if (error) {

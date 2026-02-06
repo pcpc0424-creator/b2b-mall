@@ -180,6 +180,9 @@ export interface MemberListItem {
   createdAt: Date
   lastOrderAt?: Date
   provider?: SocialProvider  // 가입 경로 (카카오, 네이버, 구글, 이메일)
+  withdrawnAt?: Date         // 탈퇴 일시
+  withdrawnBy?: 'self' | 'admin'  // 탈퇴 처리 주체 (본인/관리자)
+  rejoinedAt?: Date          // 재가입 신청 일시
 }
 
 export interface TierChangeHistory {
