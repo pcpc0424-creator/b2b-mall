@@ -145,9 +145,22 @@ export function OrderManagementPage() {
               <div>
                 <span className="text-sm font-medium text-neutral-900 block mb-2">배송 정보</span>
                 <div className="bg-neutral-50 rounded-lg p-3 text-sm space-y-1">
-                  <div className="flex justify-between"><span className="text-neutral-500">수령인</span><span>{selectedOrder.shippingAddress.recipient}</span></div>
-                  <div className="flex justify-between"><span className="text-neutral-500">연락처</span><span>{selectedOrder.shippingAddress.phone}</span></div>
-                  <div className="flex justify-between"><span className="text-neutral-500">주소</span><span className="text-right">({selectedOrder.shippingAddress.postalCode}) {selectedOrder.shippingAddress.address1}</span></div>
+                  <div className="flex justify-between"><span className="text-neutral-500">수령인</span><span>{selectedOrder.shippingAddress.recipient || '-'}</span></div>
+                  <div className="flex justify-between"><span className="text-neutral-500">연락처</span><span>{selectedOrder.shippingAddress.phone || '-'}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-500">주소</span>
+                    <span className="text-right max-w-[200px]">
+                      {selectedOrder.shippingAddress.postalCode && `(${selectedOrder.shippingAddress.postalCode}) `}
+                      {selectedOrder.shippingAddress.address1 || '-'}
+                      {selectedOrder.shippingAddress.address2 && ` ${selectedOrder.shippingAddress.address2}`}
+                    </span>
+                  </div>
+                  {selectedOrder.shippingAddress.notes && (
+                    <div className="flex justify-between pt-2 border-t border-neutral-200">
+                      <span className="text-neutral-500">배송메모</span>
+                      <span className="text-right max-w-[200px]">{selectedOrder.shippingAddress.notes}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               {/* 주문 상품 */}

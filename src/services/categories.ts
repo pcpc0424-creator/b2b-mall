@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabasePublic } from '../lib/supabase'
 import type { Category } from '../types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,7 +16,7 @@ function toCategory(row: DbRow): Category {
 
 /** 전체 카테고리 조회 */
 export async function fetchCategories(): Promise<Category[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('categories')
     .select('*')
     .eq('is_active', true)

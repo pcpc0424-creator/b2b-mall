@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabase, supabasePublic } from '../lib/supabase'
 import type { ShippingSettings, TierSettings, SiteSettings } from '../admin/types/admin'
 
 /**
@@ -48,7 +48,7 @@ function shippingToRow(settings: Partial<ShippingSettings>): DbRow {
 
 /** 배송비 설정 조회 (id='default') */
 export async function fetchShippingSettings(): Promise<ShippingSettings> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('shipping_settings')
     .select('*')
     .eq('id', 'default')
@@ -156,13 +156,23 @@ function siteToRow(settings: Partial<SiteSettings>): DbRow {
 
 /** 사이트 설정 조회 (id='default') */
 export async function fetchSiteSettings(): Promise<SiteSettings> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('site_settings')
     .select('*')
     .eq('id', 'default')
     .single()
 
-  if (error) throw error
+  if (error) {
+    console.warn('사이트 설정 로드 실패:', error.message)
+    return {
+      topBanner: {
+        image: '',
+        alt: '가성비연구소 PRICE LAB',
+        isActive: true,
+      },
+      updatedAt: new Date(),
+    }
+  }
   return toSiteSettings(data)
 }
 

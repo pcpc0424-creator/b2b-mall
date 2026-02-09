@@ -33,12 +33,6 @@ export function toMember(row: DbRow): MemberListItem {
 
 /** 전체 회원 목록 조회 (생성일 내림차순) */
 export async function fetchMembers(): Promise<MemberListItem[]> {
-  // 테스트 데이터 자동 삭제 (이전 캐시된 코드로 생성된 데이터 정리)
-  await supabase
-    .from('members')
-    .delete()
-    .or('id.like.test-%,email.like.%@test.com')
-
   const { data, error } = await supabase
     .from('members')
     .select('*')

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { usePopupModals } from '../../hooks/queries'
@@ -89,10 +89,50 @@ export function PopupModalDisplay() {
   const [currentModal, setCurrentModal] = useState<PopupModal | null>(null)
   const [isVisible, setIsVisible] = useState(false)
   const [hideToday, setHideToday] = useState(false)
+  // 세션 중 닫은 모달 ID 목록 (X 버튼으로 닫은 경우)
+  const [dismissedModals, setDismissedModals] = useState<string[]>([])
+  // 닫기 애니메이션 중 상태 (중복 모달 방지)
+  const isClosingRef = useRef(false)
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // 이전 로그인 상태 추적
+  const prevIsLoggedInRef = useRef(isLoggedIn)
+
+  // 로그인 상태 변경 시 dismissed 초기화 (로그인하면 모달 다시 표시)
+  useEffect(() => {
+    // 실제로 로그인 상태가 변경되었을 때만 초기화
+    if (prevIsLoggedInRef.current !== isLoggedIn) {
+      prevIsLoggedInRef.current = isLoggedIn
+      // 닫기 애니메이션이 진행 중이면 완료될 때까지 대기
+      if (isClosingRef.current) {
+        // 애니메이션 완료 후 dismissed 초기화
+        const checkAndReset = () => {
+          if (!isClosingRef.current) {
+            setDismissedModals([])
+          } else {
+            setTimeout(checkAndReset, 50)
+          }
+        }
+        setTimeout(checkAndReset, 50)
+      } else {
+        setDismissedModals([])
+      }
+    }
+  }, [isLoggedIn])
+
+  // 컴포넌트 언마운트 시 타이머 정리
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
+    // 닫기 애니메이션 중이면 새 모달 표시하지 않음
+    if (isClosingRef.current) return
+
     const pageType = getPageType(location.pathname)
-    const shownModals = getShownModals()
     const now = new Date()
 
     // 현재 페이지에 표시할 모달 필터링
@@ -107,8 +147,8 @@ export function PopupModalDisplay() {
         // 페이지 체크
         if (!modal.targetPages.includes('all') && !modal.targetPages.includes(pageType)) return false
 
-        // 한 번만 표시 체크
-        if (modal.showOnce && shownModals.includes(modal.id)) return false
+        // 세션 중 닫은 모달 체크 (X로 닫은 경우)
+        if (dismissedModals.includes(modal.id)) return false
 
         // 오늘 하루 보지 않기 체크
         if (isHiddenToday(modal.id)) return false
@@ -127,27 +167,38 @@ export function PopupModalDisplay() {
       const modal = eligibleModals[0]
       setCurrentModal(modal)
       setIsVisible(true)
-
-      // 한 번만 표시 옵션이면 기록
-      if (modal.showOnce) {
-        addShownModal(modal.id)
-      }
     } else {
       setCurrentModal(null)
       setIsVisible(false)
     }
-  }, [location.pathname, popupModals, isLoggedIn])
+  }, [location.pathname, popupModals, isLoggedIn, dismissedModals])
 
-  const handleClose = () => {
-    // 오늘 하루 보지 않기 체크되어 있으면 저장
-    if (hideToday && currentModal) {
-      hideModalToday(currentModal.id)
+  const handleClose = useCallback(() => {
+    if (isClosingRef.current) return // 이미 닫는 중이면 무시
+
+    if (currentModal) {
+      // 오늘 하루 보지 않기 체크되어 있으면 저장
+      if (hideToday) {
+        hideModalToday(currentModal.id)
+      }
+      // X로 닫은 모달 기록 (로그인 상태 바뀌면 초기화됨)
+      setDismissedModals(prev => [...prev, currentModal.id])
     }
 
+    isClosingRef.current = true
     setIsVisible(false)
     setHideToday(false)
-    setTimeout(() => setCurrentModal(null), 300)
-  }
+
+    // 이전 타이머가 있으면 정리
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current)
+    }
+
+    closeTimeoutRef.current = setTimeout(() => {
+      setCurrentModal(null)
+      isClosingRef.current = false
+    }, 300)
+  }, [currentModal, hideToday])
 
   const handleButtonClick = () => {
     if (currentModal?.buttonLink) {

@@ -13,6 +13,7 @@ import {
 import { useOrders, useProducts, useMembers, usePromotions } from '../../hooks/queries'
 import { Card, CardContent, Badge } from '../../components/ui'
 import { formatPrice } from '../../lib/utils'
+import { hasRealError } from '../../lib/errorUtils'
 
 export function AdminDashboard() {
   const { data: orders = [], isLoading: ordersLoading, error: ordersError } = useOrders()
@@ -21,7 +22,7 @@ export function AdminDashboard() {
   const { data: promotions = [], isLoading: promotionsLoading, error: promotionsError } = usePromotions()
 
   const isLoading = ordersLoading || productsLoading || membersLoading || promotionsLoading
-  const hasError = ordersError || productsError || membersError || promotionsError
+  const hasError = hasRealError(ordersError, productsError, membersError, promotionsError)
 
   const dashboardStats = useMemo(() => {
     const today = new Date()

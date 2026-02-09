@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { migrateLocalStorageToSupabase } from './services/migration'
 import { getCurrentUser, migrateLocalMembers } from './services/auth'
+import { mergeCartsOnLogin } from './services/cart'
 import { supabase } from './lib/supabase'
 import { useStore } from './store'
 import { Layout } from './components/layout'
@@ -28,6 +29,7 @@ import {
   PaymentSuccessPage,
   PaymentFailPage,
   MyCouponsPage,
+  CheckoutPage,
 } from './pages'
 
 // Admin imports
@@ -60,8 +62,9 @@ function ScrollToTop() {
 }
 
 function App() {
-  const { login, logout } = useStore()
+  const { login, logout, setCart } = useStore()
   const migrationRan = useRef(false)
+  const cartSyncInProgress = useRef(false)
   const [authError, setAuthError] = useState<string | null>(null)
 
   // 마이그레이션 (상품 + 회원)
@@ -75,43 +78,44 @@ function App() {
 
   // Supabase Auth 세션 복원 + 상태 리스너
   useEffect(() => {
-    // 1. 현재 세션 확인 (새로고침 시 자동 로그인)
-    const initSession = async () => {
-      const result = await getCurrentUser()
-      if (result.user) {
-        login(result.user)
-      } else {
-        // 탈퇴/승인대기 회원인 경우 메시지 표시
-        if (result.error) {
-          setAuthError(result.error)
-        }
-        // Supabase 세션 없으면 store도 정리
-        const storeState = useStore.getState()
-        if (storeState.isLoggedIn) {
-          logout()
-        }
-      }
-    }
-    initSession()
-
-    // 2. Auth 상태 변경 리스너 (로그인/로그아웃/토큰 갱신)
+    // Auth 상태 변경 리스너 (INITIAL_SESSION, SIGNED_IN, SIGNED_OUT 등)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === 'SIGNED_IN') {
-        const result = await getCurrentUser()
-        if (result.user) {
-          login(result.user)
-        } else if (result.error) {
-          // 탈퇴/승인대기 회원인 경우 메시지 표시
-          setAuthError(result.error)
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // INITIAL_SESSION: 페이지 로드 시 세션 복원 완료
+      // SIGNED_IN: 로그인 완료
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        if (session?.user) {
+          // 세션이 있으면 프로필 로드 (별도 비동기 처리)
+          const result = await getCurrentUser()
+          if (result.user) {
+            login(result.user)
+            // 장바구니 동기화 (중복 실행 방지)
+            if (!cartSyncInProgress.current) {
+              cartSyncInProgress.current = true
+              try {
+                const localCart = useStore.getState().cart
+                const mergedCart = await mergeCartsOnLogin(localCart)
+                setCart(mergedCart)
+              } catch (err) {
+                console.warn('장바구니 동기화 중 오류:', err)
+              } finally {
+                cartSyncInProgress.current = false
+              }
+            }
+          } else if (result.error) {
+            setAuthError(result.error)
+          }
+        } else if (event === 'INITIAL_SESSION') {
+          // 세션 없음 - store 정리
+          const storeState = useStore.getState()
+          if (storeState.isLoggedIn) {
+            logout()
+          }
         }
       } else if (event === 'SIGNED_OUT') {
-        const storeState = useStore.getState()
-        if (storeState.isLoggedIn) {
-          // store만 정리 (supabase.auth.signOut는 이미 호출됨)
-          useStore.setState({ user: null, isLoggedIn: false })
-        }
+        // 로그아웃 시 상태 전체 초기화 (장바구니 포함)
+        useStore.setState({ user: null, isLoggedIn: false, cart: [], appliedCoupon: null })
       }
     })
 
@@ -169,6 +173,7 @@ function App() {
           {/* Protected Routes - 회원 전용 (로그인 필수) */}
           <Route path="/quote" element={<AuthGuard><QuotePage /></AuthGuard>} />
           <Route path="/cart" element={<AuthGuard><CartPage /></AuthGuard>} />
+          <Route path="/checkout" element={<AuthGuard><CheckoutPage /></AuthGuard>} />
           <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
           <Route path="/analytics" element={<AuthGuard><AnalyticsPage /></AuthGuard>} />
           <Route path="/community/qna" element={<AuthGuard><QnAPage /></AuthGuard>} />

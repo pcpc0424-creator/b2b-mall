@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabase, supabasePublic } from '../lib/supabase'
 import type { PopupModal } from '../admin/types/admin'
 
 /**
@@ -57,7 +57,7 @@ export function toRow(modal: Partial<PopupModal>): DbRow {
 
 /** 전체 팝업 모달 목록 조회 (우선순위 내림차순) */
 export async function fetchPopupModals(): Promise<PopupModal[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('popup_modals')
     .select('*')
     .order('priority', { ascending: false })

@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabase, supabasePublic } from '../lib/supabase'
 import type { AdminPromotion } from '../admin/types/admin'
 
 /**
@@ -53,7 +53,7 @@ export function toRow(promotion: Partial<AdminPromotion>): DbRow {
 
 /** 전체 프로모션 목록 조회 (생성일 내림차순) */
 export async function fetchPromotions(): Promise<AdminPromotion[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('promotions')
     .select('*')
     .order('created_at', { ascending: false })

@@ -4,6 +4,7 @@ import { User, CartItem, QuoteItem, Product, UserTier, Coupon } from '../types'
 // 쿠폰 목록(myCoupons)은 Supabase에서 관리 → useUserCoupons 훅 사용
 // store에는 현재 적용 중인 쿠폰(appliedCoupon)만 유지
 import { supabase } from '../lib/supabase'
+import { upsertCartItem, removeCartItem as removeServerCartItem, clearServerCart } from '../services/cart'
 
 interface AppState {
   // User
@@ -20,6 +21,7 @@ interface AppState {
   updateCartQuantity: (productId: string, quantity: number, selectedOptions?: Record<string, string>) => void
   clearCart: () => void
   getCartTotal: () => number
+  setCart: (cart: CartItem[]) => void  // 서버에서 로드한 장바구니 설정
 
   // Quote
   quoteItems: QuoteItem[]
@@ -51,7 +53,8 @@ export const useStore = create<AppState>()(
   login: (user) => set({ user, isLoggedIn: true }),
   logout: () => {
     supabase.auth.signOut()
-    set({ user: null, isLoggedIn: false })
+    // 로그아웃 시 장바구니도 초기화 (중복 방지)
+    set({ user: null, isLoggedIn: false, cart: [], appliedCoupon: null })
   },
   setUserTier: (tier) => set((state) => ({
     user: state.user ? { ...state.user, tier } : null
@@ -59,7 +62,8 @@ export const useStore = create<AppState>()(
 
   // Cart
   cart: [],
-  addToCart: (product, quantity, selectedOptions) => set((state) => {
+  addToCart: (product, quantity, selectedOptions) => {
+    const state = get()
     // 옵션이 있는 경우 옵션 조합으로 구분, 없는 경우 productId로만 구분
     const optionKey = selectedOptions ? JSON.stringify(selectedOptions) : ''
     const existing = state.cart.find(item => {
@@ -67,39 +71,68 @@ export const useStore = create<AppState>()(
       return item.product.id === product.id && itemOptionKey === optionKey
     })
 
+    let newQuantity = quantity
     if (existing) {
-      return {
+      newQuantity = existing.quantity + quantity
+      set({
         cart: state.cart.map(item => {
           const itemOptionKey = item.selectedOptions ? JSON.stringify(item.selectedOptions) : ''
           return item.product.id === product.id && itemOptionKey === optionKey
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: newQuantity }
             : item
         })
-      }
+      })
+    } else {
+      set({ cart: [...state.cart, { product, quantity, selectedOptions }] })
     }
-    return { cart: [...state.cart, { product, quantity, selectedOptions }] }
-  }),
-  removeFromCart: (productId, selectedOptions) => set((state) => {
+
+    // 로그인된 경우 서버에도 동기화 (비동기)
+    if (state.isLoggedIn) {
+      upsertCartItem(product.id, newQuantity, selectedOptions).catch(console.error)
+    }
+  },
+  removeFromCart: (productId, selectedOptions) => {
+    const state = get()
     const optionKey = selectedOptions ? JSON.stringify(selectedOptions) : ''
-    return {
+    set({
       cart: state.cart.filter(item => {
         const itemOptionKey = item.selectedOptions ? JSON.stringify(item.selectedOptions) : ''
         return !(item.product.id === productId && itemOptionKey === optionKey)
       })
+    })
+
+    // 로그인된 경우 서버에서도 삭제 (비동기)
+    if (state.isLoggedIn) {
+      removeServerCartItem(productId, selectedOptions).catch(console.error)
     }
-  }),
-  updateCartQuantity: (productId, quantity, selectedOptions) => set((state) => {
+  },
+  updateCartQuantity: (productId, quantity, selectedOptions) => {
+    const state = get()
     const optionKey = selectedOptions ? JSON.stringify(selectedOptions) : ''
-    return {
+    set({
       cart: state.cart.map(item => {
         const itemOptionKey = item.selectedOptions ? JSON.stringify(item.selectedOptions) : ''
         return item.product.id === productId && itemOptionKey === optionKey
           ? { ...item, quantity }
           : item
       })
+    })
+
+    // 로그인된 경우 서버에도 동기화 (비동기)
+    if (state.isLoggedIn) {
+      upsertCartItem(productId, quantity, selectedOptions).catch(console.error)
     }
-  }),
-  clearCart: () => set({ cart: [] }),
+  },
+  clearCart: () => {
+    const state = get()
+    set({ cart: [] })
+
+    // 로그인된 경우 서버 장바구니도 비우기 (비동기)
+    if (state.isLoggedIn) {
+      clearServerCart().catch(console.error)
+    }
+  },
+  setCart: (cart) => set({ cart }),
   getCartTotal: () => {
     const state = get()
     const tier = state.user?.tier || 'guest'

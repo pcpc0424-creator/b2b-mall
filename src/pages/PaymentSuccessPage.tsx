@@ -63,10 +63,30 @@ export function PaymentSuccessPage() {
         // 4. Supabase에 주문 저장
         const pendingOrderDataStr = localStorage.getItem('pendingOrderData')
         if (pendingOrderDataStr) {
-          const pendingOrderData: CreateOrderInput = JSON.parse(pendingOrderDataStr)
-          pendingOrderData.paymentKey = paymentKey!
+          const pendingOrderData = JSON.parse(pendingOrderDataStr)
 
-          await createOrder(pendingOrderData)
+          // shippingInfo를 shippingAddress 형식으로 변환
+          const orderInput: CreateOrderInput = {
+            orderNumber: pendingOrderData.orderNumber,
+            userId: pendingOrderData.userId,
+            user: pendingOrderData.user,
+            items: pendingOrderData.items,
+            subtotal: pendingOrderData.subtotal,
+            shippingFee: pendingOrderData.shippingFee,
+            totalAmount: pendingOrderData.totalAmount,
+            paymentMethod: pendingOrderData.paymentMethod,
+            paymentKey: paymentKey!,
+            shippingAddress: pendingOrderData.shippingInfo ? {
+              recipient: pendingOrderData.shippingInfo.recipientName,
+              phone: pendingOrderData.shippingInfo.phone,
+              postalCode: pendingOrderData.shippingInfo.zonecode,
+              address1: pendingOrderData.shippingInfo.address,
+              address2: pendingOrderData.shippingInfo.addressDetail,
+              notes: pendingOrderData.shippingInfo.deliveryMemo,
+            } : undefined,
+          }
+
+          await createOrder(orderInput)
           setOrderSaved(true)
           localStorage.removeItem('pendingOrderData')
         } else {

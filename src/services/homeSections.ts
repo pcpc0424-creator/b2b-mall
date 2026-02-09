@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabase, supabasePublic } from '../lib/supabase'
 import type { HomeSection, HomeSectionType } from '../admin/types/admin'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,7 +28,7 @@ function toRow(section: Partial<HomeSection>): DbRow {
 
 /** 전체 홈 섹션 조회 (섹션타입, 순서 정렬) */
 export async function fetchHomeSections(): Promise<HomeSection[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('home_sections')
     .select('*')
     .order('section_type')

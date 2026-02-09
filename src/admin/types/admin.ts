@@ -162,6 +162,7 @@ export interface ShippingAddress {
   postalCode: string
   address1: string
   address2?: string
+  notes?: string  // 배송 메모
 }
 
 // 회원 관리

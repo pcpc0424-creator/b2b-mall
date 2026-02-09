@@ -1,29 +1,46 @@
 import { Link } from 'react-router-dom'
-import { Trash2, ShoppingBag, ArrowRight, Package, Truck, Ticket, ChevronDown, X, LogIn } from 'lucide-react'
+import { Trash2, ShoppingBag, ArrowRight, Package, Truck, Ticket, ChevronDown, X, LogIn, MapPin, Phone, User, FileText, CreditCard, Loader2 } from 'lucide-react'
 import { useStore, getPriceByTier, getTierLabel } from '../store'
 import { useProducts, useUserCoupons, useClaimAllCoupons } from '../hooks/queries'
 import { Button, NumberStepper, Card, CardContent, Badge } from '../components/ui'
-import { formatPrice, formatNumber, cn } from '../lib/utils'
+import { formatPrice, formatNumber } from '../lib/utils'
 import { Animated } from '../hooks'
 import { useMemo, useState, useEffect } from 'react'
 import { Coupon } from '../types'
 import { AdminProduct } from '../admin/types/admin'
 
-// 토스페이먼츠 타입 선언
+// 다음 우편번호 API 타입 선언
 declare global {
   interface Window {
+    daum: {
+      Postcode: new (options: {
+        oncomplete: (data: DaumPostcodeData) => void
+      }) => { open: () => void }
+    }
     TossPayments: (clientKey: string) => {
       requestPayment: (method: string, options: {
         amount: number
         orderId: string
         orderName: string
         customerName?: string
+        customerMobilePhone?: string
         successUrl: string
         failUrl: string
       }) => Promise<void>
     }
   }
 }
+
+interface DaumPostcodeData {
+  zonecode: string
+  address: string
+  addressType: string
+  bname: string
+  buildingName: string
+}
+
+const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY
+
 
 // 상품별 배송 정보 가져오기
 function getProductShipping(productId: string, adminProducts: AdminProduct[]) {
@@ -34,9 +51,6 @@ function getProductShipping(productId: string, adminProducts: AdminProduct[]) {
   // 기본값: 유료배송, 묶음배송 가능
   return { type: 'paid' as const, fee: 3000, bundleShipping: true }
 }
-
-// 토스페이먼츠 클라이언트 키
-const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY
 
 export function CartPage() {
   const {
@@ -54,9 +68,18 @@ export function CartPage() {
   const { data: adminProducts = [] } = useProducts()
   const { data: myCoupons = [] } = useUserCoupons(user?.id)
   const claimAll = useClaimAllCoupons()
-  const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   const [showCouponSelector, setShowCouponSelector] = useState(false)
   const [claimed, setClaimed] = useState(false)
+
+  // 배송 정보 상태
+  const [recipientName, setRecipientName] = useState(user?.name || '')
+  const [phone, setPhone] = useState(user?.phone || '')
+  const [zonecode, setZonecode] = useState('')
+  const [address, setAddress] = useState('')
+  const [addressDetail, setAddressDetail] = useState('')
+  const [deliveryMemo, setDeliveryMemo] = useState('')
+  const [isPaymentLoading, setIsPaymentLoading] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   // 쿠폰 자동 발급 (Supabase, 처음 방문 시 보유 쿠폰 없으면)
   useEffect(() => {
@@ -65,6 +88,29 @@ export function CartPage() {
       claimAll.mutate(user.id)
     }
   }, [user?.id, myCoupons.length, claimed, claimAll])
+
+  // 사용자 정보 변경 시 수령인 이름 업데이트
+  useEffect(() => {
+    if (user?.name && !recipientName) {
+      setRecipientName(user.name)
+    }
+    if (user?.phone && !phone) {
+      setPhone(user.phone)
+    }
+  }, [user])
+
+  // 다음 우편번호 API 스크립트 로드
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js'
+    script.async = true
+    document.body.appendChild(script)
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script)
+      }
+    }
+  }, [])
 
   const tier = user?.tier || 'guest'
   const totalAmount = getCartTotal()
@@ -144,8 +190,61 @@ export function CartPage() {
     return formatPrice(coupon.discountValue)
   }
 
-  // 결제 처리 함수
+  // 배송지 정보 입력 완료 여부
+  const isShippingComplete = recipientName.trim() !== '' &&
+    phone.trim() !== '' &&
+    zonecode !== '' &&
+    address !== '' &&
+    addressDetail.trim() !== ''
+
+  // 우편번호 검색
+  const handleAddressSearch = () => {
+    if (!window.daum) {
+      alert('주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.')
+      return
+    }
+
+    new window.daum.Postcode({
+      oncomplete: (data: DaumPostcodeData) => {
+        setZonecode(data.zonecode)
+        setAddress(data.address)
+        setAddressDetail('')
+        setTimeout(() => {
+          document.getElementById('addressDetail')?.focus()
+        }, 100)
+      }
+    }).open()
+  }
+
+  // 유효성 검사
+  const validate = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!recipientName.trim()) {
+      newErrors.recipientName = '수령인 이름을 입력해주세요'
+    }
+
+    if (!phone.trim()) {
+      newErrors.phone = '연락처를 입력해주세요'
+    } else if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone.replace(/-/g, ''))) {
+      newErrors.phone = '올바른 연락처 형식이 아닙니다'
+    }
+
+    if (!zonecode || !address) {
+      newErrors.address = '주소를 검색해주세요'
+    }
+
+    if (!addressDetail.trim()) {
+      newErrors.addressDetail = '상세주소를 입력해주세요'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  // 결제 처리
   const handlePayment = async () => {
+    if (!validate()) return
     if (cart.length === 0) return
 
     setIsPaymentLoading(true)
@@ -153,21 +252,16 @@ export function CartPage() {
     try {
       const tossPayments = window.TossPayments(TOSS_CLIENT_KEY)
 
-      // 주문 ID 생성 (고유값)
       const orderId = `ORDER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-      // 주문명 생성
       const orderName = cart.length === 1
         ? cart[0].product.name
         : `${cart[0].product.name} 외 ${cart.length - 1}건`
 
-      // 적용된 쿠폰 ID 저장 (결제 성공 시 사용처리를 위해)
       if (appliedCoupon) {
         localStorage.setItem('pendingCouponId', appliedCoupon.id)
       }
 
-      // 결제 성공 시 주문 생성에 필요한 데이터를 localStorage에 저장
-      // (Toss 결제는 리다이렉트 방식이므로 상태가 유지되지 않음)
       const orderItems = cart.map(item => {
         const unitPrice = getPriceByTier(item.product, tier)
         return {
@@ -197,25 +291,35 @@ export function CartPage() {
         shippingFee: shippingCalculation.totalShippingFee,
         totalAmount: grandTotal,
         paymentMethod: '카드',
+        shippingInfo: {
+          recipientName,
+          phone: phone.replace(/-/g, ''),
+          zonecode,
+          address,
+          addressDetail,
+          fullAddress: `(${zonecode}) ${address} ${addressDetail}`,
+          deliveryMemo,
+        },
       }
       localStorage.setItem('pendingOrderData', JSON.stringify(pendingOrderData))
 
-      // 결제 요청
-      const baseUrl = `${window.location.origin}/b2b-mall`
+      // 전화번호 형식 통일 (하이픈 제거)
+      const normalizedPhone = phone.replace(/-/g, '')
+
+      const baseUrl = window.location.origin
       await tossPayments.requestPayment('카드', {
         amount: grandTotal,
         orderId,
         orderName,
-        customerName: user?.name || '고객',
+        customerName: recipientName,
+        customerMobilePhone: normalizedPhone,
         successUrl: `${baseUrl}/payment/success`,
         failUrl: `${baseUrl}/payment/fail`,
       })
     } catch (error: any) {
-      // 사용자 취소 시 무시
       if (error.code !== 'USER_CANCEL') {
         alert('결제 처리 중 오류가 발생했습니다.')
       }
-      // 결제 실패 시 pendingOrderData 정리
       localStorage.removeItem('pendingOrderData')
     } finally {
       setIsPaymentLoading(false)
@@ -344,10 +448,135 @@ export function CartPage() {
         </Animated>
 
         {/* Summary */}
-        <Animated animation="fade-up" delay={200} className="space-y-6">
+        <Animated animation="fade-up" delay={200} className="space-y-4">
+          {/* 배송지 정보 (로그인 사용자만) */}
+          {isLoggedIn && (
+            <Card>
+              <CardContent className="p-4">
+                <h2 className="font-bold text-neutral-900 mb-3 flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary-600" />
+                  배송지 정보
+                  {isShippingComplete && (
+                    <span className="text-xs text-green-600 font-normal ml-auto">✓ 입력완료</span>
+                  )}
+                </h2>
+
+                <div className="space-y-3">
+                  {/* 수령인 */}
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-600 mb-1">
+                      수령인 <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                      <input
+                        type="text"
+                        value={recipientName}
+                        onChange={(e) => setRecipientName(e.target.value)}
+                        placeholder="수령인 이름"
+                        className={`w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                          errors.recipientName ? 'border-red-500' : 'border-neutral-300'
+                        }`}
+                      />
+                    </div>
+                    {errors.recipientName && (
+                      <p className="mt-1 text-xs text-red-500">{errors.recipientName}</p>
+                    )}
+                  </div>
+
+                  {/* 연락처 */}
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-600 mb-1">
+                      연락처 <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="010-0000-0000"
+                        className={`w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                          errors.phone ? 'border-red-500' : 'border-neutral-300'
+                        }`}
+                      />
+                    </div>
+                    {errors.phone && (
+                      <p className="mt-1 text-xs text-red-500">{errors.phone}</p>
+                    )}
+                  </div>
+
+                  {/* 주소 */}
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-600 mb-1">
+                      주소 <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={zonecode}
+                        placeholder="우편번호"
+                        readOnly
+                        className={`w-24 px-3 py-2 text-sm border rounded-lg bg-neutral-50 ${
+                          errors.address ? 'border-red-500' : 'border-neutral-300'
+                        }`}
+                      />
+                      <Button type="button" variant="outline" size="sm" onClick={handleAddressSearch}>
+                        <MapPin className="w-3 h-3 mr-1" />
+                        검색
+                      </Button>
+                    </div>
+                    <input
+                      type="text"
+                      value={address}
+                      placeholder="기본주소"
+                      readOnly
+                      className={`w-full px-3 py-2 text-sm border rounded-lg bg-neutral-50 mb-2 ${
+                        errors.address ? 'border-red-500' : 'border-neutral-300'
+                      }`}
+                    />
+                    <input
+                      id="addressDetail"
+                      type="text"
+                      value={addressDetail}
+                      onChange={(e) => setAddressDetail(e.target.value)}
+                      placeholder="상세주소 입력"
+                      className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                        errors.addressDetail ? 'border-red-500' : 'border-neutral-300'
+                      }`}
+                    />
+                    {(errors.address || errors.addressDetail) && (
+                      <p className="mt-1 text-xs text-red-500">
+                        {errors.address || errors.addressDetail}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 배송 메모 */}
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-600 mb-1">
+                      배송 메모
+                    </label>
+                    <div className="relative">
+                      <FileText className="absolute left-3 top-2.5 w-4 h-4 text-neutral-400" />
+                      <textarea
+                        value={deliveryMemo}
+                        onChange={(e) => setDeliveryMemo(e.target.value)}
+                        placeholder="배송 요청사항 (선택)"
+                        rows={2}
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 주문 요약 */}
           <Card>
-            <CardContent className="p-6">
-              <h2 className="font-bold text-neutral-900 mb-4">주문 요약</h2>
+            <CardContent className="p-4">
+              <h2 className="font-bold text-neutral-900 mb-3">주문 요약</h2>
 
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
@@ -497,29 +726,33 @@ export function CartPage() {
               </div>
 
               {/* 주문 버튼 영역 */}
-              <div className="mt-6">
+              <div className="mt-4">
                 {isLoggedIn ? (
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={handlePayment}
-                    disabled={isPaymentLoading}
-                  >
-                    {isPaymentLoading ? (
-                      <>
-                        <svg className="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        결제 처리 중...
-                      </>
-                    ) : (
-                      <>
-                        주문하기
-                        <ArrowRight className="w-5 h-5 ml-2" />
-                      </>
+                  <>
+                    {!isShippingComplete && (
+                      <p className="text-xs text-amber-600 text-center mb-2">
+                        배송지 정보를 모두 입력해주세요
+                      </p>
                     )}
-                  </Button>
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={handlePayment}
+                      disabled={isPaymentLoading || !isShippingComplete}
+                    >
+                      {isPaymentLoading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          결제 처리 중...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-5 h-5 mr-2" />
+                          {formatPrice(grandTotal)} 결제하기
+                        </>
+                      )}
+                    </Button>
+                  </>
                 ) : (
                   <div className="space-y-3">
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">

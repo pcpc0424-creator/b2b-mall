@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabase, supabasePublic } from '../lib/supabase'
 import type { AdminProduct } from '../admin/types/admin'
 
 /**
@@ -71,7 +71,7 @@ export function toRow(product: Partial<AdminProduct>): DbRow {
 
 /** 전체 상품 목록 조회 (생성일 내림차순) */
 export async function fetchProducts(): Promise<AdminProduct[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('products')
     .select('*')
     .order('created_at', { ascending: false })
@@ -82,7 +82,7 @@ export async function fetchProducts(): Promise<AdminProduct[]> {
 
 /** 단일 상품 조회. 없으면 null 반환 */
 export async function fetchProductById(id: string): Promise<AdminProduct | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('products')
     .select('*')
     .eq('id', id)
