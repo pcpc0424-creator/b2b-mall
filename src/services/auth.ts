@@ -58,6 +58,9 @@ function toUser(row: DbRow): User {
     lastLoginAt: row.last_login_at ? new Date(row.last_login_at) : undefined,
     isActive: row.status !== 'inactive' && row.status !== 'suspended' && row.status !== 'withdrawn',
     marketingConsent: row.marketing_consent,
+    organization: row.organization,
+    referrerId: row.referrer_id,
+    referrerName: row.referrer_name,
   }
 }
 
@@ -94,7 +97,9 @@ export async function registerWithEmail(
   password: string,
   name: string,
   phone: string,
-  marketingConsent: boolean = false
+  marketingConsent: boolean = false,
+  organization?: string,
+  referrerId?: string
 ): Promise<RegisterResponse> {
   // 0. 탈퇴한 회원인지 먼저 확인
   const { data: withdrawnMember } = await supabase
@@ -135,6 +140,18 @@ export async function registerWithEmail(
 
   // 2. members 테이블에 프로필 저장
   // 탈퇴 후 재가입하는 경우: pending_approval 상태로 설정 (관리자 승인 필요)
+
+  // 추천인 이름 조회
+  let referrerName: string | null = null
+  if (referrerId) {
+    const { data: referrerData } = await supabase
+      .from('members')
+      .select('name')
+      .eq('id', referrerId)
+      .single()
+    referrerName = referrerData?.name || null
+  }
+
   const profileData = {
     id: authData.user.id,
     email,
@@ -144,6 +161,9 @@ export async function registerWithEmail(
     status: isRejoiningMember ? 'pending_approval' : 'active',
     provider: 'email',
     marketing_consent: marketingConsent,
+    organization: organization || null,
+    referrer_id: referrerId || null,
+    referrer_name: referrerName,
     total_orders: 0,
     total_spent: 0,
     created_at: new Date().toISOString(),
@@ -526,4 +546,22 @@ export function getProviderName(provider: SocialProvider): string {
     email: '이메일',
   }
   return names[provider]
+}
+
+// ── 추천인 검색 (이메일로 검색) ───────────────────────────
+
+export async function searchReferrerByEmail(
+  email: string
+): Promise<{ id: string; name: string; email: string } | null> {
+  if (!email) return null
+
+  const { data, error } = await supabase
+    .from('members')
+    .select('id, name, email')
+    .eq('email', email.toLowerCase())
+    .neq('status', 'withdrawn')
+    .single()
+
+  if (error || !data) return null
+  return { id: data.id, name: data.name, email: data.email }
 }

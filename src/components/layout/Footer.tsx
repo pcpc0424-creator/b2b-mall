@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Phone, Mail, MapPin } from 'lucide-react'
 
 export function Footer() {
@@ -31,8 +32,18 @@ export function Footer() {
           </div>
         </div>
 
+        {/* Policy Links */}
+        <div className="border-t border-neutral-800 mt-6 pt-4 flex flex-wrap gap-4 text-sm">
+          <Link to="/terms-of-service" className="text-neutral-400 hover:text-white transition-colors">
+            이용약관
+          </Link>
+          <Link to="/privacy-policy" className="text-neutral-400 hover:text-white transition-colors">
+            개인정보 처리방침
+          </Link>
+        </div>
+
         {/* Business Info */}
-        <div className="border-t border-neutral-800 mt-6 pt-4">
+        <div className="border-t border-neutral-800 mt-4 pt-4">
           <div className="text-xs text-neutral-500 space-y-1">
             <p>
               <span className="text-neutral-400">상호명:</span> 정담 |{' '}

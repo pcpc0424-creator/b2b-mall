@@ -30,6 +30,11 @@ export interface User {
   lastLoginAt?: Date
   isActive: boolean
   marketingConsent?: boolean  // 마케팅 수신 동의
+
+  // 그룹 관리
+  organization?: string       // 소속 (사업자/단체명)
+  referrerId?: string         // 추천인 ID (회원 id)
+  referrerName?: string       // 추천인 이름 (조회용)
 }
 
 export interface Category {

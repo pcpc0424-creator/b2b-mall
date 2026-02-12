@@ -30,6 +30,8 @@ import {
   PaymentFailPage,
   MyCouponsPage,
   CheckoutPage,
+  PrivacyPolicyPage,
+  TermsOfServicePage,
 } from './pages'
 
 // Admin imports
@@ -168,6 +170,8 @@ function App() {
           <Route path="/promotion/:promoId" element={<PromotionDetailPage />} />
           <Route path="/community/notice" element={<NoticePage />} />
           <Route path="/community/faq" element={<FAQPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms-of-service" element={<TermsOfServicePage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
           {/* Protected Routes - 회원 전용 (로그인 필수) */}

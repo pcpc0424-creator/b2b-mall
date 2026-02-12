@@ -28,6 +28,9 @@ export function toMember(row: DbRow): MemberListItem {
     withdrawnAt: row.withdrawn_at ? new Date(row.withdrawn_at) : undefined,
     withdrawnBy: row.withdrawn_by,
     rejoinedAt: row.rejoined_at ? new Date(row.rejoined_at) : undefined,
+    organization: row.organization,
+    referrerId: row.referrer_id,
+    referrerName: row.referrer_name,
   }
 }
 

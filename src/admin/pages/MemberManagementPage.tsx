@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Eye, RefreshCw, UserCheck, UserX } from 'lucide-react'
+import { Search, Eye, RefreshCw, UserCheck, Building2, Users } from 'lucide-react'
 import { useMembers, useUpdateMemberTier, useUpdateMemberStatus } from '../../hooks/queries'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { formatPrice, cn } from '../../lib/utils'
@@ -245,10 +245,25 @@ export function MemberManagementPage() {
                   </div>
                   <Badge variant={status.variant} size="sm">{status.label}</Badge>
                 </div>
-                {/* 둘째 줄: 이메일 + 금액 + 버튼들 */}
+                {/* 둘째 줄: 이메일 + 소속 + 추천인 */}
+                <div className="flex items-center gap-3 text-sm text-neutral-500 mb-2">
+                  <span className="truncate">{member.email}</span>
+                  {member.organization && (
+                    <span className="flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">
+                      <Building2 className="w-3 h-3" />
+                      {member.organization}
+                    </span>
+                  )}
+                  {member.referrerName && (
+                    <span className="flex items-center gap-1 text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded">
+                      <Users className="w-3 h-3" />
+                      {member.referrerName}
+                    </span>
+                  )}
+                </div>
+                {/* 셋째 줄: 금액 + 버튼들 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-neutral-500 min-w-0">
-                    <span className="truncate">{member.email}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-sm font-bold text-neutral-900">{formatPrice(member.totalSpent)}</span>
@@ -327,6 +342,8 @@ export function MemberManagementPage() {
                   )}
                   {selectedMember.company && <div className="flex justify-between"><span className="text-neutral-500">회사</span><span>{selectedMember.company}</span></div>}
                   {selectedMember.businessNumber && <div className="flex justify-between"><span className="text-neutral-500">사업자번호</span><span>{selectedMember.businessNumber}</span></div>}
+                  <div className="flex justify-between"><span className="text-neutral-500">소속</span><span className={selectedMember.organization ? "text-blue-600 font-medium" : "text-neutral-400"}>{selectedMember.organization || '-'}</span></div>
+                  <div className="flex justify-between"><span className="text-neutral-500">추천인</span><span className={selectedMember.referrerName ? "text-purple-600 font-medium" : "text-neutral-400"}>{selectedMember.referrerName || '-'}</span></div>
                 </div>
               </div>
               {/* 회원 등급 */}

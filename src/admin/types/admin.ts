@@ -184,6 +184,9 @@ export interface MemberListItem {
   withdrawnAt?: Date         // 탈퇴 일시
   withdrawnBy?: 'self' | 'admin'  // 탈퇴 처리 주체 (본인/관리자)
   rejoinedAt?: Date          // 재가입 신청 일시
+  organization?: string      // 소속 (사업자/단체명)
+  referrerId?: string        // 추천인 ID (회원 id)
+  referrerName?: string      // 추천인 이름
 }
 
 export interface TierChangeHistory {
