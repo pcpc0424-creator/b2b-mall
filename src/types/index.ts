@@ -106,6 +106,7 @@ export interface Promotion {
   targetTiers: UserTier[]
   type: 'all' | 'timesale' | 'exclusive'
   isActive: boolean
+  productIds?: string[]  // 프로모션에 연결된 상품 ID 목록
 }
 
 export interface OrderSummary {

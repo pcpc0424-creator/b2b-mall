@@ -1,11 +1,12 @@
-import { useState } from 'react'
-import { Search, Eye, RefreshCw, UserCheck, Building2, Users } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Eye, RefreshCw, UserCheck, Building2, Users, MapPin, Star, Loader2 } from 'lucide-react'
 import { useMembers, useUpdateMemberTier, useUpdateMemberStatus } from '../../hooks/queries'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { formatPrice, cn } from '../../lib/utils'
-import { MemberListItem, MemberStatus } from '../types/admin'
+import { MemberListItem, MemberStatus, SavedShippingAddress } from '../types/admin'
 import { UserTier } from '../../types'
 import { getProviderName } from '../../services/auth'
+import { fetchUserShippingAddresses } from '../../services/shippingAddresses'
 
 const tierConfig: Record<UserTier, { label: string; color: string }> = {
   guest: { label: '비회원', color: 'bg-neutral-100 text-neutral-700' },
@@ -31,6 +32,24 @@ export function MemberManagementPage() {
   const [statusFilter, setStatusFilter] = useState<MemberStatus | 'all'>('all')
   const [selectedMember, setSelectedMember] = useState<MemberListItem | null>(null)
   const [showWithdrawn, setShowWithdrawn] = useState(false)
+  const [memberAddresses, setMemberAddresses] = useState<SavedShippingAddress[]>([])
+  const [addressesLoading, setAddressesLoading] = useState(false)
+
+  // 회원 선택 시 배송지 목록 로드
+  useEffect(() => {
+    if (selectedMember) {
+      setAddressesLoading(true)
+      fetchUserShippingAddresses(selectedMember.id)
+        .then(setMemberAddresses)
+        .catch((err) => {
+          console.error('배송지 로드 실패:', err)
+          setMemberAddresses([])
+        })
+        .finally(() => setAddressesLoading(false))
+    } else {
+      setMemberAddresses([])
+    }
+  }, [selectedMember?.id])
 
   // 승인 대기 및 탈퇴 회원 카운트
   const pendingCount = members.filter(m => m.status === 'pending_approval').length
@@ -326,6 +345,7 @@ export function MemberManagementPage() {
                 <div className="bg-neutral-50 rounded-lg p-3 text-sm space-y-1">
                   <div className="flex justify-between"><span className="text-neutral-500">이름</span><span>{selectedMember.name}</span></div>
                   <div className="flex justify-between"><span className="text-neutral-500">이메일</span><span>{selectedMember.email}</span></div>
+                  <div className="flex justify-between"><span className="text-neutral-500">전화번호</span><span className={selectedMember.phone ? "" : "text-neutral-400"}>{selectedMember.phone || '-'}</span></div>
                   {selectedMember.provider && (
                     <div className="flex justify-between">
                       <span className="text-neutral-500">가입경로</span>
@@ -344,6 +364,12 @@ export function MemberManagementPage() {
                   {selectedMember.businessNumber && <div className="flex justify-between"><span className="text-neutral-500">사업자번호</span><span>{selectedMember.businessNumber}</span></div>}
                   <div className="flex justify-between"><span className="text-neutral-500">소속</span><span className={selectedMember.organization ? "text-blue-600 font-medium" : "text-neutral-400"}>{selectedMember.organization || '-'}</span></div>
                   <div className="flex justify-between"><span className="text-neutral-500">추천인</span><span className={selectedMember.referrerName ? "text-purple-600 font-medium" : "text-neutral-400"}>{selectedMember.referrerName || '-'}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-500">마케팅 수신</span>
+                    <span className={selectedMember.marketingConsent ? "text-green-600" : "text-neutral-400"}>
+                      {selectedMember.marketingConsent ? '동의' : '미동의'}
+                    </span>
+                  </div>
                 </div>
               </div>
               {/* 회원 등급 */}
@@ -397,6 +423,52 @@ export function MemberManagementPage() {
                   <div className="flex justify-between"><span className="text-neutral-500">가입일</span><span>{new Date(selectedMember.createdAt).toLocaleDateString('ko-KR')}</span></div>
                   {selectedMember.lastOrderAt && <div className="flex justify-between"><span className="text-neutral-500">최근주문</span><span>{new Date(selectedMember.lastOrderAt).toLocaleDateString('ko-KR')}</span></div>}
                 </div>
+              </div>
+
+              {/* 배송지 목록 */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin className="w-4 h-4 text-neutral-500" />
+                  <span className="text-sm font-medium text-neutral-900">배송지 목록</span>
+                  <span className="text-xs text-neutral-500">({memberAddresses.length}개)</span>
+                </div>
+                {addressesLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+                  </div>
+                ) : memberAddresses.length === 0 ? (
+                  <div className="bg-neutral-50 rounded-lg p-3 text-sm text-neutral-500 text-center">
+                    등록된 배송지가 없습니다.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {memberAddresses.map((addr) => (
+                      <div key={addr.id} className={cn(
+                        'bg-neutral-50 rounded-lg p-3 text-sm',
+                        addr.isDefault && 'ring-1 ring-primary-300 bg-primary-50'
+                      )}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-neutral-900">{addr.name}</span>
+                          {addr.isDefault && (
+                            <span className="flex items-center gap-0.5 text-xs text-primary-600 bg-primary-100 px-1.5 py-0.5 rounded">
+                              <Star className="w-3 h-3" />
+                              기본
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-neutral-600">
+                          <p>{addr.recipient} / {addr.phone}</p>
+                          <p className="text-neutral-500">
+                            [{addr.postalCode}] {addr.address1} {addr.address2 || ''}
+                          </p>
+                          {addr.notes && (
+                            <p className="text-xs text-neutral-400 mt-1">배송메모: {addr.notes}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 탈퇴/재가입 정보 (탈퇴 회원 또는 승인 대기 회원인 경우) */}

@@ -1,13 +1,25 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Package, ChevronDown, ChevronUp, Truck, CheckCircle, Clock, XCircle, Search, RefreshCw, Loader2 } from 'lucide-react'
+import { Package, ChevronDown, ChevronUp, Truck, CheckCircle, Clock, XCircle, Search, RefreshCw, Loader2, AlertTriangle } from 'lucide-react'
 import { Card, Button } from '../components/ui'
 import { Animated } from '../hooks'
 import { cn } from '../lib/utils'
 import { formatPrice } from '../lib/utils'
 import { useStore } from '../store'
-import { useUserOrders } from '../hooks/queries'
+import { useUserOrders, useUpdateOrderStatus } from '../hooks/queries'
+import { cancelPayment } from '../services/payment'
 import type { Order, OrderStatus } from '../admin/types/admin'
+
+// 택배사 조회 URL
+const carrierTrackingUrls: Record<string, { name: string; url: string }> = {
+  cj: { name: 'CJ대한통운', url: 'https://www.cjlogistics.com/ko/tool/parcel/tracking?gnbInvcNo=' },
+  hanjin: { name: '한진택배', url: 'https://www.hanjin.com/kor/CMS/DeliveryMgr/WaybillResult.do?mession=&wblNum=' },
+  lotte: { name: '롯데택배', url: 'https://www.lotteglogis.com/home/reservation/tracking/linkView?InvNo=' },
+  logen: { name: '로젠택배', url: 'https://www.ilogen.com/web/personal/trace/' },
+  epost: { name: '우체국택배', url: 'https://service.epost.go.kr/trace.RetrieveDomRi498.postal?sid1=' },
+  cu: { name: 'CU편의점택배', url: 'https://www.cupost.co.kr/postbox/delivery/localResult.cupost?invoice_no=' },
+  gspost: { name: 'GS편의점택배', url: 'https://www.cvsnet.co.kr/invoice/tracking.do?invoice_no=' },
+}
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; icon: typeof Clock }> = {
   pending:    { label: '결제대기', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
@@ -36,6 +48,9 @@ export function OrdersPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [cancelTarget, setCancelTarget] = useState<Order | null>(null)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const updateOrderStatus = useUpdateOrderStatus()
 
   const filteredOrders = orders.filter((order: Order) => {
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter
@@ -47,6 +62,35 @@ export function OrdersPage() {
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id)
+  }
+
+  const handleCancelOrder = async () => {
+    if (!cancelTarget) return
+    setIsCancelling(true)
+
+    try {
+      // 결제 취소 (paymentKey가 있는 경우)
+      if (cancelTarget.paymentKey) {
+        await cancelPayment({
+          paymentKey: cancelTarget.paymentKey,
+          cancelReason: '고객 요청에 의한 주문 취소',
+        })
+      }
+
+      // 주문 상태 업데이트
+      await updateOrderStatus.mutateAsync({
+        orderId: cancelTarget.id,
+        status: 'cancelled',
+      })
+
+      alert('주문이 취소되었습니다.')
+      setCancelTarget(null)
+    } catch (err: any) {
+      console.error('주문 취소 실패:', err)
+      alert(err.message || '주문 취소에 실패했습니다.')
+    } finally {
+      setIsCancelling(false)
+    }
   }
 
   const formatDate = (date: Date) => {
@@ -167,6 +211,24 @@ export function OrdersPage() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between md:justify-end gap-4">
+                      {/* 배송조회 버튼 - 운송장 번호가 있을 때 헤더에 표시 */}
+                      {order.trackingNumber && order.carrier && carrierTrackingUrls[order.carrier] && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8 bg-primary-50 border-primary-200 text-primary-700 hover:bg-primary-100"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            window.open(
+                              carrierTrackingUrls[order.carrier!].url + order.trackingNumber,
+                              '_blank'
+                            )
+                          }}
+                        >
+                          <Truck className="w-3 h-3 mr-1" />
+                          배송조회
+                        </Button>
+                      )}
                       <p className="text-lg font-bold text-neutral-900">
                         {formatPrice(order.totalAmount)}
                       </p>
@@ -247,9 +309,26 @@ export function OrdersPage() {
                           {order.trackingNumber && (
                             <div className="flex items-center gap-2 mt-3">
                               <p className="text-xs text-neutral-500">
+                                {order.carrier && carrierTrackingUrls[order.carrier] && (
+                                  <span className="mr-1">{carrierTrackingUrls[order.carrier].name}</span>
+                                )}
                                 운송장번호: <span className="font-mono">{order.trackingNumber}</span>
                               </p>
-                              <Button variant="outline" size="sm" className="text-xs h-7">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-7"
+                                onClick={() => {
+                                  if (order.carrier && carrierTrackingUrls[order.carrier]) {
+                                    window.open(
+                                      carrierTrackingUrls[order.carrier].url + order.trackingNumber,
+                                      '_blank'
+                                    )
+                                  } else {
+                                    alert('택배사 정보가 없습니다.')
+                                  }
+                                }}
+                              >
                                 배송조회
                               </Button>
                             </div>
@@ -266,7 +345,15 @@ export function OrdersPage() {
                           </>
                         )}
                         {(order.status === 'pending' || order.status === 'confirmed') && (
-                          <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setCancelTarget(order)
+                            }}
+                          >
                             주문취소
                           </Button>
                         )}
@@ -293,6 +380,55 @@ export function OrdersPage() {
             )}
           </div>
         </Animated>
+      )}
+
+      {/* 주문 취소 확인 모달 */}
+      {cancelTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-neutral-900">주문 취소</h3>
+            </div>
+            <p className="text-sm text-neutral-600 mb-2">
+              정말 이 주문을 취소하시겠습니까?
+            </p>
+            <div className="bg-neutral-50 rounded-lg p-3 mb-6">
+              <p className="text-sm font-medium text-neutral-900">{cancelTarget.orderNumber}</p>
+              <p className="text-xs text-neutral-500">
+                {cancelTarget.items[0]?.productName}
+                {cancelTarget.items.length > 1 && ` 외 ${cancelTarget.items.length - 1}건`}
+              </p>
+              <p className="text-sm font-bold text-primary-600 mt-1">
+                {formatPrice(cancelTarget.totalAmount)}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setCancelTarget(null)}
+                disabled={isCancelling}
+              >
+                닫기
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleCancelOrder}
+                disabled={isCancelling}
+              >
+                {isCancelling ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    취소 중...
+                  </>
+                ) : '주문 취소'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

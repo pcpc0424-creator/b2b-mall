@@ -1,16 +1,29 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MessageCircle, ChevronDown, ChevronUp, Search, Lock, CheckCircle, Loader2 } from 'lucide-react'
+import { MessageCircle, ChevronDown, ChevronUp, Search, Lock, CheckCircle, Loader2, Plus, X } from 'lucide-react'
 import { Badge, Card, Button } from '../components/ui'
 import { Animated } from '../hooks'
-import { useQnAs } from '../hooks/queries'
+import { useQnAs, useCreateQnA, useProducts } from '../hooks/queries'
+import { useStore } from '../store'
 import { cn } from '../lib/utils'
 
 export function QnAPage() {
   const { data: qnas = [], isLoading } = useQnAs()
+  const { data: products = [] } = useProducts()
+  const createQnA = useCreateQnA()
+  const { user } = useStore()
+
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<'all' | 'answered' | 'waiting'>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  // 문의 작성 모달 상태
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedProductId, setSelectedProductId] = useState('')
+  const [question, setQuestion] = useState('')
+  const [isPrivate, setIsPrivate] = useState(false)
+  const [productSearch, setProductSearch] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const filters = [
     { id: 'all', label: '전체' },
@@ -28,6 +41,13 @@ export function QnAPage() {
     return matchesFilter && matchesSearch
   })
 
+  // 상품 검색 필터
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(productSearch.toLowerCase())
+  )
+
+  const selectedProduct = products.find(p => p.id === selectedProductId)
+
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id)
   }
@@ -38,6 +58,56 @@ export function QnAPage() {
       month: '2-digit',
       day: '2-digit'
     })
+  }
+
+  const handleOpenModal = () => {
+    if (!user) {
+      alert('로그인이 필요합니다.')
+      return
+    }
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedProductId('')
+    setQuestion('')
+    setIsPrivate(false)
+    setProductSearch('')
+  }
+
+  const handleSubmit = async () => {
+    if (!selectedProductId) {
+      alert('상품을 선택해주세요.')
+      return
+    }
+    if (!question.trim()) {
+      alert('문의 내용을 입력해주세요.')
+      return
+    }
+    if (!user) {
+      alert('로그인이 필요합니다.')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      await createQnA.mutateAsync({
+        productId: selectedProductId,
+        productName: selectedProduct?.name || '',
+        productImage: selectedProduct?.images?.[0] || '',
+        question: question.trim(),
+        author: user.name || user.email,
+        userId: user.id,
+        isPrivate,
+      })
+      alert('문의가 등록되었습니다.')
+      handleCloseModal()
+    } catch {
+      alert('문의 등록에 실패했습니다.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -53,9 +123,15 @@ export function QnAPage() {
 
       {/* Header */}
       <Animated animation="fade-up" delay={100}>
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-neutral-900 mb-2">상품 Q&A</h1>
-          <p className="text-neutral-500">상품에 대해 궁금한 점을 질문해 보세요</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-900 mb-2">상품 Q&A</h1>
+            <p className="text-neutral-500">상품에 대해 궁금한 점을 질문해 보세요</p>
+          </div>
+          <Button onClick={handleOpenModal} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            문의하기
+          </Button>
         </div>
       </Animated>
 
@@ -208,6 +284,123 @@ export function QnAPage() {
           </ul>
         </div>
       </Animated>
+
+      {/* 문의 작성 모달 */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50" onClick={handleCloseModal} />
+          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-neutral-900">상품 문의하기</h2>
+              <button onClick={handleCloseModal} className="p-1 hover:bg-neutral-100 rounded-lg">
+                <X className="w-5 h-5 text-neutral-500" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* 상품 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  상품 선택 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  placeholder="상품명을 검색하세요"
+                  className="w-full px-4 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 mb-2"
+                />
+                {productSearch && !selectedProductId && (
+                  <div className="border border-neutral-200 rounded-lg max-h-48 overflow-y-auto">
+                    {filteredProducts.length > 0 ? (
+                      filteredProducts.slice(0, 10).map(product => (
+                        <button
+                          key={product.id}
+                          onClick={() => {
+                            setSelectedProductId(product.id)
+                            setProductSearch(product.name)
+                          }}
+                          className="w-full px-4 py-2 text-left hover:bg-neutral-50 flex items-center gap-3"
+                        >
+                          <img
+                            src={product.images?.[0]}
+                            alt={product.name}
+                            className="w-10 h-10 rounded object-cover"
+                          />
+                          <span className="text-sm text-neutral-900 truncate">{product.name}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="px-4 py-3 text-sm text-neutral-500">검색 결과가 없습니다.</p>
+                    )}
+                  </div>
+                )}
+                {selectedProduct && (
+                  <div className="flex items-center gap-3 p-3 bg-primary-50 rounded-lg">
+                    <img
+                      src={selectedProduct.images?.[0]}
+                      alt={selectedProduct.name}
+                      className="w-12 h-12 rounded object-cover"
+                    />
+                    <span className="text-sm font-medium text-neutral-900 flex-1">{selectedProduct.name}</span>
+                    <button
+                      onClick={() => {
+                        setSelectedProductId('')
+                        setProductSearch('')
+                      }}
+                      className="text-neutral-500 hover:text-neutral-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 문의 내용 */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  문의 내용 <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  placeholder="궁금한 점을 자세히 적어주세요"
+                  rows={5}
+                  className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                />
+              </div>
+
+              {/* 비공개 설정 */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPrivate}
+                  onChange={(e) => setIsPrivate(e.target.checked)}
+                  className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-sm text-neutral-700">비공개 문의</span>
+                <span className="text-xs text-neutral-500">(개인정보가 포함된 경우 체크해주세요)</span>
+              </label>
+            </div>
+
+            <div className="sticky bottom-0 bg-white border-t border-neutral-200 px-6 py-4 flex gap-3">
+              <Button variant="secondary" onClick={handleCloseModal} className="flex-1">
+                취소
+              </Button>
+              <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1">
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    등록 중...
+                  </>
+                ) : (
+                  '문의 등록'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

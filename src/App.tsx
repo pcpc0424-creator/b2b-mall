@@ -32,6 +32,10 @@ import {
   CheckoutPage,
   PrivacyPolicyPage,
   TermsOfServicePage,
+  RefundPolicyPage,
+  ShippingPolicyPage,
+  ShippingAddressPage,
+  ResetPasswordPage,
 } from './pages'
 
 // Admin imports
@@ -50,15 +54,18 @@ import {
   ModalManagementPage,
   BannerSettingsPage,
   HomeSectionManagementPage,
+  QnAManagementPage,
+  NoticeManagementPage,
+  FAQManagementPage,
 } from './admin/pages'
 
 // 페이지 전환 시 스크롤을 상단으로 이동
 function ScrollToTop() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
 
   useEffect(() => {
     window.scrollTo(0, 0)
-  }, [pathname])
+  }, [pathname, search])
 
   return null
 }
@@ -80,36 +87,63 @@ function App() {
 
   // Supabase Auth 세션 복원 + 상태 리스너
   useEffect(() => {
+    let isActive = true // cleanup 시 비동기 작업 무시용 플래그
+
     // Auth 상태 변경 리스너 (INITIAL_SESSION, SIGNED_IN, SIGNED_OUT 등)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[App] Auth 이벤트:', event, '세션:', session ? '있음' : '없음')
+
       // INITIAL_SESSION: 페이지 로드 시 세션 복원 완료
       // SIGNED_IN: 로그인 완료
       if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
         if (session?.user) {
+          console.log('[App] 세션 사용자:', session.user.email)
           // 세션이 있으면 프로필 로드 (별도 비동기 처리)
-          const result = await getCurrentUser()
-          if (result.user) {
-            login(result.user)
-            // 장바구니 동기화 (중복 실행 방지)
-            if (!cartSyncInProgress.current) {
-              cartSyncInProgress.current = true
-              try {
-                const localCart = useStore.getState().cart
-                const mergedCart = await mergeCartsOnLogin(localCart)
-                setCart(mergedCart)
-              } catch (err) {
-                console.warn('장바구니 동기화 중 오류:', err)
-              } finally {
-                cartSyncInProgress.current = false
+          try {
+            const result = await getCurrentUser()
+            // cleanup 후에는 상태 업데이트 하지 않음
+            if (!isActive) return
+
+            console.log('[App] getCurrentUser 결과:', result)
+            if (result.user) {
+              login(result.user)
+              // 장바구니 동기화 (중복 실행 방지)
+              if (!cartSyncInProgress.current) {
+                cartSyncInProgress.current = true
+                try {
+                  const localCart = useStore.getState().cart
+                  const mergedCart = await mergeCartsOnLogin(localCart)
+                  if (isActive) {
+                    setCart(mergedCart)
+                  }
+                } catch (err) {
+                  console.warn('장바구니 동기화 중 오류:', err)
+                } finally {
+                  cartSyncInProgress.current = false
+                }
               }
+            } else if (result.error) {
+              setAuthError(result.error)
+            } else {
+              // user가 null이고 error도 없는 경우 - 디버깅용
+              console.error('로그인 실패: 사용자 정보를 가져올 수 없습니다.', result)
+              setAuthError('로그인 처리 중 오류가 발생했습니다. 다시 시도해주세요.')
             }
-          } else if (result.error) {
-            setAuthError(result.error)
+          } catch (err) {
+            // AbortError는 React StrictMode에서 정상적으로 발생할 수 있음 (무시)
+            if (err instanceof Error && err.name === 'AbortError') {
+              console.log('[App] Auth 요청이 취소됨 (StrictMode 또는 빠른 전환)')
+              return
+            }
+            if (!isActive) return
+            console.error('로그인 오류:', err)
+            setAuthError('로그인 처리 중 오류가 발생했습니다.')
           }
         } else if (event === 'INITIAL_SESSION') {
           // 세션 없음 - store 정리
+          if (!isActive) return
           const storeState = useStore.getState()
           if (storeState.isLoggedIn) {
             logout()
@@ -117,11 +151,13 @@ function App() {
         }
       } else if (event === 'SIGNED_OUT') {
         // 로그아웃 시 상태 전체 초기화 (장바구니 포함)
+        if (!isActive) return
         useStore.setState({ user: null, isLoggedIn: false, cart: [], appliedCoupon: null })
       }
     })
 
     return () => {
+      isActive = false
       subscription.unsubscribe()
     }
   }, [])
@@ -172,7 +208,10 @@ function App() {
           <Route path="/community/faq" element={<FAQPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
           <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+          <Route path="/refund-policy" element={<RefundPolicyPage />} />
+          <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Protected Routes - 회원 전용 (로그인 필수) */}
           <Route path="/quote" element={<AuthGuard><QuotePage /></AuthGuard>} />
@@ -183,9 +222,10 @@ function App() {
           <Route path="/community/qna" element={<AuthGuard><QnAPage /></AuthGuard>} />
           <Route path="/exclusive" element={<AuthGuard><ExclusivePage /></AuthGuard>} />
           <Route path="/orders" element={<AuthGuard><OrdersPage /></AuthGuard>} />
-          <Route path="/payment/success" element={<AuthGuard><PaymentSuccessPage /></AuthGuard>} />
-          <Route path="/payment/fail" element={<AuthGuard><PaymentFailPage /></AuthGuard>} />
+          <Route path="/payment/success" element={<PaymentSuccessPage />} />
+          <Route path="/payment/fail" element={<PaymentFailPage />} />
           <Route path="/my/coupons" element={<AuthGuard><MyCouponsPage /></AuthGuard>} />
+          <Route path="/my/shipping-addresses" element={<AuthGuard><ShippingAddressPage /></AuthGuard>} />
         </Route>
 
         {/* Admin Routes */}
@@ -205,6 +245,9 @@ function App() {
           <Route path="promotions" element={<PromotionManagementPage />} />
           <Route path="orders" element={<OrderManagementPage />} />
           <Route path="members" element={<MemberManagementPage />} />
+          <Route path="notices" element={<NoticeManagementPage />} />
+          <Route path="faqs" element={<FAQManagementPage />} />
+          <Route path="qna" element={<QnAManagementPage />} />
           <Route path="settings/shipping" element={<ShippingSettingsPage />} />
           <Route path="settings/tiers" element={<TierSettingsPage />} />
           <Route path="settings/modals" element={<ModalManagementPage />} />

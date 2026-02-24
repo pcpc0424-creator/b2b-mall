@@ -26,8 +26,10 @@ export function PromotionDetailPage() {
     )
   }
 
-  // 프로모션 관련 상품 (할인율 기준)
-  const promotionProducts = products.slice(0, 8)
+  // 프로모션에 연결된 상품만 필터링
+  const promotionProducts = promotion.productIds && promotion.productIds.length > 0
+    ? products.filter(p => promotion.productIds?.includes(p.id))
+    : []
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('ko-KR', {
@@ -111,24 +113,29 @@ export function PromotionDetailPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-neutral-900">프로모션 적용 상품</h2>
-            <Link
-              to="/products"
-              className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
-            >
-              전체보기
-            </Link>
+            {promotionProducts.length > 0 && (
+              <span className="text-sm text-neutral-500">
+                총 {promotionProducts.length}개 상품
+              </span>
+            )}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {promotionProducts.map((product, index) => (
-              <div
-                key={product.id}
-                className="animate-fade-in"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <ProductCard product={product} />
-              </div>
-            ))}
-          </div>
+          {promotionProducts.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {promotionProducts.map((product, index) => (
+                <div
+                  key={product.id}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <ProductCard product={product} promotionDiscount={promotion.discount} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-neutral-50 rounded-xl">
+              <p className="text-neutral-500">프로모션 적용 상품이 아직 등록되지 않았습니다.</p>
+            </div>
+          )}
         </div>
       </Animated>
     </div>

@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Plus, Edit2, Trash2, Eye, EyeOff, X, Image } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Plus, Edit2, Trash2, Eye, EyeOff, X, Image as ImageIcon, Upload } from 'lucide-react'
 import { usePopupModals, useCreatePopupModal, useUpdatePopupModal, useDeletePopupModal, useTogglePopupModalActive } from '../../hooks/queries'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { cn } from '../../lib/utils'
 import { PopupModal, ModalTargetPage } from '../types/admin'
+import { uploadImage } from '../../services/storage'
 
 const targetPageLabels: Record<ModalTargetPage, string> = {
   home: '메인 페이지',
@@ -37,6 +38,9 @@ export function ModalManagementPage() {
   const [editingModal, setEditingModal] = useState<PopupModal | null>(null)
   const [formData, setFormData] = useState(defaultModal)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleAdd = () => {
     setEditingModal(null)
@@ -91,17 +95,51 @@ export function ModalManagementPage() {
     setEditingModal(null)
   }
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const base64 = reader.result as string
-        setFormData({ ...formData, image: base64 })
-        setPreviewImage(base64)
-      }
-      reader.readAsDataURL(file)
+  // 이미지 업로드 핸들러
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드 가능합니다.')
+      return
     }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('파일 크기는 5MB 이하여야 합니다.')
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const url = await uploadImage('modals', file)
+      setFormData({ ...formData, image: url })
+      setPreviewImage(url)
+    } catch (error) {
+      console.error('이미지 업로드 실패:', error)
+      alert('이미지 업로드에 실패했습니다.')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  // 드래그 앤 드롭 핸들러
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleImageUpload(file)
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleImageUpload(file)
   }
 
   const handleTargetPageToggle = (page: ModalTargetPage) => {
@@ -231,31 +269,71 @@ export function ModalManagementPage() {
               {/* 이미지 */}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">이미지</label>
-                <div className="flex items-start gap-4">
-                  <div className="flex-1">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="w-full text-sm"
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                {previewImage ? (
+                  <div className="relative">
+                    <img
+                      src={previewImage}
+                      alt="모달 이미지"
+                      className="w-full h-48 object-cover rounded-lg border border-neutral-200"
                     />
-                    <input
-                      type="text"
-                      value={formData.image || ''}
-                      onChange={(e) => {
-                        setFormData({ ...formData, image: e.target.value })
-                        setPreviewImage(e.target.value)
-                      }}
-                      className="w-full px-3 py-2 border border-neutral-200 rounded-lg mt-2 text-sm"
-                      placeholder="또는 이미지 URL 입력"
-                    />
-                  </div>
-                  {previewImage && (
-                    <div className="w-24 h-24 rounded overflow-hidden bg-neutral-100 flex-shrink-0">
-                      <img src={previewImage} alt="" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                      >
+                        <Upload className="w-4 h-4 mr-1" />
+                        변경
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          setFormData({ ...formData, image: undefined })
+                          setPreviewImage(null)
+                        }}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        삭제
+                      </Button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`w-full h-48 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                      isDragging
+                        ? 'border-primary-500 bg-primary-50'
+                        : 'border-neutral-300 hover:border-primary-400 hover:bg-neutral-50'
+                    }`}
+                  >
+                    {isUploading ? (
+                      <>
+                        <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mb-2" />
+                        <p className="text-sm text-neutral-500">업로드 중...</p>
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-10 h-10 text-neutral-400 mb-2" />
+                        <p className="text-sm text-neutral-600 font-medium">클릭하거나 이미지를 드래그하세요</p>
+                        <p className="text-xs text-neutral-400 mt-1">PNG, JPG, GIF (최대 5MB)</p>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 표시 페이지 */}

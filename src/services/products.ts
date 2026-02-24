@@ -103,7 +103,7 @@ export async function createProduct(product: Partial<AdminProduct>): Promise<Adm
   row.created_at = new Date().toISOString()
   row.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('products')
     .insert(row)
     .select()
@@ -121,7 +121,7 @@ export async function updateProduct(
   const row = toRow(updates)
   row.updated_at = new Date().toISOString()
 
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('products')
     .update(row)
     .eq('id', id)
@@ -131,7 +131,7 @@ export async function updateProduct(
 
 /** 상품 삭제 */
 export async function deleteProduct(id: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('products')
     .delete()
     .eq('id', id)

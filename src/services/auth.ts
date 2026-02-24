@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabase, supabasePublic } from '../lib/supabase'
 import { User, SocialProvider } from '../types'
 
 /**
@@ -68,7 +68,7 @@ function toUser(row: DbRow): User {
 
 /** Supabase members 테이블에서 프로필 조회 */
 async function fetchMemberProfile(userId: string): Promise<User | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('members')
     .select('*')
     .eq('id', userId)
@@ -81,7 +81,7 @@ async function fetchMemberProfile(userId: string): Promise<User | null> {
 /** members 테이블 upsert */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function upsertMemberProfile(profile: Record<string, any>): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('members')
     .upsert(profile, { onConflict: 'id' })
 
@@ -102,7 +102,7 @@ export async function registerWithEmail(
   referrerId?: string
 ): Promise<RegisterResponse> {
   // 0. 탈퇴한 회원인지 먼저 확인
-  const { data: withdrawnMember } = await supabase
+  const { data: withdrawnMember } = await supabasePublic
     .from('members')
     .select('id, status')
     .eq('email', email.toLowerCase())
@@ -144,7 +144,7 @@ export async function registerWithEmail(
   // 추천인 이름 조회
   let referrerName: string | null = null
   if (referrerId) {
-    const { data: referrerData } = await supabase
+    const { data: referrerData } = await supabasePublic
       .from('members')
       .select('name')
       .eq('id', referrerId)
@@ -200,7 +200,7 @@ export async function loginWithEmail(
 
   if (!error && data.user) {
     // 로그인 성공 → 먼저 회원 상태 확인
-    const { data: memberData } = await supabase
+    const { data: memberData } = await supabasePublic
       .from('members')
       .select('status')
       .eq('id', data.user.id)
@@ -208,7 +208,7 @@ export async function loginWithEmail(
 
     // 탈퇴한 회원이 다시 로그인 시도하는 경우 → pending_approval로 변경
     if (memberData?.status === 'withdrawn') {
-      await supabase
+      await supabasePublic
         .from('members')
         .update({
           status: 'pending_approval',
@@ -233,7 +233,7 @@ export async function loginWithEmail(
     }
 
     // 로그인 시간 업데이트
-    await supabase
+    await supabasePublic
       .from('members')
       .update({ last_login_at: new Date().toISOString() })
       .eq('id', data.user.id)
@@ -363,21 +363,49 @@ export async function getCurrentUser(): Promise<GetCurrentUserResponse> {
     data: { session },
   } = await supabase.auth.getSession()
 
-  if (!session?.user) return { user: null }
+  if (!session?.user) {
+    console.log('[Auth] 세션 없음')
+    return { user: null }
+  }
 
-  // 먼저 members 테이블에서 raw 데이터 조회
-  const { data: memberData } = await supabase
+  console.log('[Auth] 세션 사용자 ID:', session.user.id, '이메일:', session.user.email)
+
+  // 먼저 members 테이블에서 raw 데이터 조회 (supabasePublic 사용 - RLS 우회)
+  // ID로 조회 시도
+  let { data: memberData, error: memberError } = await supabasePublic
     .from('members')
     .select('*')
     .eq('id', session.user.id)
     .single()
+
+  console.log('[Auth] ID로 조회 결과:', memberData ? '찾음' : '없음', memberError?.message || '')
+
+  // ID로 못 찾으면 이메일로 조회 시도
+  if (!memberData && session.user.email) {
+    const { data: memberByEmail } = await supabasePublic
+      .from('members')
+      .select('*')
+      .eq('email', session.user.email.toLowerCase())
+      .single()
+
+    if (memberByEmail) {
+      console.log('[Auth] 이메일로 찾은 회원 ID:', memberByEmail.id, '- ID 업데이트 필요')
+      // 기존 회원의 ID를 Supabase Auth ID로 업데이트
+      await supabasePublic
+        .from('members')
+        .update({ id: session.user.id })
+        .eq('email', session.user.email.toLowerCase())
+
+      memberData = { ...memberByEmail, id: session.user.id }
+    }
+  }
 
   const meta = session.user.user_metadata || {}
   const provider = session.user.app_metadata?.provider || 'email'
 
   // 탈퇴 회원이 다시 로그인한 경우 → pending_approval 상태로 변경 (관리자 승인 필요)
   if (memberData?.status === 'withdrawn') {
-    await supabase
+    await supabasePublic
       .from('members')
       .update({
         status: 'pending_approval',
@@ -444,7 +472,7 @@ export async function withdrawAccount(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
   // members 테이블에서 삭제하지 않고 withdrawn 상태로 변경 (데이터 보관)
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('members')
     .update({
       status: 'withdrawn',
@@ -477,7 +505,7 @@ export async function updateMember(
   if (updates.profileImage !== undefined) dbUpdates.profile_image = updates.profileImage
   if (updates.marketingConsent !== undefined) dbUpdates.marketing_consent = updates.marketingConsent
 
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('members')
     .update(dbUpdates)
     .eq('id', userId)
@@ -505,7 +533,7 @@ export async function migrateLocalMembers(): Promise<void> {
     const members = JSON.parse(data)
     for (const member of members) {
       try {
-        await supabase.from('members').upsert(
+        await supabasePublic.from('members').upsert(
           {
             id: member.id,
             email: member.email,
@@ -536,6 +564,19 @@ export async function migrateLocalMembers(): Promise<void> {
   localStorage.setItem(MEMBERS_MIGRATED_KEY, 'true')
 }
 
+// ── 사용자 등급 새로고침 ─────────────────────────────────
+
+export async function refreshUserTier(userId: string): Promise<string | null> {
+  const { data, error } = await supabasePublic
+    .from('members')
+    .select('tier')
+    .eq('id', userId)
+    .single()
+
+  if (error || !data) return null
+  return data.tier
+}
+
 // ── Provider 이름 반환 ─────────────────────────────────
 
 export function getProviderName(provider: SocialProvider): string {
@@ -555,7 +596,7 @@ export async function searchReferrerByEmail(
 ): Promise<{ id: string; name: string; email: string } | null> {
   if (!email) return null
 
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('members')
     .select('id, name, email')
     .eq('email', email.toLowerCase())

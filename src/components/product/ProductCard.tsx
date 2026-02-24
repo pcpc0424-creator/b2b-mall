@@ -9,9 +9,10 @@ import { cn } from '../../lib/utils'
 
 interface ProductCardProps {
   product: Product
+  promotionDiscount?: number  // 프로모션 할인율 (선택적)
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, promotionDiscount }: ProductCardProps) {
   const navigate = useNavigate()
   const { user, addToCart, isLoggedIn } = useStore()
   const [quantity, setQuantity] = useState(0)
@@ -20,8 +21,13 @@ export function ProductCard({ product }: ProductCardProps) {
   const retailPrice = product.prices.retail
   const memberPrice = product.prices.member
   const currentPrice = getPriceByTier(product, tier)
-  const salePrice = tier === 'guest' ? memberPrice : currentPrice
-  const discountRate = Math.round((1 - salePrice / retailPrice) * 100)
+  const baseSalePrice = tier === 'guest' ? memberPrice : currentPrice
+
+  // 프로모션 할인이 있으면 적용, 없으면 기본 할인율 사용
+  const salePrice = promotionDiscount
+    ? Math.round(retailPrice * (1 - promotionDiscount / 100))
+    : baseSalePrice
+  const discountRate = promotionDiscount || Math.round((1 - baseSalePrice / retailPrice) * 100)
 
   const stockStatusConfig = {
     available: { label: '재고충분', variant: 'success' as const },

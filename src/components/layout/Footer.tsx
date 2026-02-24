@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Phone, Mail, MapPin } from 'lucide-react'
+import { Mail, Phone } from 'lucide-react'
 
 export function Footer() {
   return (
@@ -10,8 +10,7 @@ export function Footer() {
           <div>
             <h2 className="text-lg font-bold text-white mb-2">가성비연구소</h2>
             <p className="text-sm text-neutral-400">
-              전문 도매 쇼핑몰<br />
-              대량 주문, 견적서 발행, 등급별 할인 혜택
+              전문 도매 쇼핑몰
             </p>
           </div>
 
@@ -19,15 +18,11 @@ export function Footer() {
           <div className="space-y-1 text-sm md:text-right">
             <div className="flex items-center gap-2 md:justify-end">
               <Phone className="w-4 h-4 text-primary-400" />
-              <span>1588-0000</span>
+              <span>010-8921-8376</span>
             </div>
             <div className="flex items-center gap-2 md:justify-end">
               <Mail className="w-4 h-4 text-primary-400" />
-              <span>contact@joengdam.co.kr</span>
-            </div>
-            <div className="flex items-center gap-2 md:justify-end">
-              <MapPin className="w-4 h-4 text-primary-400" />
-              <span>서울특별시 강남구 테헤란로 123</span>
+              <span>lee0608min@naver.com</span>
             </div>
           </div>
         </div>
@@ -40,22 +35,31 @@ export function Footer() {
           <Link to="/privacy-policy" className="text-neutral-400 hover:text-white transition-colors">
             개인정보 처리방침
           </Link>
+          <Link to="/refund-policy" className="text-neutral-400 hover:text-white transition-colors">
+            교환/환불 정책
+          </Link>
+          <Link to="/shipping-policy" className="text-neutral-400 hover:text-white transition-colors">
+            배송 안내
+          </Link>
         </div>
 
         {/* Business Info */}
         <div className="border-t border-neutral-800 mt-4 pt-4">
           <div className="text-xs text-neutral-500 space-y-1">
             <p>
-              <span className="text-neutral-400">상호명:</span> 정담 |{' '}
+              <span className="text-neutral-400">상호명:</span> 가성비연구소 |{' '}
               <span className="text-neutral-400">대표:</span> 김선애 |{' '}
               <span className="text-neutral-400">사업자등록번호:</span> 597-06-02858
             </p>
             <p>
-              <span className="text-neutral-400">사업장소재지:</span> 경기도 남양주시 진건읍 진관로387번길 48 |{' '}
+              <span className="text-neutral-400">사업장소재지:</span> 경기도 남양주시 진건읍 진관로387번길 48
+            </p>
+            <p>
+              <span className="text-neutral-400">연락처:</span> 010-8921-8376 |{' '}
               <span className="text-neutral-400">이메일:</span> lee0608min@naver.com
             </p>
             <p className="text-neutral-600 mt-2">
-              © 2023 정담. All rights reserved.
+              © 2026 가성비연구소. All rights reserved.
             </p>
           </div>
         </div>

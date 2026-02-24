@@ -157,13 +157,13 @@ export function AdminHeader() {
     setSearchQuery('')
     switch (result.type) {
       case 'product':
-        navigate(`/admin/products/${result.id}`)
+        navigate(`/admin/products/${result.id}/edit`)
         break
       case 'order':
-        navigate(`/admin/orders/${result.id}`)
+        navigate(`/admin/orders?search=${result.id}`)
         break
       case 'member':
-        navigate(`/admin/members/${result.id}`)
+        navigate(`/admin/members?search=${result.id}`)
         break
     }
   }

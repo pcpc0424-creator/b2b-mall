@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabasePublic } from '../lib/supabase'
 
 /**
  * Supabase Storage 서비스
@@ -11,9 +11,9 @@ export async function uploadImage(
   file: File,
   path?: string
 ): Promise<string> {
-  const fileName = path || `${Date.now()}-${file.name}`
+  const fileName = path || `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
 
-  const { data, error } = await supabase.storage
+  const { data, error } = await supabasePublic.storage
     .from(bucket)
     .upload(fileName, file, {
       cacheControl: '3600',
@@ -25,7 +25,7 @@ export async function uploadImage(
     throw new Error(`이미지 업로드 실패: ${error.message}`)
   }
 
-  const { data: urlData } = supabase.storage
+  const { data: urlData } = supabasePublic.storage
     .from(bucket)
     .getPublicUrl(data.path)
 
@@ -75,7 +75,7 @@ export async function deleteImage(
   const path = url.substring(index + bucketPath.length)
   if (!path) return
 
-  const { error } = await supabase.storage
+  const { error } = await supabasePublic.storage
     .from(bucket)
     .remove([path])
 

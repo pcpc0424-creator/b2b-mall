@@ -51,10 +51,17 @@ export const useStore = create<AppState>()(
   isLoggedIn: false,
 
   login: (user) => set({ user, isLoggedIn: true }),
-  logout: () => {
-    supabase.auth.signOut()
-    // 로그아웃 시 장바구니도 초기화 (중복 방지)
+  logout: async () => {
+    // 상태 초기화
     set({ user: null, isLoggedIn: false, cart: [], appliedCoupon: null })
+    // Supabase 세션 삭제 후 페이지 새로고침 (클라이언트 상태 완전 초기화)
+    try {
+      await supabase.auth.signOut()
+    } catch {
+      // 에러 무시
+    }
+    // 페이지 새로고침으로 Supabase 클라이언트 완전 초기화
+    window.location.href = '/'
   },
   setUserTier: (tier) => set((state) => ({
     user: state.user ? { ...state.user, tier } : null

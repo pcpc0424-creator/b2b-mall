@@ -66,7 +66,7 @@ export async function upsertShippingSettings(
   row.id = 'default'
   row.updated_at = new Date().toISOString()
 
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('shipping_settings')
     .upsert(row)
 
@@ -104,7 +104,7 @@ function tierToRow(settings: Partial<TierSettings>): DbRow {
 
 /** 등급 설정 조회 (id='default') */
 export async function fetchTierSettings(): Promise<TierSettings> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('tier_settings')
     .select('*')
     .eq('id', 'default')
@@ -122,7 +122,7 @@ export async function upsertTierSettings(
   row.id = 'default'
   row.updated_at = new Date().toISOString()
 
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('tier_settings')
     .upsert(row)
 
@@ -184,7 +184,7 @@ export async function upsertSiteSettings(
   row.id = 'default'
   row.updated_at = new Date().toISOString()
 
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('site_settings')
     .upsert(row)
 

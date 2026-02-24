@@ -12,8 +12,11 @@ import {
   X,
   Crown,
   MessageSquare,
+  MessageCircle,
   Image,
-  LayoutGrid
+  LayoutGrid,
+  Bell,
+  HelpCircle,
 } from 'lucide-react'
 import { useAdminStore } from '../../store/adminStore'
 import { cn } from '../../../lib/utils'
@@ -24,6 +27,9 @@ const menuItems = [
   { path: '/admin/promotions', icon: Megaphone, label: '프로모션 관리' },
   { path: '/admin/orders', icon: ShoppingCart, label: '주문 관리' },
   { path: '/admin/members', icon: Users, label: '회원 관리' },
+  { path: '/admin/notices', icon: Bell, label: '공지사항 관리' },
+  { path: '/admin/faqs', icon: HelpCircle, label: 'FAQ 관리' },
+  { path: '/admin/qna', icon: MessageCircle, label: 'Q&A 관리' },
   { path: '/admin/home-sections', icon: LayoutGrid, label: '홈 섹션 관리' },
   { path: '/admin/settings/banner', icon: Image, label: '배너 이미지' },
   { path: '/admin/settings/modals', icon: MessageSquare, label: '팝업 모달' },

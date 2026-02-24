@@ -49,7 +49,7 @@ export async function addHomeSection(
   row.created_at = now
   row.updated_at = now
 
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('home_sections')
     .insert(row)
     .select()
@@ -61,7 +61,7 @@ export async function addHomeSection(
 
 /** 홈 섹션에서 상품 제거 */
 export async function removeHomeSection(id: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('home_sections')
     .delete()
     .eq('id', id)
@@ -75,7 +75,7 @@ export async function reorderHomeSections(
 ): Promise<void> {
   const now = new Date().toISOString()
   for (const item of items) {
-    const { error } = await supabase
+    const { error } = await supabasePublic
       .from('home_sections')
       .update({ display_order: item.displayOrder, updated_at: now })
       .eq('id', item.id)

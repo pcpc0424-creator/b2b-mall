@@ -286,19 +286,21 @@ function ReviewWriteModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b border-neutral-200">
-          <h3 className="text-lg font-bold text-neutral-900">리뷰 작성</h3>
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+      <Card className="w-full max-w-xl bg-white rounded-xl shadow-2xl">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
+          <h3 className="text-xl font-bold text-neutral-900">리뷰 작성</h3>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-neutral-100 rounded-full transition-colors"
+            className="p-2 hover:bg-neutral-100 rounded-full transition-colors"
           >
             <X className="w-5 h-5 text-neutral-500" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        {/* 폼 */}
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
           {/* 별점 선택 */}
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-2">
@@ -312,11 +314,11 @@ function ReviewWriteModal({
                   onClick={() => setRating(star)}
                   onMouseEnter={() => setHoveredRating(star)}
                   onMouseLeave={() => setHoveredRating(0)}
-                  className="p-1"
+                  className="p-0.5"
                 >
                   <Star
                     className={cn(
-                      'w-8 h-8 transition-colors',
+                      'w-9 h-9 transition-colors',
                       star <= (hoveredRating || rating)
                         ? 'fill-yellow-400 text-yellow-400'
                         : 'fill-neutral-200 text-neutral-200'
@@ -324,7 +326,7 @@ function ReviewWriteModal({
                   />
                 </button>
               ))}
-              <span className="ml-2 text-sm text-neutral-500">{rating}점</span>
+              <span className="ml-3 text-base font-medium text-neutral-600">{rating}점</span>
             </div>
           </div>
 
@@ -338,7 +340,7 @@ function ReviewWriteModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="리뷰 제목을 입력하세요"
-              className="w-full px-4 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-base"
             />
           </div>
 
@@ -352,22 +354,22 @@ function ReviewWriteModal({
               onChange={(e) => setContent(e.target.value)}
               placeholder="상품에 대한 솔직한 리뷰를 작성해 주세요"
               rows={5}
-              className="w-full px-4 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+              className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none text-base"
             />
           </div>
 
           {/* 버튼 */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="flex-1"
+              className="flex-1 py-3"
               disabled={createReview.isPending}
             >
               취소
             </Button>
-            <Button type="submit" className="flex-1" disabled={createReview.isPending}>
+            <Button type="submit" className="flex-1 py-3" disabled={createReview.isPending}>
               {createReview.isPending ? '등록 중...' : '등록하기'}
             </Button>
           </div>

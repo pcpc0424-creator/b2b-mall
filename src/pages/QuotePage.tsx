@@ -268,7 +268,7 @@ export function QuotePage() {
                   <div className="bg-neutral-50 p-4 rounded-lg">
                     <p className="font-bold text-primary-600 text-lg">가성비연구소</p>
                     <p className="text-sm text-neutral-600 mt-1">서울특별시 강남구 테헤란로 123</p>
-                    <p className="text-sm text-neutral-600">Tel: 1588-0000</p>
+                    <p className="text-sm text-neutral-600">Email: lee0608min@naver.com</p>
                   </div>
                 </div>
               </div>
@@ -349,7 +349,7 @@ export function QuotePage() {
               {/* Footer */}
               <div className="mt-8 pt-6 border-t border-neutral-200 text-center text-xs text-neutral-500">
                 <p>본 견적서는 전자문서로 작성되었으며, 별도의 날인이 필요하지 않습니다.</p>
-                <p className="mt-1">문의사항: contact@joengdam.co.kr | 1588-0000</p>
+                <p className="mt-1">문의사항: lee0608min@naver.com</p>
               </div>
             </div>
           </div>

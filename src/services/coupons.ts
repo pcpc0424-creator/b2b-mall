@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabasePublic } from '../lib/supabase'
 import type { Coupon } from '../types'
 
 /**
@@ -30,7 +30,7 @@ function toUserCoupon(row: DbRow): Coupon {
 
 /** 사용자의 쿠폰 목록 조회 */
 export async function fetchUserCoupons(userId: string): Promise<Coupon[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('user_coupons')
     .select('*, coupons(*)')
     .eq('user_id', userId)
@@ -43,7 +43,7 @@ export async function fetchUserCoupons(userId: string): Promise<Coupon[]> {
 /** 쿠폰 코드로 등록 (user_coupons에 추가) */
 export async function registerCouponByCode(userId: string, code: string): Promise<Coupon> {
   // 1. 쿠폰 코드로 조회
-  const { data: coupon, error: findError } = await supabase
+  const { data: coupon, error: findError } = await supabasePublic
     .from('coupons')
     .select('*')
     .eq('code', code.toUpperCase())
@@ -55,7 +55,7 @@ export async function registerCouponByCode(userId: string, code: string): Promis
   }
 
   // 2. 이미 보유 여부 확인
-  const { data: existing } = await supabase
+  const { data: existing } = await supabasePublic
     .from('user_coupons')
     .select('id')
     .eq('user_id', userId)
@@ -67,7 +67,7 @@ export async function registerCouponByCode(userId: string, code: string): Promis
   }
 
   // 3. user_coupons에 추가
-  const { data: uc, error: insertError } = await supabase
+  const { data: uc, error: insertError } = await supabasePublic
     .from('user_coupons')
     .insert({ user_id: userId, coupon_id: coupon.id })
     .select('*, coupons(*)')
@@ -79,7 +79,7 @@ export async function registerCouponByCode(userId: string, code: string): Promis
 
 /** 활성 쿠폰 전체 자동 발급 (신규 사용자용) */
 export async function claimAllActiveCoupons(userId: string): Promise<void> {
-  const { data: allCoupons } = await supabase
+  const { data: allCoupons } = await supabasePublic
     .from('coupons')
     .select('id')
     .eq('is_active', true)
@@ -92,14 +92,14 @@ export async function claimAllActiveCoupons(userId: string): Promise<void> {
   }))
 
   // ignoreDuplicates: 이미 보유한 쿠폰은 무시
-  await supabase
+  await supabasePublic
     .from('user_coupons')
     .upsert(inserts, { onConflict: 'user_id,coupon_id', ignoreDuplicates: true })
 }
 
 /** 쿠폰 사용 처리 */
 export async function markCouponUsed(userCouponId: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('user_coupons')
     .update({ is_used: true, used_at: new Date().toISOString() })
     .eq('id', userCouponId)

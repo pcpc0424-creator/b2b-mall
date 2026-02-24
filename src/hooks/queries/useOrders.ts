@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchOrders, fetchUserOrders, createOrder, updateOrderStatus } from '../../services/orders'
+import { fetchOrders, fetchUserOrders, createOrder, updateOrderStatus, updateTrackingInfo } from '../../services/orders'
 import type { OrderStatus } from '../../admin/types/admin'
 import type { CreateOrderInput } from '../../services/orders'
 
@@ -37,5 +37,16 @@ export function useUpdateOrderStatus() {
       updateOrderStatus(orderId, status),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['orders'] }),
     onError: (err) => console.error('주문 상태 변경 실패:', err),
+  })
+}
+
+/** 운송장 정보 업데이트 */
+export function useUpdateTrackingInfo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ orderId, carrier, trackingNumber }: { orderId: string; carrier: string; trackingNumber: string }) =>
+      updateTrackingInfo(orderId, carrier, trackingNumber),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['orders'] }),
+    onError: (err) => console.error('운송장 정보 업데이트 실패:', err),
   })
 }

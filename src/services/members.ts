@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabase, supabasePublic } from '../lib/supabase'
 import type { MemberListItem, MemberStatus } from '../admin/types/admin'
 import type { UserTier } from '../types'
 
@@ -16,6 +16,7 @@ export function toMember(row: DbRow): MemberListItem {
     id: row.id,
     name: row.name,
     email: row.email,
+    phone: row.phone,
     company: row.company,
     businessNumber: row.business_number,
     tier: row.tier ?? 'guest',
@@ -31,12 +32,13 @@ export function toMember(row: DbRow): MemberListItem {
     organization: row.organization,
     referrerId: row.referrer_id,
     referrerName: row.referrer_name,
+    marketingConsent: row.marketing_consent,
   }
 }
 
 /** 전체 회원 목록 조회 (생성일 내림차순) */
 export async function fetchMembers(): Promise<MemberListItem[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('members')
     .select('*')
     .order('created_at', { ascending: false })
@@ -50,7 +52,7 @@ export async function updateMemberTier(
   memberId: string,
   tier: UserTier
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('members')
     .update({ tier })
     .eq('id', memberId)
@@ -63,7 +65,7 @@ export async function updateMemberStatus(
   memberId: string,
   status: MemberStatus
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('members')
     .update({ status })
     .eq('id', memberId)
@@ -74,7 +76,7 @@ export async function updateMemberStatus(
 /** 회원 삭제 (탈퇴 처리 - 데이터 보관) */
 export async function deleteMember(memberId: string): Promise<void> {
   // 실제 삭제하지 않고 withdrawn 상태로 변경 (데이터 보관)
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('members')
     .update({
       status: 'withdrawn',
@@ -88,7 +90,7 @@ export async function deleteMember(memberId: string): Promise<void> {
 
 /** 테스트 회원 일괄 삭제 */
 export async function deleteTestMembers(): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('members')
     .delete()
     .or('id.like.test-%,email.like.%@test.com')

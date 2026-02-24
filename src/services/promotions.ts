@@ -22,6 +22,7 @@ export function toPromotion(row: DbRow): AdminPromotion {
     targetTiers: row.target_tiers ?? [],
     type: row.type ?? 'all',
     isActive: row.is_active ?? true,
+    productIds: row.product_ids ?? [],
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
     createdBy: row.created_by,
@@ -46,6 +47,7 @@ export function toRow(promotion: Partial<AdminPromotion>): DbRow {
   if (promotion.targetTiers !== undefined) row.target_tiers = promotion.targetTiers
   if (promotion.type !== undefined) row.type = promotion.type
   if (promotion.isActive !== undefined) row.is_active = promotion.isActive
+  if (promotion.productIds !== undefined) row.product_ids = promotion.productIds
   if (promotion.createdBy !== undefined) row.created_by = promotion.createdBy
 
   return row
@@ -70,7 +72,7 @@ export async function createPromotion(
   row.created_at = new Date().toISOString()
   row.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('promotions')
     .insert(row)
     .select()
@@ -88,7 +90,7 @@ export async function updatePromotion(
   const row = toRow(updates)
   row.updated_at = new Date().toISOString()
 
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('promotions')
     .update(row)
     .eq('id', id)
@@ -98,7 +100,7 @@ export async function updatePromotion(
 
 /** 프로모션 삭제 */
 export async function deletePromotion(id: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('promotions')
     .delete()
     .eq('id', id)
@@ -111,7 +113,7 @@ export async function togglePromotionActive(
   id: string,
   currentActive: boolean
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('promotions')
     .update({
       is_active: !currentActive,

@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
-import { Trash2, ShoppingBag, ArrowRight, Package, Truck, Ticket, ChevronDown, X, LogIn, MapPin, Phone, User, FileText, CreditCard, Loader2 } from 'lucide-react'
+import { Trash2, ShoppingBag, ArrowRight, Package, Truck, Ticket, ChevronDown, X, LogIn, MapPin, Phone, User, FileText, CreditCard, Loader2, Star } from 'lucide-react'
 import { useStore, getPriceByTier, getTierLabel } from '../store'
-import { useProducts, useUserCoupons, useClaimAllCoupons } from '../hooks/queries'
+import { useProducts, useUserCoupons, useClaimAllCoupons, useUserShippingAddresses } from '../hooks/queries'
+import type { SavedShippingAddress } from '../admin/types/admin'
 import { Button, NumberStepper, Card, CardContent, Badge } from '../components/ui'
 import { formatPrice, formatNumber } from '../lib/utils'
 import { Animated } from '../hooks'
@@ -67,6 +68,7 @@ export function CartPage() {
   } = useStore()
   const { data: adminProducts = [] } = useProducts()
   const { data: myCoupons = [] } = useUserCoupons(user?.id)
+  const { data: savedAddresses = [] } = useUserShippingAddresses(user?.id)
   const claimAll = useClaimAllCoupons()
   const [showCouponSelector, setShowCouponSelector] = useState(false)
   const [claimed, setClaimed] = useState(false)
@@ -80,6 +82,8 @@ export function CartPage() {
   const [deliveryMemo, setDeliveryMemo] = useState('')
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [showAddressModal, setShowAddressModal] = useState(false)
+  const [addressInitialized, setAddressInitialized] = useState(false)
 
   // 쿠폰 자동 발급 (Supabase, 처음 방문 시 보유 쿠폰 없으면)
   useEffect(() => {
@@ -98,6 +102,34 @@ export function CartPage() {
       setPhone(user.phone)
     }
   }, [user])
+
+  // 기본 배송지 자동 입력 (최초 1회)
+  useEffect(() => {
+    if (!addressInitialized && savedAddresses.length > 0) {
+      const defaultAddr = savedAddresses.find(a => a.isDefault) || savedAddresses[0]
+      if (defaultAddr && !zonecode) {
+        fillAddressFromSaved(defaultAddr)
+        setAddressInitialized(true)
+      }
+    }
+  }, [savedAddresses, addressInitialized, zonecode])
+
+  // 저장된 배송지로 폼 채우기
+  const fillAddressFromSaved = (addr: SavedShippingAddress) => {
+    setRecipientName(addr.recipient)
+    setPhone(addr.phone)
+    setZonecode(addr.postalCode)
+    setAddress(addr.address1)
+    setAddressDetail(addr.address2 || '')
+    setDeliveryMemo(addr.notes || '')
+    setErrors({})
+  }
+
+  // 배송지 선택
+  const handleSelectAddress = (addr: SavedShippingAddress) => {
+    fillAddressFromSaved(addr)
+    setShowAddressModal(false)
+  }
 
   // 다음 우편번호 API 스크립트 로드
   useEffect(() => {
@@ -180,8 +212,7 @@ export function CartPage() {
 
   const couponDiscount = getCouponDiscount(totalAmount)
   const discountedAmount = totalAmount - couponDiscount
-  const vat = Math.round(discountedAmount * 0.1)
-  const grandTotal = discountedAmount + vat + shippingCalculation.totalShippingFee
+  const grandTotal = discountedAmount + shippingCalculation.totalShippingFee
 
   const getDiscountText = (coupon: Coupon) => {
     if (coupon.discountType === 'percent') {
@@ -453,13 +484,25 @@ export function CartPage() {
           {isLoggedIn && (
             <Card>
               <CardContent className="p-4">
-                <h2 className="font-bold text-neutral-900 mb-3 flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-primary-600" />
-                  배송지 정보
-                  {isShippingComplete && (
-                    <span className="text-xs text-green-600 font-normal ml-auto">✓ 입력완료</span>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-bold text-neutral-900 flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-primary-600" />
+                    배송지 정보
+                    {isShippingComplete && (
+                      <span className="text-xs text-green-600 font-normal">✓ 입력완료</span>
+                    )}
+                  </h2>
+                  {savedAddresses.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAddressModal(true)}
+                    >
+                      <ChevronDown className="w-3 h-3 mr-1" />
+                      저장된 배송지
+                    </Button>
                   )}
-                </h2>
+                </div>
 
                 <div className="space-y-3">
                   {/* 수령인 */}
@@ -677,10 +720,6 @@ export function CartPage() {
                 )}
 
                 <div className="flex justify-between">
-                  <span className="text-neutral-600">부가세 (10%)</span>
-                  <span className="font-medium">{formatPrice(vat)}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-neutral-600">배송비</span>
                   {shippingCalculation.totalShippingFee === 0 ? (
                     <span className="font-medium text-success">무료</span>
@@ -781,6 +820,74 @@ export function CartPage() {
           </Card>
         </Animated>
       </div>
+
+      {/* 저장된 배송지 선택 모달 */}
+      {showAddressModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl max-w-lg w-full max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-neutral-200">
+              <h3 className="text-lg font-bold text-neutral-900">저장된 배송지 선택</h3>
+              <button onClick={() => setShowAddressModal(false)} className="text-neutral-400 hover:text-neutral-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh] space-y-3">
+              {savedAddresses.map((addr) => (
+                <div
+                  key={addr.id}
+                  onClick={() => handleSelectAddress(addr)}
+                  className={`p-4 border rounded-lg cursor-pointer transition-colors hover:bg-neutral-50 ${
+                    addr.isDefault ? 'border-primary-500 bg-primary-50/50' : 'border-neutral-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-bold text-neutral-900">{addr.name}</span>
+                    {addr.isDefault && (
+                      <span className="inline-flex items-center text-xs text-primary-600 bg-primary-100 px-2 py-0.5 rounded">
+                        <Star className="w-3 h-3 mr-1" />
+                        기본
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-1 text-sm text-neutral-600">
+                    <p className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-neutral-400" />
+                      {addr.recipient}
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-neutral-400" />
+                      {addr.phone}
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-neutral-400" />
+                      ({addr.postalCode}) {addr.address1} {addr.address2}
+                    </p>
+                    {addr.notes && (
+                      <p className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-neutral-400" />
+                        {addr.notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {savedAddresses.length === 0 && (
+                <div className="text-center py-8 text-neutral-500">
+                  <MapPin className="w-10 h-10 text-neutral-300 mx-auto mb-2" />
+                  <p>저장된 배송지가 없습니다.</p>
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-neutral-200">
+              <Link to="/my/shipping-addresses">
+                <Button variant="outline" className="w-full">
+                  배송지 관리
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

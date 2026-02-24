@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabasePublic } from '../lib/supabase'
 
 /**
  * 견적서 서비스
@@ -47,7 +47,7 @@ function toSavedQuote(row: DbRow): SavedQuote {
 
 /** 사용자의 견적서 목록 조회 */
 export async function fetchUserQuotes(userId: string): Promise<SavedQuote[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('quotes')
     .select('*')
     .eq('user_id', userId)
@@ -68,7 +68,7 @@ export async function saveQuote(input: {
   const quoteNumber = `QT-${Date.now().toString().slice(-8)}`
   const now = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('quotes')
     .insert({
       quote_number: quoteNumber,

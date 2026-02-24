@@ -129,8 +129,10 @@ export interface Order {
   status: OrderStatus
   paymentStatus: PaymentStatus
   paymentMethod: string
+  paymentKey?: string | null
   shippingAddress: ShippingAddress
   trackingNumber?: string
+  carrier?: string  // 택배사 (cj, hanjin, lotte, logen, epost 등)
   notes?: string
   createdAt: Date
   updatedAt: Date
@@ -165,6 +167,33 @@ export interface ShippingAddress {
   notes?: string  // 배송 메모
 }
 
+// 저장된 배송지
+export interface SavedShippingAddress {
+  id: string
+  userId: string
+  name: string              // 배송지 이름 (집, 회사 등)
+  recipient: string
+  phone: string
+  postalCode: string
+  address1: string
+  address2?: string
+  notes?: string
+  isDefault: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface SavedShippingAddressInput {
+  name: string
+  recipient: string
+  phone: string
+  postalCode: string
+  address1: string
+  address2?: string
+  notes?: string
+  isDefault?: boolean
+}
+
 // 회원 관리
 export type MemberStatus = 'active' | 'inactive' | 'suspended' | 'pending_approval' | 'withdrawn'
 
@@ -172,6 +201,7 @@ export interface MemberListItem {
   id: string
   name: string
   email: string
+  phone?: string             // 전화번호
   company?: string
   businessNumber?: string
   tier: UserTier
@@ -187,6 +217,7 @@ export interface MemberListItem {
   organization?: string      // 소속 (사업자/단체명)
   referrerId?: string        // 추천인 ID (회원 id)
   referrerName?: string      // 추천인 이름
+  marketingConsent?: boolean // 마케팅 수신 동의
 }
 
 export interface TierChangeHistory {

@@ -62,10 +62,10 @@ export function Header() {
       {/* Main Header - 정담B2B 로고, 검색, 장바구니 */}
       <div className="border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between h-24 md:h-28 gap-4 md:gap-8">
+        <div className="flex items-center justify-between h-20 md:h-24 gap-4 md:gap-8">
           {/* Logo */}
           <Link to="/" className="flex-shrink-0">
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="가성비연구소" className="h-20 md:h-24 w-auto" />
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="가성비연구소" className="h-16 md:h-20 w-auto" />
           </Link>
 
           {/* Search */}
@@ -215,30 +215,35 @@ export function Header() {
             <nav className="md:hidden flex items-center justify-center flex-1 gap-4">
               <Link
                 to="/products"
+                onClick={() => window.scrollTo(0, 0)}
                 className="text-xs font-medium text-neutral-700 hover:text-primary-600 transition-colors"
               >
                 전체상품
               </Link>
               <Link
                 to="/products?sort=best"
+                onClick={() => window.scrollTo(0, 0)}
                 className="text-xs font-medium text-neutral-700 hover:text-primary-600 transition-colors"
               >
                 베스트
               </Link>
               <Link
                 to="/products?sort=new"
+                onClick={() => window.scrollTo(0, 0)}
                 className="text-xs font-medium text-neutral-700 hover:text-primary-600 transition-colors"
               >
                 신상품
               </Link>
               <Link
                 to="/products?sort=sale"
+                onClick={() => window.scrollTo(0, 0)}
                 className="text-xs font-medium text-neutral-700 hover:text-primary-600 transition-colors"
               >
                 초특가
               </Link>
               <Link
                 to="/promotions"
+                onClick={() => window.scrollTo(0, 0)}
                 className="text-xs font-medium text-neutral-700 hover:text-primary-600 transition-colors"
               >
                 기획전
@@ -312,30 +317,35 @@ export function Header() {
             <nav className="hidden md:flex items-center justify-center flex-1 gap-8">
               <Link
                 to="/products"
+                onClick={() => window.scrollTo(0, 0)}
                 className="text-sm text-neutral-700 hover:text-primary-600 transition-colors"
               >
                 전체상품연구실
               </Link>
               <Link
                 to="/products?sort=best"
+                onClick={() => window.scrollTo(0, 0)}
                 className="text-sm text-neutral-700 hover:text-primary-600 transition-colors"
               >
                 베스트연구실
               </Link>
               <Link
                 to="/products?sort=new"
+                onClick={() => window.scrollTo(0, 0)}
                 className="text-sm text-neutral-700 hover:text-primary-600 transition-colors"
               >
                 신상품연구실
               </Link>
               <Link
                 to="/products?sort=sale"
+                onClick={() => window.scrollTo(0, 0)}
                 className="text-sm text-neutral-700 hover:text-primary-600 transition-colors"
               >
                 초특가연구실
               </Link>
               <Link
                 to="/promotions"
+                onClick={() => window.scrollTo(0, 0)}
                 className="text-sm text-neutral-700 hover:text-primary-600 transition-colors"
               >
                 기획전연구실

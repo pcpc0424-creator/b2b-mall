@@ -16,8 +16,14 @@ export function useUpdateMemberTier() {
   return useMutation({
     mutationFn: ({ memberId, tier }: { memberId: string; tier: UserTier }) =>
       updateMemberTier(memberId, tier),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['members'] }),
-    onError: (err) => console.error('등급 변경 실패:', err),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['members'] })
+      alert('등급이 변경되었습니다.')
+    },
+    onError: (err) => {
+      console.error('등급 변경 실패:', err)
+      alert('등급 변경 실패: ' + (err as Error).message)
+    },
   })
 }
 

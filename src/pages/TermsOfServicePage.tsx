@@ -300,7 +300,7 @@ export function TermsOfServicePage() {
         <div className="mt-8 p-6 bg-neutral-50 rounded-lg text-center">
           <p className="text-neutral-600 mb-2">이용약관에 대해 궁금하신 점이 있으신가요?</p>
           <p className="text-sm text-neutral-500">
-            고객센터 <span className="font-bold text-primary-600">1588-0000</span> (평일 09:00~18:00)
+            이메일 <span className="font-bold text-primary-600">lee0608min@naver.com</span>
           </p>
         </div>
       </Animated>

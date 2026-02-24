@@ -1,9 +1,11 @@
-import { useState } from 'react'
-import { Search, Edit, Trash2, Plus, X } from 'lucide-react'
-import { usePromotions, useCreatePromotion, useUpdatePromotion, useDeletePromotion, useTogglePromotionActive } from '../../hooks/queries'
+import { useState, useRef } from 'react'
+import { Search, Edit, Trash2, Plus, X, Upload, Image as ImageIcon, Package, Check } from 'lucide-react'
+import { usePromotions, useCreatePromotion, useUpdatePromotion, useDeletePromotion, useTogglePromotionActive, useProducts } from '../../hooks/queries'
 import { Button, Card, CardContent, Badge } from '../../components/ui'
 import { AdminPromotion } from '../types/admin'
-import { UserTier } from '../../types'
+import { UserTier, Product } from '../../types'
+import { uploadImage } from '../../services/storage'
+import { cn } from '../../lib/utils'
 
 const typeLabels = {
   all: '전체',
@@ -20,6 +22,7 @@ const tierLabels: Record<UserTier, string> = {
 
 export function PromotionManagementPage() {
   const { data: promotions = [], isLoading } = usePromotions()
+  const { data: products = [] } = useProducts()
   const createMutation = useCreatePromotion()
   const updateMutation = useUpdatePromotion()
   const deleteMutation = useDeletePromotion()
@@ -29,6 +32,11 @@ export function PromotionManagementPage() {
   const [activeFilter, setActiveFilter] = useState('all')
   const [editingPromo, setEditingPromo] = useState<AdminPromotion | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isProductSelectOpen, setIsProductSelectOpen] = useState(false)
+  const [productSearchTerm, setProductSearchTerm] = useState('')
 
   const filteredPromotions = promotions.filter(promo => {
     const matchesSearch = promo.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -56,19 +64,36 @@ export function PromotionManagementPage() {
       id: `promo-${Date.now()}`,
       title: '',
       description: '',
-      image: 'https://images.unsplash.com/photo-1607083206968-13611e3d76db?w=1200&h=400&fit=crop',
+      image: '',
       discount: 10,
       startDate: new Date(),
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       targetTiers: ['guest', 'member', 'premium', 'vip'],
       type: 'all',
       isActive: false,
+      productIds: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     }
     setEditingPromo(newPromo)
     setIsModalOpen(true)
   }
+
+  // 상품 선택/해제 토글
+  const toggleProductSelection = (productId: string) => {
+    if (!editingPromo) return
+    const currentIds = editingPromo.productIds || []
+    const newIds = currentIds.includes(productId)
+      ? currentIds.filter(id => id !== productId)
+      : [...currentIds, productId]
+    setEditingPromo({ ...editingPromo, productIds: newIds })
+  }
+
+  // 상품 검색 필터링
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+    product.sku?.toLowerCase().includes(productSearchTerm.toLowerCase())
+  )
 
   const handleSave = () => {
     if (!editingPromo) return
@@ -91,6 +116,53 @@ export function PromotionManagementPage() {
   const formatDate = (date: Date) => {
     const d = new Date(date)
     return d.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
+  }
+
+  // 이미지 업로드 핸들러
+  const handleImageUpload = async (file: File) => {
+    if (!editingPromo) return
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드 가능합니다.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('파일 크기는 5MB 이하여야 합니다.')
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const url = await uploadImage('promotions', file)
+      setEditingPromo({ ...editingPromo, image: url })
+    } catch (error) {
+      console.error('이미지 업로드 실패:', error)
+      alert('이미지 업로드에 실패했습니다.')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  // 드래그 앤 드롭 핸들러
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleImageUpload(file)
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleImageUpload(file)
   }
 
   if (isLoading) {
@@ -172,6 +244,12 @@ export function PromotionManagementPage() {
                     <Badge variant={promo.type === 'timesale' ? 'warning' : promo.type === 'exclusive' ? 'primary' : 'secondary'} size="sm">
                       {typeLabels[promo.type]}
                     </Badge>
+                    {(promo.productIds?.length || 0) > 0 && (
+                      <Badge variant="default" size="sm" className="flex items-center gap-1">
+                        <Package className="w-3 h-3" />
+                        {promo.productIds?.length}개 상품
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-neutral-500">
                     <span>{promo.discount}% 할인</span>
@@ -244,14 +322,69 @@ export function PromotionManagementPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">이미지 URL</label>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">이미지</label>
                 <input
-                  type="text"
-                  value={editingPromo.image}
-                  onChange={(e) => setEditingPromo({ ...editingPromo, image: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg"
-                  placeholder="https://..."
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
                 />
+                {editingPromo.image ? (
+                  <div className="relative">
+                    <img
+                      src={editingPromo.image}
+                      alt="프로모션 이미지"
+                      className="w-full h-40 object-cover rounded-lg border border-neutral-200"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                      >
+                        <Upload className="w-4 h-4 mr-1" />
+                        변경
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setEditingPromo({ ...editingPromo, image: '' })}
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        삭제
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`w-full h-40 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                      isDragging
+                        ? 'border-primary-500 bg-primary-50'
+                        : 'border-neutral-300 hover:border-primary-400 hover:bg-neutral-50'
+                    }`}
+                  >
+                    {isUploading ? (
+                      <>
+                        <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mb-2" />
+                        <p className="text-sm text-neutral-500">업로드 중...</p>
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-10 h-10 text-neutral-400 mb-2" />
+                        <p className="text-sm text-neutral-600 font-medium">클릭하거나 이미지를 드래그하세요</p>
+                        <p className="text-xs text-neutral-400 mt-1">PNG, JPG, GIF (최대 5MB)</p>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -319,6 +452,54 @@ export function PromotionManagementPage() {
                   ))}
                 </div>
               </div>
+              {/* 상품 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">적용 상품</label>
+                <div className="border border-neutral-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-neutral-600">
+                      {(editingPromo.productIds?.length || 0) > 0
+                        ? `${editingPromo.productIds?.length}개 상품 선택됨`
+                        : '선택된 상품 없음'}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setProductSearchTerm('')
+                        setIsProductSelectOpen(true)
+                      }}
+                    >
+                      <Package className="w-4 h-4 mr-1" />
+                      상품 선택
+                    </Button>
+                  </div>
+                  {(editingPromo.productIds?.length || 0) > 0 && (
+                    <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                      {editingPromo.productIds?.map(productId => {
+                        const product = products.find(p => p.id === productId)
+                        return product ? (
+                          <span
+                            key={productId}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-primary-50 text-primary-700 text-xs rounded-full"
+                          >
+                            {product.name.length > 15 ? product.name.substring(0, 15) + '...' : product.name}
+                            <button
+                              type="button"
+                              onClick={() => toggleProductSelection(productId)}
+                              className="hover:text-primary-900"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ) : null
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -333,6 +514,97 @@ export function PromotionManagementPage() {
             <div className="flex items-center justify-end gap-2 p-4 border-t">
               <Button variant="ghost" onClick={() => setIsModalOpen(false)}>취소</Button>
               <Button onClick={handleSave}>저장</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 상품 선택 모달 */}
+      {isProductSelectOpen && editingPromo && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-bold">상품 선택</h3>
+              <button onClick={() => setIsProductSelectOpen(false)} className="p-1 hover:bg-neutral-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <input
+                  type="text"
+                  placeholder="상품명 또는 SKU로 검색"
+                  value={productSearchTerm}
+                  onChange={(e) => setProductSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-neutral-200 rounded-lg"
+                />
+              </div>
+              <div className="flex items-center justify-between mt-2 text-sm text-neutral-500">
+                <span>{editingPromo.productIds?.length || 0}개 선택됨</span>
+                {(editingPromo.productIds?.length || 0) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingPromo({ ...editingPromo, productIds: [] })}
+                    className="text-red-500 hover:text-red-600"
+                  >
+                    전체 해제
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {filteredProducts.length === 0 ? (
+                <div className="text-center py-8 text-neutral-500">상품이 없습니다.</div>
+              ) : (
+                <div className="space-y-1">
+                  {filteredProducts.map(product => {
+                    const isSelected = editingPromo.productIds?.includes(product.id)
+                    return (
+                      <button
+                        key={product.id}
+                        type="button"
+                        onClick={() => toggleProductSelection(product.id)}
+                        className={cn(
+                          'w-full flex items-center gap-3 p-2 rounded-lg text-left transition-colors',
+                          isSelected
+                            ? 'bg-primary-50 border-2 border-primary-500'
+                            : 'hover:bg-neutral-50 border-2 border-transparent'
+                        )}
+                      >
+                        <div className={cn(
+                          'w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0',
+                          isSelected
+                            ? 'bg-primary-600 border-primary-600 text-white'
+                            : 'border-neutral-300'
+                        )}>
+                          {isSelected && <Check className="w-3 h-3" />}
+                        </div>
+                        {product.images?.[0] ? (
+                          <img src={product.images[0]} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded bg-neutral-100 flex items-center justify-center flex-shrink-0">
+                            <Package className="w-5 h-5 text-neutral-400" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-neutral-900 truncate">{product.name}</p>
+                          <p className="text-xs text-neutral-500">SKU: {product.sku || '-'}</p>
+                        </div>
+                        <span className="text-sm font-medium text-neutral-700 flex-shrink-0">
+                          {product.prices?.retail?.toLocaleString()}원
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t">
+              <Button variant="ghost" onClick={() => setIsProductSelectOpen(false)}>닫기</Button>
+              <Button onClick={() => setIsProductSelectOpen(false)}>
+                {editingPromo.productIds?.length || 0}개 상품 선택 완료
+              </Button>
             </div>
           </div>
         </div>

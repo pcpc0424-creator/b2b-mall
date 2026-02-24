@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabase, supabasePublic } from '../lib/supabase'
 import type { Order, OrderStatus, OrderItem, OrderUser, ShippingAddress } from '../admin/types/admin'
 
 /**
@@ -23,6 +23,7 @@ export function toOrder(row: DbRow): Order {
     status: row.status ?? 'pending',
     paymentStatus: row.payment_status ?? 'pending',
     paymentMethod: row.payment_method ?? '',
+    paymentKey: row.payment_key ?? null,
     shippingAddress: row.shipping_address ?? {
       recipient: '',
       phone: '',
@@ -30,6 +31,7 @@ export function toOrder(row: DbRow): Order {
       address1: '',
     },
     trackingNumber: row.tracking_number,
+    carrier: row.carrier,
     notes: row.notes,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
@@ -54,7 +56,7 @@ export interface CreateOrderInput {
 /** 주문 생성 */
 export async function createOrder(input: CreateOrderInput): Promise<Order> {
   const now = new Date().toISOString()
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('orders')
     .insert({
       id: crypto.randomUUID(),
@@ -68,6 +70,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
       status: 'confirmed' as OrderStatus,
       payment_status: 'paid',
       payment_method: input.paymentMethod,
+      payment_key: input.paymentKey ?? null,
       shipping_address: input.shippingAddress ?? {
         recipient: input.user.name,
         phone: '',
@@ -88,7 +91,7 @@ export async function createOrder(input: CreateOrderInput): Promise<Order> {
 
 /** 전체 주문 목록 조회 (생성일 내림차순) — 관리자용 */
 export async function fetchOrders(): Promise<Order[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('orders')
     .select('*')
     .order('created_at', { ascending: false })
@@ -99,7 +102,7 @@ export async function fetchOrders(): Promise<Order[]> {
 
 /** 특정 사용자의 주문 목록 조회 (생성일 내림차순) */
 export async function fetchUserOrders(userId: string): Promise<Order[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('orders')
     .select('*')
     .eq('user_id', userId)
@@ -114,7 +117,7 @@ export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('orders')
     .update({
       status,
@@ -123,4 +126,23 @@ export async function updateOrderStatus(
     .eq('id', orderId)
 
   if (error) throw new Error(`주문 상태 변경 실패: ${error.message}`)
+}
+
+/** 운송장번호 업데이트 */
+export async function updateTrackingInfo(
+  orderId: string,
+  carrier: string,
+  trackingNumber: string
+): Promise<void> {
+  const { error } = await supabasePublic
+    .from('orders')
+    .update({
+      carrier,
+      tracking_number: trackingNumber,
+      status: 'shipped',  // 운송장 입력 시 자동으로 배송중 상태로 변경
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId)
+
+  if (error) throw new Error(`운송장 정보 업데이트 실패: ${error.message}`)
 }

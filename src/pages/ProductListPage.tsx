@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { Grid, List, Filter, ChevronDown } from 'lucide-react'
-import { useStore } from '../store'
+import { Filter, ChevronDown } from 'lucide-react'
 import { useProducts, useCategories } from '../hooks/queries'
-import { ProductCard, ProductTable } from '../components/product'
+import { ProductCard } from '../components/product'
 import { Button, Select, Badge, Card, CardContent } from '../components/ui'
 import { cn } from '../lib/utils'
 import { Animated } from '../hooks'
@@ -11,7 +10,6 @@ import { Animated } from '../hooks'
 export function ProductListPage() {
   const { categoryId: paramCategoryId } = useParams()
   const [searchParams] = useSearchParams()
-  const { viewMode, setViewMode } = useStore()
   const { data: products = [] } = useProducts()
   const { data: categories = [] } = useCategories()
 
@@ -72,6 +70,18 @@ export function ProductListPage() {
     filteredProducts = filteredProducts.filter(p => p.stockStatus === selectedFilters.stockStatus)
   }
 
+  // 가격대 필터 적용
+  if (selectedFilters.priceRange !== 'all') {
+    filteredProducts = filteredProducts.filter(p => {
+      const price = p.prices.member
+      if (selectedFilters.priceRange === '200000+') {
+        return price >= 200000
+      }
+      const [min, max] = selectedFilters.priceRange.split('-').map(Number)
+      return price >= min && price <= max
+    })
+  }
+
   // Sort products
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     switch (sortBy) {
@@ -103,6 +113,9 @@ export function ProductListPage() {
 
   const priceRangeOptions = [
     { value: 'all', label: '전체 가격' },
+    { value: '0-5000', label: '5천원 이하' },
+    { value: '0-10000', label: '1만원 이하' },
+    { value: '0-30000', label: '3만원 이하' },
     { value: '0-50000', label: '5만원 이하' },
     { value: '50000-100000', label: '5만원 ~ 10만원' },
     { value: '100000-200000', label: '10만원 ~ 20만원' },
@@ -145,35 +158,6 @@ export function ProductListPage() {
             </p>
           </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 p-1 bg-neutral-100 rounded-lg">
-            <button
-              onClick={() => setViewMode('normal')}
-              className={cn(
-                'flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                viewMode === 'normal'
-                  ? 'bg-white text-primary-600 shadow-sm'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              )}
-            >
-              <Grid className="w-4 h-4" />
-              일반 보기
-            </button>
-            <button
-              onClick={() => setViewMode('bulk')}
-              className={cn(
-                'flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-                viewMode === 'bulk'
-                  ? 'bg-white text-primary-600 shadow-sm'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              )}
-            >
-              <List className="w-4 h-4" />
-              대량 주문
-            </button>
-          </div>
-        </div>
         </div>
       </Animated>
 
@@ -314,21 +298,17 @@ export function ProductListPage() {
           </div>
 
           {/* Products */}
-          {viewMode === 'normal' ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {sortedProducts.map((product, index) => (
-                <div
-                  key={product.id}
-                  className="animate-fade-in"
-                  style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
-                >
-                  <ProductCard product={product} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <ProductTable products={sortedProducts} />
-          )}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {sortedProducts.map((product, index) => (
+              <div
+                key={product.id}
+                className="animate-fade-in"
+                style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
+              >
+                <ProductCard product={product} />
+              </div>
+            ))}
+          </div>
 
           {sortedProducts.length === 0 && (
             <div className="text-center py-16">

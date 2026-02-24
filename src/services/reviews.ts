@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabasePublic } from '../lib/supabase'
 import type { Review } from '../types'
 
 /**
@@ -25,14 +25,23 @@ function toReview(row: DbRow): Review {
 
 /** 특정 상품의 리뷰 조회 */
 export async function fetchProductReviews(productId: string): Promise<Review[]> {
-  const { data, error } = await supabase
-    .from('reviews')
-    .select('*')
-    .eq('product_id', productId)
-    .order('created_at', { ascending: false })
+  try {
+    const { data, error } = await supabasePublic
+      .from('reviews')
+      .select('*')
+      .eq('product_id', productId)
+      .order('created_at', { ascending: false })
 
-  if (error) throw error
-  return (data || []).map(toReview)
+    // 테이블이 없거나 에러 시 빈 배열 반환
+    if (error) {
+      console.warn('리뷰 조회 오류:', error.message)
+      return []
+    }
+    return (data || []).map(toReview)
+  } catch (err) {
+    console.warn('리뷰 조회 예외:', err)
+    return []
+  }
 }
 
 /** 리뷰 작성 */
@@ -44,7 +53,7 @@ export async function createReview(input: {
   title: string
   content: string
 }): Promise<Review> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('reviews')
     .insert({
       product_id: input.productId,
@@ -64,7 +73,7 @@ export async function createReview(input: {
 /** 도움이 돼요 +1 */
 export async function incrementHelpful(reviewId: string): Promise<void> {
   // 현재 값을 읽고 +1
-  const { data: review } = await supabase
+  const { data: review } = await supabasePublic
     .from('reviews')
     .select('helpful')
     .eq('id', reviewId)
@@ -72,7 +81,7 @@ export async function incrementHelpful(reviewId: string): Promise<void> {
 
   if (!review) return
 
-  await supabase
+  await supabasePublic
     .from('reviews')
     .update({ helpful: review.helpful + 1 })
     .eq('id', reviewId)

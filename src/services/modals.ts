@@ -74,7 +74,7 @@ export async function createPopupModal(
   row.created_at = new Date().toISOString()
   row.updated_at = new Date().toISOString()
 
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('popup_modals')
     .insert(row)
     .select()
@@ -92,7 +92,7 @@ export async function updatePopupModal(
   const row = toRow(updates)
   row.updated_at = new Date().toISOString()
 
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('popup_modals')
     .update(row)
     .eq('id', id)
@@ -102,7 +102,7 @@ export async function updatePopupModal(
 
 /** 팝업 모달 삭제 */
 export async function deletePopupModal(id: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('popup_modals')
     .delete()
     .eq('id', id)
@@ -115,7 +115,7 @@ export async function togglePopupModalActive(
   id: string,
   currentActive: boolean
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabasePublic
     .from('popup_modals')
     .update({
       is_active: !currentActive,

@@ -186,8 +186,7 @@ export function PrivacyPolicyPage() {
               <div className="bg-neutral-50 rounded-lg p-4">
                 <p className="text-neutral-600"><strong>개인정보 보호책임자</strong></p>
                 <p className="text-neutral-600">이메일: privacy@gasungbi.com</p>
-                <p className="text-neutral-600">고객센터: 1588-0000</p>
-              </div>
+                              </div>
             </section>
 
             <section>
@@ -209,7 +208,7 @@ export function PrivacyPolicyPage() {
         <div className="mt-8 p-6 bg-neutral-50 rounded-lg text-center">
           <p className="text-neutral-600 mb-2">개인정보 관련 문의사항이 있으신가요?</p>
           <p className="text-sm text-neutral-500">
-            고객센터 <span className="font-bold text-primary-600">1588-0000</span> (평일 09:00~18:00)
+            이메일 <span className="font-bold text-primary-600">lee0608min@naver.com</span>
           </p>
         </div>
       </Animated>

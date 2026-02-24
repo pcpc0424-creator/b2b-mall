@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Mail, Lock, Eye, EyeOff, User, Phone, UserPlus, Building2, Users, Check, X, Loader2 } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, User, Phone, UserPlus, Building2 } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Input, Card, CardContent } from '../components/ui'
-import { cn } from '../lib/utils'
-import { registerWithEmail, loginWithSocial, getProviderName, searchReferrerByEmail } from '../services/auth'
+import { registerWithEmail, loginWithSocial, getProviderName } from '../services/auth'
 import { SocialProvider } from '../types'
 
 export function RegisterPage() {
@@ -25,52 +24,16 @@ export function RegisterPage() {
     name: '',
     phone: '',
     organization: '',
-    referrerEmail: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(null)
-
-  // 추천인 검증 상태
-  const [referrerVerifying, setReferrerVerifying] = useState(false)
-  const [referrerVerified, setReferrerVerified] = useState<{ id: string; name: string } | null>(null)
-  const [referrerError, setReferrerError] = useState('')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }))
-    }
-    // 추천인 이메일 변경 시 검증 상태 초기화
-    if (name === 'referrerEmail') {
-      setReferrerVerified(null)
-      setReferrerError('')
-    }
-  }
-
-  // 추천인 검증 함수
-  const handleVerifyReferrer = async () => {
-    if (!formData.referrerEmail.trim()) {
-      setReferrerError('추천인 이메일을 입력해주세요')
-      return
-    }
-
-    setReferrerVerifying(true)
-    setReferrerError('')
-    setReferrerVerified(null)
-
-    try {
-      const result = await searchReferrerByEmail(formData.referrerEmail.trim())
-      if (result) {
-        setReferrerVerified({ id: result.id, name: result.name })
-      } else {
-        setReferrerError('존재하지 않는 회원입니다')
-      }
-    } catch {
-      setReferrerError('추천인 확인 중 오류가 발생했습니다')
-    } finally {
-      setReferrerVerifying(false)
     }
   }
 
@@ -133,8 +96,7 @@ export function RegisterPage() {
         formData.name,
         formData.phone,
         agreedTerms.marketing,
-        formData.organization || undefined,
-        referrerVerified?.id || undefined
+        formData.organization || undefined
       )
       if (result.success && result.user) {
         login(result.user)
@@ -325,76 +287,6 @@ export function RegisterPage() {
                   onChange={handleChange}
                   icon={<Building2 className="w-5 h-5" />}
                 />
-
-                {/* 추천인 입력 */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-neutral-700">
-                    추천인 (선택)
-                  </label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
-                        <Users className="w-5 h-5" />
-                      </div>
-                      <input
-                        type="email"
-                        name="referrerEmail"
-                        placeholder="추천인 이메일 입력"
-                        value={formData.referrerEmail}
-                        onChange={handleChange}
-                        className={cn(
-                          "w-full pl-10 pr-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2",
-                          referrerVerified
-                            ? "border-green-300 focus:ring-green-200 bg-green-50"
-                            : referrerError
-                            ? "border-red-300 focus:ring-red-200"
-                            : "border-neutral-200 focus:ring-primary-200"
-                        )}
-                        disabled={referrerVerified !== null}
-                      />
-                      {referrerVerified && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <Check className="w-5 h-5 text-green-500" />
-                        </div>
-                      )}
-                    </div>
-                    {!referrerVerified ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleVerifyReferrer}
-                        disabled={referrerVerifying || !formData.referrerEmail.trim()}
-                        className="whitespace-nowrap"
-                      >
-                        {referrerVerifying ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          '확인'
-                        )}
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setReferrerVerified(null)
-                          setFormData(prev => ({ ...prev, referrerEmail: '' }))
-                        }}
-                        className="whitespace-nowrap text-neutral-500"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                  {referrerVerified && (
-                    <p className="text-sm text-green-600">
-                      추천인: {referrerVerified.name}
-                    </p>
-                  )}
-                  {referrerError && (
-                    <p className="text-sm text-red-500">{referrerError}</p>
-                  )}
-                </div>
               </div>
 
               {/* 약관 동의 */}
@@ -461,17 +353,6 @@ export function RegisterPage() {
                 {errors.terms && (
                   <p className="text-sm text-error">{errors.terms}</p>
                 )}
-              </div>
-
-              {/* 가입 혜택 안내 */}
-              <div className="mt-6 p-4 bg-primary-50 rounded-lg">
-                <h3 className="font-medium text-primary-900 mb-2">회원가입 혜택</h3>
-                <ul className="text-sm text-primary-700 space-y-1">
-                  <li>• 신규 회원 10% 할인 쿠폰 지급</li>
-                  <li>• 회원 전용 할인가 제공</li>
-                  <li>• 주문 내역 및 배송 조회</li>
-                  <li>• 적립금 혜택</li>
-                </ul>
               </div>
 
               {/* 가입 버튼 */}

@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabase, supabasePublic } from '../lib/supabase'
 import type { Notice } from '../types'
 
 /**
@@ -25,7 +25,7 @@ function toNotice(row: DbRow): Notice {
 }
 
 export async function fetchNotices(): Promise<Notice[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('notices')
     .select('*')
     .order('created_at', { ascending: false })
@@ -35,14 +35,68 @@ export async function fetchNotices(): Promise<Notice[]> {
 }
 
 export async function incrementNoticeViewCount(id: string): Promise<void> {
-  const { error } = await supabase.rpc('increment_view_count', { notice_id: id })
+  const { error } = await supabasePublic.rpc('increment_view_count', { notice_id: id })
   if (error) {
     // rpc가 없으면 직접 업데이트
-    const { data } = await supabase.from('notices').select('view_count').eq('id', id).single()
+    const { data } = await supabasePublic.from('notices').select('view_count').eq('id', id).single()
     if (data) {
-      await supabase.from('notices').update({ view_count: (data.view_count || 0) + 1 }).eq('id', id)
+      await supabasePublic.from('notices').update({ view_count: (data.view_count || 0) + 1 }).eq('id', id)
     }
   }
+}
+
+export async function createNotice(input: {
+  title: string
+  content: string
+  category: 'notice' | 'event' | 'update' | 'important'
+  isImportant: boolean
+}): Promise<Notice> {
+  const { data, error } = await supabasePublic
+    .from('notices')
+    .insert({
+      title: input.title,
+      content: input.content,
+      category: input.category,
+      is_important: input.isImportant,
+      view_count: 0,
+    })
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return toNotice(data)
+}
+
+export async function updateNotice(id: string, input: {
+  title?: string
+  content?: string
+  category?: 'notice' | 'event' | 'update' | 'important'
+  isImportant?: boolean
+}): Promise<Notice> {
+  const updates: DbRow = {}
+  if (input.title !== undefined) updates.title = input.title
+  if (input.content !== undefined) updates.content = input.content
+  if (input.category !== undefined) updates.category = input.category
+  if (input.isImportant !== undefined) updates.is_important = input.isImportant
+
+  const { data, error } = await supabasePublic
+    .from('notices')
+    .update(updates)
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return toNotice(data)
+}
+
+export async function deleteNotice(id: string): Promise<void> {
+  const { error } = await supabasePublic
+    .from('notices')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
 }
 
 // ===========================
@@ -68,7 +122,7 @@ function toFAQ(row: DbRow): FAQ {
 }
 
 export async function fetchFAQs(): Promise<FAQ[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('faqs')
     .select('*')
     .eq('is_active', true)
@@ -76,6 +130,77 @@ export async function fetchFAQs(): Promise<FAQ[]> {
 
   if (error) throw error
   return (data || []).map(toFAQ)
+}
+
+// 관리자용: 모든 FAQ 조회 (비활성 포함)
+export async function fetchAllFAQs(): Promise<(FAQ & { isActive: boolean })[]> {
+  const { data, error } = await supabasePublic
+    .from('faqs')
+    .select('*')
+    .order('sort_order', { ascending: true })
+
+  if (error) throw error
+  return (data || []).map(row => ({
+    ...toFAQ(row),
+    isActive: row.is_active,
+  }))
+}
+
+export async function createFAQ(input: {
+  category: string
+  question: string
+  answer: string
+  sortOrder?: number
+  isActive?: boolean
+}): Promise<FAQ> {
+  const { data, error } = await supabasePublic
+    .from('faqs')
+    .insert({
+      category: input.category,
+      question: input.question,
+      answer: input.answer,
+      sort_order: input.sortOrder ?? 0,
+      is_active: input.isActive ?? true,
+    })
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return toFAQ(data)
+}
+
+export async function updateFAQ(id: string, input: {
+  category?: string
+  question?: string
+  answer?: string
+  sortOrder?: number
+  isActive?: boolean
+}): Promise<FAQ> {
+  const updates: DbRow = {}
+  if (input.category !== undefined) updates.category = input.category
+  if (input.question !== undefined) updates.question = input.question
+  if (input.answer !== undefined) updates.answer = input.answer
+  if (input.sortOrder !== undefined) updates.sort_order = input.sortOrder
+  if (input.isActive !== undefined) updates.is_active = input.isActive
+
+  const { data, error } = await supabasePublic
+    .from('faqs')
+    .update(updates)
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return toFAQ(data)
+}
+
+export async function deleteFAQ(id: string): Promise<void> {
+  const { error } = await supabasePublic
+    .from('faqs')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
 }
 
 // ===========================
@@ -115,7 +240,7 @@ function toQnA(row: DbRow): QnAItem {
 }
 
 export async function fetchQnAs(): Promise<QnAItem[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('qna')
     .select('*')
     .order('created_at', { ascending: false })
@@ -133,7 +258,7 @@ export async function createQnA(input: {
   userId?: string
   isPrivate: boolean
 }): Promise<QnAItem> {
-  const { data, error } = await supabase
+  const { data, error } = await supabasePublic
     .from('qna')
     .insert({
       product_id: input.productId,
@@ -149,4 +274,29 @@ export async function createQnA(input: {
 
   if (error) throw error
   return toQnA(data)
+}
+
+export async function answerQnA(id: string, answer: string): Promise<QnAItem> {
+  const { data, error } = await supabasePublic
+    .from('qna')
+    .update({
+      answer,
+      is_answered: true,
+      answered_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) throw error
+  return toQnA(data)
+}
+
+export async function deleteQnA(id: string): Promise<void> {
+  const { error } = await supabasePublic
+    .from('qna')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
 }
