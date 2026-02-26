@@ -43,35 +43,37 @@ export function PromotionsPage() {
       <Animated animation="fade-up" delay={200}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           {visiblePromotions.map((promo, index) => (
-            <Card key={promo.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="relative h-48">
-                <img
-                  src={promo.image}
-                  alt={promo.title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4 text-white">
-                  <div className="flex items-center gap-2 mb-2">
-                    {promo.type === 'timesale' && (
-                      <Badge variant="error" size="sm" className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        타임특가
+            <Link key={promo.id} to={`/promotions/${promo.id}`}>
+              <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                <div className="relative h-48">
+                  <img
+                    src={promo.image}
+                    alt={promo.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4 text-white">
+                    <div className="flex items-center gap-2 mb-2">
+                      {promo.type === 'timesale' && (
+                        <Badge variant="error" size="sm" className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          타임특가
+                        </Badge>
+                      )}
+                      {promo.type === 'exclusive' && (
+                        <Badge variant="secondary" size="sm">회원전용</Badge>
+                      )}
+                      <Badge variant="primary" size="sm">
+                        <Tag className="w-3 h-3 mr-1" />
+                        {promo.discount}% 할인
                       </Badge>
-                    )}
-                    {promo.type === 'exclusive' && (
-                      <Badge variant="secondary" size="sm">회원전용</Badge>
-                    )}
-                    <Badge variant="primary" size="sm">
-                      <Tag className="w-3 h-3 mr-1" />
-                      {promo.discount}% 할인
-                    </Badge>
+                    </div>
+                    <h3 className="text-lg font-bold">{promo.title}</h3>
+                    <p className="text-sm text-white/80">{promo.description}</p>
                   </div>
-                  <h3 className="text-lg font-bold">{promo.title}</h3>
-                  <p className="text-sm text-white/80">{promo.description}</p>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </Link>
           ))}
         </div>
       </Animated>

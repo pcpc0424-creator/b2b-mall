@@ -155,7 +155,8 @@ export function ProductManagementPage() {
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-medium text-neutral-900 truncate block">{product.name}</span>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-sm font-bold text-neutral-900">{formatPrice(product.prices.retail)}</span>
+                      <span className="text-xs text-neutral-400 line-through">{formatPrice(product.prices.retail)}</span>
+                      <span className="text-sm font-bold text-neutral-900">{formatPrice(product.prices.member)}</span>
                       <Badge variant={stockConfig.variant} size="sm">{stockConfig.label}</Badge>
                     </div>
                   </div>

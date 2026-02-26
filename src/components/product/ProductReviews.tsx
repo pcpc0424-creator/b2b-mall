@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Star, ThumbsUp, CheckCircle, ChevronDown, ChevronUp, X, Loader2 } from 'lucide-react'
+import { Star, ThumbsUp, CheckCircle, ChevronDown, ChevronUp, X, Loader2, Store } from 'lucide-react'
 import { Button, Badge, Card } from '../ui'
 import { cn } from '../../lib/utils'
 import { useProductReviews, useCreateReview, useIncrementHelpful } from '../../hooks/queries'
@@ -208,7 +208,23 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                     </button>
                   )}
 
-                  <div className="flex items-center justify-between pt-3 border-t border-neutral-100">
+                  {/* 판매자 답글 */}
+                  {review.adminReply && (
+                    <div className="mt-4 ml-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Store className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-semibold text-blue-700">판매자 답글</span>
+                        {review.adminReplyAt && (
+                          <span className="text-xs text-blue-500">
+                            {formatDate(review.adminReplyAt)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-blue-900 leading-relaxed">{review.adminReply}</p>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-3 border-t border-neutral-100 mt-3">
                     <span className="text-sm text-neutral-500">{review.author}</span>
                     <button
                       onClick={() => incrementHelpful.mutate({ reviewId: review.id, productId })}

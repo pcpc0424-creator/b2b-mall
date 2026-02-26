@@ -23,6 +23,7 @@ export function toPromotion(row: DbRow): AdminPromotion {
     type: row.type ?? 'all',
     isActive: row.is_active ?? true,
     productIds: row.product_ids ?? [],
+    benefits: row.benefits ?? [],
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
     createdBy: row.created_by,
@@ -48,6 +49,7 @@ export function toRow(promotion: Partial<AdminPromotion>): DbRow {
   if (promotion.type !== undefined) row.type = promotion.type
   if (promotion.isActive !== undefined) row.is_active = promotion.isActive
   if (promotion.productIds !== undefined) row.product_ids = promotion.productIds
+  if (promotion.benefits !== undefined) row.benefits = promotion.benefits
   if (promotion.createdBy !== undefined) row.created_by = promotion.createdBy
 
   return row

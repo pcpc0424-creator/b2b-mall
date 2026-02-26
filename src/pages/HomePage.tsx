@@ -58,7 +58,8 @@ export function HomePage() {
   const visiblePromotions = promotions
     .filter(p => p.isActive)
     .filter(p => tier === 'guest' || p.targetTiers.includes(tier))
-  const heroPromotions = visiblePromotions.slice(0, 3)
+  // 활성화된 모든 프로모션을 배너 캐러셀에 표시 (제한 없음)
+  const heroPromotions = visiblePromotions
 
   // Auto slide
   useEffect(() => {

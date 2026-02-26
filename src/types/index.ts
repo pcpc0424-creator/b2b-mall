@@ -107,6 +107,7 @@ export interface Promotion {
   type: 'all' | 'timesale' | 'exclusive'
   isActive: boolean
   productIds?: string[]  // 프로모션에 연결된 상품 ID 목록
+  benefits?: string[]    // 프로모션 혜택 문구 목록 (관리자 설정 가능)
 }
 
 export interface OrderSummary {
@@ -143,6 +144,8 @@ export interface Review {
   createdAt: Date
   helpful: number
   verified: boolean
+  adminReply?: string        // 관리자 답글
+  adminReplyAt?: Date        // 관리자 답글 작성일
 }
 
 export interface Coupon {

@@ -148,6 +148,10 @@ export async function removeCartItem(
 
     return true
   } catch (err) {
+    // AbortError는 페이지 이동 등으로 인한 정상적인 취소이므로 무시
+    if (err instanceof Error && err.name === 'AbortError') {
+      return false
+    }
     console.error('장바구니 삭제 중 오류:', err)
     return false
   }

@@ -29,6 +29,7 @@ export function ProductEditPage() {
     vipPrice: 0,
     stock: 0,
     minQuantity: 1,
+    maxQuantity: 0,  // 0이면 제한 없음
     isActive: true,
   })
 
@@ -83,6 +84,7 @@ export function ProductEditPage() {
           vipPrice: existingProduct.prices.vip,
           stock: existingProduct.stock,
           minQuantity: existingProduct.minQuantity,
+          maxQuantity: existingProduct.maxQuantity || 0,
           isActive: true,
         })
 
@@ -105,7 +107,7 @@ export function ProductEditPage() {
               priceModifier: 0,
               isDefault: vidx === 0,
             })),
-            required: true,
+            required: false, // 기본값: 선택 사항
             displayOrder: idx,
           }))
           setOptions(convertedOptions)
@@ -149,7 +151,7 @@ export function ProductEditPage() {
       id: `opt_${Date.now()}`,
       name: '',
       values: [],
-      required: true,
+      required: false, // 기본값: 선택 사항 (하나만 선택해도 됨)
       displayOrder: options.length,
     }
     setOptions([...options, newOption])
@@ -165,6 +167,13 @@ export function ProductEditPage() {
   const handleOptionNameChange = (optionId: string, name: string) => {
     setOptions(options.map(opt =>
       opt.id === optionId ? { ...opt, name } : opt
+    ))
+  }
+
+  // 옵션 필수 여부 변경
+  const handleOptionRequiredChange = (optionId: string, required: boolean) => {
+    setOptions(options.map(opt =>
+      opt.id === optionId ? { ...opt, required } : opt
     ))
   }
 
@@ -413,6 +422,7 @@ export function ProductEditPage() {
           vip: formData.vipPrice || formData.retailPrice,
         },
         minQuantity: formData.minQuantity,
+        maxQuantity: formData.maxQuantity > 0 ? formData.maxQuantity : undefined,
         stock: formData.stock,
         stockStatus: (formData.stock > 10 ? 'available' : formData.stock > 0 ? 'low' : 'out_of_stock') as 'available' | 'low' | 'out_of_stock',
         isActive: formData.isActive,
@@ -704,13 +714,28 @@ export function ProductEditPage() {
 
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
-                  최소 주문수량
+                  최소 구매수량
                 </label>
                 <input
                   type="number"
                   value={formData.minQuantity}
                   onChange={(e) => setFormData({ ...formData, minQuantity: parseInt(e.target.value) || 1 })}
                   onFocus={(e) => e.target.select()}
+                  min={1}
+                  className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-neutral-700 mb-1.5 sm:mb-2">
+                  최대 구매수량 <span className="text-neutral-400 font-normal">(0 = 제한없음)</span>
+                </label>
+                <input
+                  type="number"
+                  value={formData.maxQuantity}
+                  onChange={(e) => setFormData({ ...formData, maxQuantity: parseInt(e.target.value) || 0 })}
+                  onFocus={(e) => e.target.select()}
+                  min={0}
                   className="w-full px-3 sm:px-4 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
@@ -1081,6 +1106,7 @@ export function ProductEditPage() {
                   index={index}
                   showOptionImages={showOptionImages}
                   onNameChange={(name) => handleOptionNameChange(option.id, name)}
+                  onRequiredChange={(required) => handleOptionRequiredChange(option.id, required)}
                   onAddValue={(value) => handleAddOptionValue(option.id, value)}
                   onRemoveValue={(valueId) => handleRemoveOptionValue(option.id, valueId)}
                   onPriceModifierChange={(valueId, modifier) =>
@@ -1410,6 +1436,7 @@ interface OptionItemProps {
   index: number
   showOptionImages: boolean
   onNameChange: (name: string) => void
+  onRequiredChange: (required: boolean) => void
   onAddValue: (value: string) => void
   onRemoveValue: (valueId: string) => void
   onPriceModifierChange: (valueId: string, modifier: number) => void
@@ -1422,6 +1449,7 @@ function OptionItem({
   index,
   showOptionImages,
   onNameChange,
+  onRequiredChange,
   onAddValue,
   onRemoveValue,
   onPriceModifierChange,
@@ -1467,6 +1495,16 @@ function OptionItem({
           placeholder="옵션명 (예: 사이즈)"
           className="flex-1 min-w-0 px-2 sm:px-3 py-1 sm:py-1.5 border border-neutral-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
+        {/* 필수 체크박스 */}
+        <label className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={option.required}
+            onChange={(e) => onRequiredChange(e.target.checked)}
+            className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span className="text-xs sm:text-sm text-neutral-600">필수</span>
+        </label>
         <Button
           type="button"
           variant="ghost"

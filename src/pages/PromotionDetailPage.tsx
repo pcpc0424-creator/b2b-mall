@@ -92,18 +92,31 @@ export function PromotionDetailPage() {
         <div className="bg-primary-50 rounded-xl p-6 mb-8">
           <h2 className="text-lg font-bold text-neutral-900 mb-4">프로모션 혜택</h2>
           <ul className="space-y-2 text-neutral-700">
-            <li className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-primary-600 rounded-full" />
-              최대 {promotion.discount}% 할인 적용
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-primary-600 rounded-full" />
-              {promotion.type === 'exclusive' ? '회원 전용 특별 혜택' : '전 회원 대상 혜택'}
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-primary-600 rounded-full" />
-              기간 내 무제한 적용
-            </li>
+            {(promotion.benefits && promotion.benefits.length > 0) ? (
+              // 관리자가 설정한 혜택 문구 표시
+              promotion.benefits.map((benefit, index) => (
+                <li key={index} className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-primary-600 rounded-full" />
+                  {benefit}
+                </li>
+              ))
+            ) : (
+              // 기본 혜택 문구 (설정된 혜택이 없을 때)
+              <>
+                <li className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-primary-600 rounded-full" />
+                  최대 {promotion.discount}% 할인 적용
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-primary-600 rounded-full" />
+                  {promotion.type === 'exclusive' ? '회원 전용 특별 혜택' : '전 회원 대상 혜택'}
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-primary-600 rounded-full" />
+                  기간 내 무제한 적용
+                </li>
+              </>
+            )}
           </ul>
         </div>
       </Animated>

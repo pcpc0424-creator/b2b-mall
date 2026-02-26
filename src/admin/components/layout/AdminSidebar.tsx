@@ -17,6 +17,7 @@ import {
   LayoutGrid,
   Bell,
   HelpCircle,
+  Star,
 } from 'lucide-react'
 import { useAdminStore } from '../../store/adminStore'
 import { cn } from '../../../lib/utils'
@@ -30,6 +31,7 @@ const menuItems = [
   { path: '/admin/notices', icon: Bell, label: '공지사항 관리' },
   { path: '/admin/faqs', icon: HelpCircle, label: 'FAQ 관리' },
   { path: '/admin/qna', icon: MessageCircle, label: 'Q&A 관리' },
+  { path: '/admin/reviews', icon: Star, label: '리뷰 관리' },
   { path: '/admin/home-sections', icon: LayoutGrid, label: '홈 섹션 관리' },
   { path: '/admin/settings/banner', icon: Image, label: '배너 이미지' },
   { path: '/admin/settings/modals', icon: MessageSquare, label: '팝업 모달' },

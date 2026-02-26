@@ -20,6 +20,8 @@ function toReview(row: DbRow): Review {
     helpful: row.helpful,
     verified: row.verified,
     createdAt: new Date(row.created_at),
+    adminReply: row.admin_reply || undefined,
+    adminReplyAt: row.admin_reply_at ? new Date(row.admin_reply_at) : undefined,
   }
 }
 
@@ -85,4 +87,61 @@ export async function incrementHelpful(reviewId: string): Promise<void> {
     .from('reviews')
     .update({ helpful: review.helpful + 1 })
     .eq('id', reviewId)
+}
+
+// ========== 관리자 기능 ==========
+
+/** 전체 리뷰 조회 (관리자용) */
+export async function fetchAllReviews(): Promise<Review[]> {
+  try {
+    const { data, error } = await supabasePublic
+      .from('reviews')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.warn('전체 리뷰 조회 오류:', error.message)
+      return []
+    }
+    return (data || []).map(toReview)
+  } catch (err) {
+    console.warn('전체 리뷰 조회 예외:', err)
+    return []
+  }
+}
+
+/** 리뷰 삭제 (관리자용) */
+export async function deleteReview(reviewId: string): Promise<void> {
+  const { error } = await supabasePublic
+    .from('reviews')
+    .delete()
+    .eq('id', reviewId)
+
+  if (error) throw new Error(`리뷰 삭제 실패: ${error.message}`)
+}
+
+/** 관리자 답글 작성/수정 */
+export async function replyToReview(reviewId: string, reply: string): Promise<void> {
+  const { error } = await supabasePublic
+    .from('reviews')
+    .update({
+      admin_reply: reply,
+      admin_reply_at: new Date().toISOString(),
+    })
+    .eq('id', reviewId)
+
+  if (error) throw new Error(`답글 작성 실패: ${error.message}`)
+}
+
+/** 관리자 답글 삭제 */
+export async function deleteReviewReply(reviewId: string): Promise<void> {
+  const { error } = await supabasePublic
+    .from('reviews')
+    .update({
+      admin_reply: null,
+      admin_reply_at: null,
+    })
+    .eq('id', reviewId)
+
+  if (error) throw new Error(`답글 삭제 실패: ${error.message}`)
 }

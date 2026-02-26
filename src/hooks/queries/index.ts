@@ -65,6 +65,10 @@ export {
   useProductReviews,
   useCreateReview,
   useIncrementHelpful,
+  useAllReviews,
+  useDeleteReview,
+  useReplyToReview,
+  useDeleteReviewReply,
 } from './useReviews'
 
 export {

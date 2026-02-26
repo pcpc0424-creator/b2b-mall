@@ -57,6 +57,7 @@ import {
   QnAManagementPage,
   NoticeManagementPage,
   FAQManagementPage,
+  ReviewManagementPage,
 } from './admin/pages'
 
 // 페이지 전환 시 스크롤을 상단으로 이동
@@ -85,11 +86,11 @@ function App() {
     }
   }, [])
 
-  // Supabase Auth 세션 복원 + 상태 리스너
+  // Supabase Auth 상태 변경 리스너
   useEffect(() => {
     let isActive = true // cleanup 시 비동기 작업 무시용 플래그
 
-    // Auth 상태 변경 리스너 (INITIAL_SESSION, SIGNED_IN, SIGNED_OUT 등)
+    // Auth 상태 변경 리스너 (SIGNED_IN, SIGNED_OUT 등)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -203,7 +204,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/promotions" element={<PromotionsPage />} />
-          <Route path="/promotion/:promoId" element={<PromotionDetailPage />} />
+          <Route path="/promotions/:promoId" element={<PromotionDetailPage />} />
           <Route path="/community/notice" element={<NoticePage />} />
           <Route path="/community/faq" element={<FAQPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
@@ -248,6 +249,7 @@ function App() {
           <Route path="notices" element={<NoticeManagementPage />} />
           <Route path="faqs" element={<FAQManagementPage />} />
           <Route path="qna" element={<QnAManagementPage />} />
+          <Route path="reviews" element={<ReviewManagementPage />} />
           <Route path="settings/shipping" element={<ShippingSettingsPage />} />
           <Route path="settings/tiers" element={<TierSettingsPage />} />
           <Route path="settings/modals" element={<ModalManagementPage />} />

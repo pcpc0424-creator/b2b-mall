@@ -6,12 +6,15 @@ import { ProductCard } from '../components/product'
 import { Button, Select, Badge, Card, CardContent } from '../components/ui'
 import { cn } from '../lib/utils'
 import { Animated } from '../hooks'
+import { useStore, getPriceByTier } from '../store'
 
 export function ProductListPage() {
   const { categoryId: paramCategoryId } = useParams()
   const [searchParams] = useSearchParams()
   const { data: products = [] } = useProducts()
   const { data: categories = [] } = useCategories()
+  const { user } = useStore()
+  const userTier = user?.tier || 'member'
 
   // URL path parameter 또는 query parameter에서 categoryId 가져오기
   const categoryId = paramCategoryId || searchParams.get('category')
@@ -70,10 +73,10 @@ export function ProductListPage() {
     filteredProducts = filteredProducts.filter(p => p.stockStatus === selectedFilters.stockStatus)
   }
 
-  // 가격대 필터 적용
+  // 가격대 필터 적용 (실판매가 기준)
   if (selectedFilters.priceRange !== 'all') {
     filteredProducts = filteredProducts.filter(p => {
-      const price = p.prices.member
+      const price = getPriceByTier(p, userTier)
       if (selectedFilters.priceRange === '200000+') {
         return price >= 200000
       }

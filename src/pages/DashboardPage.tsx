@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   ShoppingBag, FileText, DollarSign, Package,
-  ArrowRight, Gift, Star, Loader2, AlertTriangle, MapPin
+  ArrowRight, Loader2, AlertTriangle, MapPin
 } from 'lucide-react'
 import { useStore, getTierLabel, getTierColor } from '../store'
 import { Button, Card, CardContent, Badge } from '../components/ui'
 import { formatPrice, formatNumber, cn } from '../lib/utils'
 import { Animated } from '../hooks'
-import { useUserOrders, useProducts, usePromotions } from '../hooks/queries'
+import { useUserOrders, useProducts } from '../hooks/queries'
 import { withdrawAccount } from '../services/auth'
 
 export function DashboardPage() {
@@ -18,7 +18,6 @@ export function DashboardPage() {
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const { data: orders = [] } = useUserOrders(user?.id)
   const { data: allProducts = [] } = useProducts()
-  const { data: allPromotions = [] } = usePromotions()
 
   const handleWithdraw = async () => {
     if (!user) return
@@ -76,17 +75,6 @@ export function DashboardPage() {
       .map(item => item.product!)
   })()
 
-  // User tier benefits
-  const tierBenefits = {
-    member: ['기본 회원가 적용', '적립금 1% 지급'],
-    premium: ['모든 상품 5% 추가 할인', '무료 배송', '전용 기획전 참여', '적립금 2% 지급'],
-    vip: ['모든 상품 10% 추가 할인', '무료 배송', 'VIP 전용 혜택', '적립금 3% 지급', '우선 배송'],
-  }
-
-  const currentBenefits = tierBenefits[tier as keyof typeof tierBenefits] || []
-
-  const exclusivePromotions = allPromotions.filter(p => p.targetTiers.includes(tier) && p.type === 'exclusive')
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
@@ -102,30 +90,6 @@ export function DashboardPage() {
           </div>
         </div>
       </Animated>
-
-      {/* VIP/Premium Banner */}
-      {(tier === 'vip' || tier === 'premium') && (
-        <div className="mb-8 p-4 md:p-6 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg text-white">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Star className="w-5 h-5" />
-                <span className="font-bold">{getTierLabel(tier)} 전용 혜택</span>
-              </div>
-              <ul className="text-sm space-y-1 opacity-90">
-                {currentBenefits.slice(0, 3).map((benefit, i) => (
-                  <li key={i}>• {benefit}</li>
-                ))}
-              </ul>
-            </div>
-            <Link to="/exclusive" className="flex-shrink-0">
-              <Button className="w-full md:w-auto bg-white text-amber-600 hover:bg-amber-50">
-                전용 혜택 보기
-              </Button>
-            </Link>
-          </div>
-        </div>
-      )}
 
       {/* Stats Cards */}
       <Animated animation="fade-up" delay={100}>
@@ -202,26 +166,6 @@ export function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Exclusive Promotions */}
-          {exclusivePromotions.length > 0 && (
-            <Card className="border-amber-200 bg-amber-50">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Gift className="w-5 h-5 text-amber-600" />
-                  <h2 className="font-bold text-neutral-900">{getTierLabel(tier)} 전용 기획전</h2>
-                </div>
-                <div className="space-y-3">
-                  {exclusivePromotions.slice(0, 2).map((promo) => (
-                    <div key={promo.id} className="p-3 bg-white rounded-lg">
-                      <Badge variant="warning" size="sm" className="mb-2">{promo.discount}% OFF</Badge>
-                      <p className="font-medium text-sm text-neutral-900">{promo.title}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
       </Animated>
@@ -290,24 +234,42 @@ export function DashboardPage() {
                   shipped: '배송중', delivered: '배송완료', cancelled: '취소', refunded: '환불',
                 }
                 const isDelivered = order.status === 'delivered'
+                // 주문 상품 이미지 가져오기
+                const orderImages = order.items.slice(0, 3).map(item => {
+                  const product = allProducts.find(p => p.id === item.productId)
+                  return product?.images[0] || ''
+                }).filter(Boolean)
+                const moreCount = order.items.length - 3
                 return (
-                <div key={order.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-neutral-50 transition-colors">
-                  <div>
-                    <p className="text-sm font-medium text-neutral-900">{order.orderNumber}</p>
+                <Link key={order.id} to="/orders" className="flex items-center gap-3 p-3 rounded-lg hover:bg-neutral-50 transition-colors">
+                  <div className="flex -space-x-2">
+                    {orderImages.map((img, idx) => (
+                      <img
+                        key={idx}
+                        src={img}
+                        alt=""
+                        className="w-10 h-10 rounded object-cover border-2 border-white"
+                      />
+                    ))}
+                    {moreCount > 0 && (
+                      <div className="w-10 h-10 rounded bg-neutral-100 border-2 border-white flex items-center justify-center">
+                        <span className="text-xs font-medium text-neutral-500">+{moreCount}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs text-neutral-500">
                       {new Date(order.createdAt).toLocaleDateString('ko-KR')} · {order.items.length}개 품목
                     </p>
-                  </div>
-                  <div className="text-right">
                     <p className="text-sm font-bold text-neutral-900">{formatPrice(order.totalAmount)}</p>
-                    <Badge
-                      variant={isDelivered ? 'success' : 'primary'}
-                      size="sm"
-                    >
-                      {statusLabel[order.status] || order.status}
-                    </Badge>
                   </div>
-                </div>
+                  <Badge
+                    variant={isDelivered ? 'success' : 'primary'}
+                    size="sm"
+                  >
+                    {statusLabel[order.status] || order.status}
+                  </Badge>
+                </Link>
                 )
               })}{orders.length === 0 && (
                 <p className="text-sm text-neutral-500 text-center py-4">주문 내역이 없습니다.</p>

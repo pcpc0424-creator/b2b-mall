@@ -72,11 +72,38 @@ export function PromotionManagementPage() {
       type: 'all',
       isActive: false,
       productIds: [],
+      benefits: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     }
     setEditingPromo(newPromo)
     setIsModalOpen(true)
+  }
+
+  // 혜택 문구 추가
+  const addBenefit = () => {
+    if (!editingPromo) return
+    const currentBenefits = editingPromo.benefits || []
+    setEditingPromo({ ...editingPromo, benefits: [...currentBenefits, ''] })
+  }
+
+  // 혜택 문구 삭제
+  const removeBenefit = (index: number) => {
+    if (!editingPromo) return
+    const currentBenefits = editingPromo.benefits || []
+    setEditingPromo({
+      ...editingPromo,
+      benefits: currentBenefits.filter((_, i) => i !== index)
+    })
+  }
+
+  // 혜택 문구 수정
+  const updateBenefit = (index: number, value: string) => {
+    if (!editingPromo) return
+    const currentBenefits = editingPromo.benefits || []
+    const newBenefits = [...currentBenefits]
+    newBenefits[index] = value
+    setEditingPromo({ ...editingPromo, benefits: newBenefits })
   }
 
   // 상품 선택/해제 토글
@@ -496,6 +523,49 @@ export function PromotionManagementPage() {
                         ) : null
                       })}
                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 혜택 문구 입력 */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-neutral-700">프로모션 혜택 문구</label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={addBenefit}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    추가
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {(editingPromo.benefits || []).length === 0 ? (
+                    <p className="text-sm text-neutral-500 py-2">
+                      혜택 문구가 없습니다. 추가 버튼을 눌러 입력해주세요.
+                    </p>
+                  ) : (
+                    (editingPromo.benefits || []).map((benefit, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="text-sm text-neutral-500 w-6">{index + 1}.</span>
+                        <input
+                          type="text"
+                          value={benefit}
+                          onChange={(e) => updateBenefit(index, e.target.value)}
+                          className="flex-1 px-3 py-2 border border-neutral-200 rounded-lg text-sm"
+                          placeholder="예: 최대 10% 할인 적용"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeBenefit(index)}
+                          className="p-2 text-neutral-400 hover:text-red-500 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>

@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ShoppingCart, Zap, ChevronDown, Truck, Package, X, ZoomIn, ZoomOut, Lock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ShoppingCart, Zap, ChevronDown, Truck, Package, X, ZoomIn, ZoomOut, Lock, Plus, Minus, Trash2 } from 'lucide-react'
 import { useStore, getPriceByTier, getTierLabel, getTierColor } from '../store'
 import { useProducts, useCategories } from '../hooks/queries'
 import { ProductCard, ProductReviews } from '../components/product'
@@ -8,7 +8,16 @@ import { Button, Badge, NumberStepper, Card, CardContent } from '../components/u
 import { formatPrice, cn } from '../lib/utils'
 import { Animated } from '../hooks'
 import { ProductOption } from '../types'
-import { ProductOptionAdmin, QuantityDiscount } from '../admin/types/admin'
+import { ProductOptionAdmin, QuantityDiscount, ProductVariant } from '../admin/types/admin'
+
+// 선택된 옵션 아이템 타입 (다중 옵션 지원)
+interface SelectedOptionItem {
+  id: string
+  options: Record<string, string> // 옵션명: 옵션값
+  quantity: number
+  priceModifier: number
+  stock: number // 해당 옵션 조합의 재고
+}
 
 export function ProductDetailPage() {
   const { productId } = useParams()
@@ -24,6 +33,7 @@ export function ProductDetailPage() {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
   const [optionPriceModifier, setOptionPriceModifier] = useState(0)
   const [selectedQuantityDiscount, setSelectedQuantityDiscount] = useState<QuantityDiscount | null>(null)
+  const [selectedOptionItems, setSelectedOptionItems] = useState<SelectedOptionItem[]>([]) // 다중 옵션 선택 리스트
 
   // 관리자 상품에서 찾기
   const product = useMemo(() => {
@@ -63,6 +73,182 @@ export function ProductDetailPage() {
     return adminProduct?.adminOptions || []
   }, [productId, adminProducts])
 
+  // 상품 변형(옵션 조합) 정보
+  const productVariants = useMemo((): ProductVariant[] => {
+    const adminProduct = adminProducts.find(p => p.id === productId)
+    return adminProduct?.variants || []
+  }, [productId, adminProducts])
+
+  // 필수 옵션이 모두 선택되었는지 확인 (required=true인 옵션만 체크)
+  const isAllOptionsSelected = useMemo(() => {
+    if (productOptions.length === 0) return true
+    // adminOptionsMap에서 required 정보 확인
+    return productOptions.every(opt => {
+      const adminOpt = adminOptionsMap.find(ao => ao.id === opt.id)
+      // required가 false이면 선택 안 해도 됨
+      if (adminOpt && adminOpt.required === false) return true
+      // required가 true이거나 undefined면 필수
+      return selectedOptions[opt.id] && selectedOptions[opt.id] !== ''
+    })
+  }, [productOptions, selectedOptions, adminOptionsMap])
+
+  // 최소 하나 이상의 옵션이 선택되었는지 확인
+  const hasAnyOptionSelected = useMemo(() => {
+    if (productOptions.length === 0) return true
+    return productOptions.some(opt => selectedOptions[opt.id] && selectedOptions[opt.id] !== '')
+  }, [productOptions, selectedOptions])
+
+  // 현재 선택된 옵션 조합의 재고 확인
+  const getCurrentOptionStock = useCallback((optionsToCheck: Record<string, string>): number => {
+    if (productOptions.length === 0) return product?.stock || 0
+
+    // 옵션명으로 변환
+    const optionsByName: Record<string, string> = {}
+    productOptions.forEach(opt => {
+      if (optionsToCheck[opt.id]) {
+        optionsByName[opt.name] = optionsToCheck[opt.id]
+      }
+    })
+
+    // variants에서 해당 조합 찾기
+    const variant = productVariants.find(v => {
+      return Object.keys(v.optionCombination).every(
+        key => v.optionCombination[key] === optionsByName[key]
+      ) && Object.keys(optionsByName).every(
+        key => optionsByName[key] === v.optionCombination[key]
+      )
+    })
+
+    if (variant) return variant.stock
+    return product?.stock || 0 // variant가 없으면 기본 재고 사용
+  }, [productOptions, productVariants, product])
+
+  // 현재 선택된 옵션의 재고
+  const currentOptionStock = useMemo(() => {
+    if (!isAllOptionsSelected) return product?.stock || 0
+    return getCurrentOptionStock(selectedOptions)
+  }, [isAllOptionsSelected, selectedOptions, getCurrentOptionStock, product])
+
+  // 옵션 선택 토글 (이미지 옵션용)
+  const toggleOption = useCallback((optionId: string, value: string) => {
+    setSelectedOptions(prev => {
+      if (prev[optionId] === value) {
+        // 같은 값이면 선택 해제
+        return { ...prev, [optionId]: '' }
+      }
+      return { ...prev, [optionId]: value }
+    })
+  }, [])
+
+  // 선택한 옵션을 리스트에 추가
+  const addSelectedOptionToList = useCallback(() => {
+    // 최소 하나 이상의 옵션이 선택되어야 함
+    if (!hasAnyOptionSelected) {
+      alert('옵션을 선택해주세요.')
+      return
+    }
+
+    // 필수 옵션이 선택되었는지 확인
+    if (!isAllOptionsSelected) {
+      // 필수 옵션 중 선택 안 된 것 찾기
+      const missingOptions = productOptions
+        .filter(opt => {
+          const adminOpt = adminOptionsMap.find(ao => ao.id === opt.id)
+          const isRequired = !adminOpt || adminOpt.required !== false
+          return isRequired && (!selectedOptions[opt.id] || selectedOptions[opt.id] === '')
+        })
+        .map(opt => opt.name)
+
+      if (missingOptions.length > 0) {
+        alert(`필수 옵션을 선택해주세요: ${missingOptions.join(', ')}`)
+        return
+      }
+    }
+
+    // 옵션명으로 변환 (선택된 옵션만)
+    const optionsByName: Record<string, string> = {}
+    productOptions.forEach(opt => {
+      if (selectedOptions[opt.id]) {
+        optionsByName[opt.name] = selectedOptions[opt.id]
+      }
+    })
+
+    // 이미 같은 옵션 조합이 있는지 확인
+    const existingIndex = selectedOptionItems.findIndex(item => {
+      return Object.keys(item.options).every(
+        key => item.options[key] === optionsByName[key]
+      ) && Object.keys(optionsByName).every(
+        key => optionsByName[key] === item.options[key]
+      )
+    })
+
+    const stock = getCurrentOptionStock(selectedOptions)
+
+    if (existingIndex >= 0) {
+      // 이미 있으면 수량 증가
+      setSelectedOptionItems(prev => prev.map((item, idx) => {
+        if (idx === existingIndex) {
+          const newQuantity = Math.min(item.quantity + 1, stock)
+          return { ...item, quantity: newQuantity }
+        }
+        return item
+      }))
+    } else {
+      // 새로운 옵션 조합 추가
+      const newItem: SelectedOptionItem = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        options: optionsByName,
+        quantity: 1,
+        priceModifier: optionPriceModifier,
+        stock
+      }
+      setSelectedOptionItems(prev => [...prev, newItem])
+    }
+
+    // 옵션 선택 초기화
+    const initialOptions: Record<string, string> = {}
+    productOptions.forEach(opt => {
+      initialOptions[opt.id] = ''
+    })
+    setSelectedOptions(initialOptions)
+  }, [hasAnyOptionSelected, isAllOptionsSelected, productOptions, selectedOptions, selectedOptionItems, optionPriceModifier, getCurrentOptionStock, adminOptionsMap])
+
+  // 선택된 옵션 아이템 수량 변경
+  const updateOptionItemQuantity = useCallback((itemId: string, newQuantity: number) => {
+    setSelectedOptionItems(prev => prev.map(item => {
+      if (item.id === itemId) {
+        const qty = Math.max(1, Math.min(newQuantity, item.stock))
+        return { ...item, quantity: qty }
+      }
+      return item
+    }))
+  }, [])
+
+  // 선택된 옵션 아이템 삭제
+  const removeOptionItem = useCallback((itemId: string) => {
+    setSelectedOptionItems(prev => prev.filter(item => item.id !== itemId))
+  }, [])
+
+  // 선택된 옵션들의 총 금액 (product 존재 시에만 계산)
+  const selectedOptionsTotalPrice = useMemo(() => {
+    if (!product) return 0
+    const basePrice = getPriceByTier(product, user?.tier || 'guest')
+    if (productOptions.length === 0) {
+      // 옵션이 없는 상품
+      return (basePrice + optionPriceModifier) * quantity
+    }
+    // 옵션이 있는 상품
+    return selectedOptionItems.reduce((total, item) => {
+      return total + (basePrice + item.priceModifier) * item.quantity
+    }, 0)
+  }, [product, user?.tier, productOptions, optionPriceModifier, quantity, selectedOptionItems])
+
+  // 선택된 옵션들의 총 수량
+  const selectedOptionsTotalQuantity = useMemo(() => {
+    if (productOptions.length === 0) return quantity
+    return selectedOptionItems.reduce((total, item) => total + item.quantity, 0)
+  }, [productOptions, quantity, selectedOptionItems])
+
   // 배송비 정보 가져오기
   const shippingInfo = useMemo(() => {
     const adminProduct = adminProducts.find(p => p.id === productId)
@@ -78,9 +264,11 @@ export function ProductDetailPage() {
       })
       setSelectedOptions(initialOptions)
       setOptionPriceModifier(0)
+      setSelectedOptionItems([]) // 선택된 옵션 리스트도 초기화
     } else {
       setSelectedOptions({})
       setOptionPriceModifier(0)
+      setSelectedOptionItems([])
     }
   }, [productOptions])
 
@@ -303,14 +491,14 @@ export function ProductDetailPage() {
                           <button
                             key={value}
                             type="button"
-                            onClick={() => setSelectedOptions(prev => ({ ...prev, [option.id]: value }))}
+                            onClick={() => toggleOption(option.id, value)}
                             className={cn(
                               'relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-all',
                               isSelected
                                 ? 'border-primary-600 ring-2 ring-primary-200'
                                 : 'border-neutral-200 hover:border-neutral-400'
                             )}
-                            title={value}
+                            title={`${value}${isSelected ? ' (클릭하여 선택 해제)' : ''}`}
                           >
                             {optionValue?.image ? (
                               <img src={optionValue.image} alt={value} className="w-full h-full object-cover" />
@@ -457,11 +645,122 @@ export function ProductDetailPage() {
                 </span>
               </div>
             )}
+
+            {/* 옵션 선택 완료 버튼 및 재고 표시 (옵션이 있는 상품만) */}
+            {productOptions.length > 0 && (
+              <div className="space-y-3">
+                {/* 현재 선택된 옵션 재고 표시 */}
+                {hasAnyOptionSelected && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-neutral-600">선택 옵션 재고</span>
+                    <span className={cn(
+                      'font-medium',
+                      currentOptionStock <= 0 ? 'text-red-500' : currentOptionStock <= 5 ? 'text-amber-500' : 'text-green-500'
+                    )}>
+                      {currentOptionStock <= 0 ? '품절' : `${currentOptionStock}개`}
+                    </span>
+                  </div>
+                )}
+
+                {/* 옵션 선택 완료 버튼 */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={addSelectedOptionToList}
+                  disabled={!hasAnyOptionSelected || currentOptionStock <= 0}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {!hasAnyOptionSelected ? '옵션을 선택해주세요' : currentOptionStock <= 0 ? '품절된 옵션입니다' : '옵션 선택 완료'}
+                </Button>
+              </div>
+            )}
+
+            {/* 선택된 옵션 리스트 */}
+            {selectedOptionItems.length > 0 && (
+              <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                <div className="bg-neutral-50 px-4 py-2 border-b border-neutral-200">
+                  <p className="text-sm font-medium text-neutral-700">선택한 옵션</p>
+                </div>
+                <div className="divide-y divide-neutral-100">
+                  {selectedOptionItems.map((item) => {
+                    const itemPrice = currentPrice + item.priceModifier
+                    const itemTotal = itemPrice * item.quantity
+
+                    return (
+                      <div key={item.id} className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-neutral-700 truncate">
+                              {Object.entries(item.options).map(([key, value]) => `${key}: ${value}`).join(', ')}
+                            </p>
+                            {item.priceModifier !== 0 && (
+                              <p className="text-xs text-neutral-500">
+                                추가금액: {item.priceModifier > 0 ? '+' : ''}{formatPrice(item.priceModifier)}
+                              </p>
+                            )}
+                            <p className="text-xs text-neutral-400">재고: {item.stock}개</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeOptionItem(item.id)}
+                            className="p-1 text-neutral-400 hover:text-red-500 transition-colors"
+                            title="삭제"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => updateOptionItemQuantity(item.id, item.quantity - 1)}
+                              disabled={item.quantity <= 1}
+                              className="w-7 h-7 rounded border border-neutral-200 flex items-center justify-center hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => updateOptionItemQuantity(item.id, parseInt(e.target.value) || 1)}
+                              className="w-12 h-7 text-center text-sm border border-neutral-200 rounded"
+                              min={1}
+                              max={item.stock}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => updateOptionItemQuantity(item.id, item.quantity + 1)}
+                              disabled={item.quantity >= item.stock}
+                              className="w-7 h-7 rounded border border-neutral-200 flex items-center justify-center hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <span className="font-bold text-neutral-900">{formatPrice(itemTotal)}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                {/* 총 금액 */}
+                <div className="bg-neutral-50 px-4 py-3 border-t border-neutral-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-neutral-600">
+                      총 {selectedOptionsTotalQuantity}개
+                    </span>
+                    <span className="text-lg font-bold text-primary-600">
+                      {formatPrice(selectedOptionsTotalPrice)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           )}
 
-          {/* Stock & Quantity - 로그인 회원만 표시 */}
-          {isLoggedIn && (
+          {/* Stock & Quantity - 옵션이 없는 상품만, 로그인 회원만 표시 */}
+          {isLoggedIn && productOptions.length === 0 && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-neutral-600">재고 상태</span>
@@ -471,9 +770,11 @@ export function ProductDetailPage() {
               </span>
             </div>
 
-            {product.minQuantity > 1 && (
-              <p className="text-sm text-neutral-500 mb-3">
-                최소 주문수량: <span className="font-medium text-neutral-700">{product.minQuantity}개</span>
+            {/* 구매수량 제한 안내 */}
+            {product.maxQuantity && product.maxQuantity > 0 && (
+              <p className="text-sm text-amber-600 mb-3 flex items-center gap-1">
+                <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                1인당 최대 <span className="font-semibold">{product.maxQuantity}개</span>까지 구매 가능
               </p>
             )}
 
@@ -482,8 +783,10 @@ export function ProductDetailPage() {
               <NumberStepper
                 value={quantity}
                 onChange={setQuantity}
-                min={0}
-                max={product.stock}
+                min={product.minQuantity || 1}
+                max={product.maxQuantity && product.maxQuantity > 0
+                  ? Math.min(product.maxQuantity, product.stock)
+                  : product.stock}
                 disabled={product.stockStatus === 'out_of_stock'}
               />
               <span className="text-sm text-neutral-500">
@@ -500,21 +803,29 @@ export function ProductDetailPage() {
             <Button
               size="lg"
               onClick={() => {
-                if (quantity <= 0) {
-                  alert('수량을 선택해주세요.')
-                  return
-                }
-                // 옵션명으로 변환하여 저장
-                const optionsWithNames: Record<string, string> = {}
-                productOptions.forEach(opt => {
-                  if (selectedOptions[opt.id]) {
-                    optionsWithNames[opt.name] = selectedOptions[opt.id]
+                // 옵션이 있는 상품인 경우
+                if (productOptions.length > 0) {
+                  if (selectedOptionItems.length === 0) {
+                    alert('옵션을 선택해주세요.')
+                    return
                   }
-                })
-                addToCart(product, quantity, Object.keys(optionsWithNames).length > 0 ? optionsWithNames : undefined)
-                navigate('/cart')
+                  // 선택된 옵션들을 각각 장바구니에 추가
+                  selectedOptionItems.forEach(item => {
+                    addToCart(product, item.quantity, item.options)
+                  })
+                  setSelectedOptionItems([]) // 선택 초기화
+                  navigate('/cart')
+                } else {
+                  // 옵션이 없는 상품
+                  if (quantity <= 0) {
+                    alert('수량을 선택해주세요.')
+                    return
+                  }
+                  addToCart(product, quantity, undefined)
+                  navigate('/cart')
+                }
               }}
-              disabled={product.stockStatus === 'out_of_stock'}
+              disabled={product.stockStatus === 'out_of_stock' || (productOptions.length > 0 && selectedOptionItems.length === 0)}
               className="flex-1"
             >
               <Zap className="w-5 h-5 mr-2" />
@@ -524,22 +835,29 @@ export function ProductDetailPage() {
               size="lg"
               variant="outline"
               onClick={() => {
-                if (quantity <= 0) {
-                  alert('수량을 선택해주세요.')
-                  return
-                }
-                // 옵션명으로 변환하여 저장
-                const optionsWithNames: Record<string, string> = {}
-                productOptions.forEach(opt => {
-                  if (selectedOptions[opt.id]) {
-                    optionsWithNames[opt.name] = selectedOptions[opt.id]
+                // 옵션이 있는 상품인 경우
+                if (productOptions.length > 0) {
+                  if (selectedOptionItems.length === 0) {
+                    alert('옵션을 선택해주세요.')
+                    return
                   }
-                })
-                addToCart(product, quantity, Object.keys(optionsWithNames).length > 0 ? optionsWithNames : undefined)
+                  // 선택된 옵션들을 각각 장바구니에 추가
+                  selectedOptionItems.forEach(item => {
+                    addToCart(product, item.quantity, item.options)
+                  })
+                  setSelectedOptionItems([]) // 선택 초기화
+                } else {
+                  // 옵션이 없는 상품
+                  if (quantity <= 0) {
+                    alert('수량을 선택해주세요.')
+                    return
+                  }
+                  addToCart(product, quantity, undefined)
+                }
                 setShowAddedToast(true)
                 setTimeout(() => setShowAddedToast(false), 2000)
               }}
-              disabled={product.stockStatus === 'out_of_stock'}
+              disabled={product.stockStatus === 'out_of_stock' || (productOptions.length > 0 && selectedOptionItems.length === 0)}
             >
               <ShoppingCart className="w-5 h-5 mr-2" />
               장바구니 담기

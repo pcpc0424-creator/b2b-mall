@@ -344,7 +344,7 @@ export async function loginWithSocial(
     provider: provider as 'kakao' | 'google',
     options: {
       redirectTo: `${window.location.origin}/`,
-      scopes: provider === 'kakao' ? 'profile_nickname profile_image' : undefined,
+      scopes: provider === 'kakao' ? 'profile_nickname profile_image account_email' : undefined,
     },
   })
 
