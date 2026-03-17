@@ -58,6 +58,8 @@ import {
   NoticeManagementPage,
   FAQManagementPage,
   ReviewManagementPage,
+  CouponManagementPage,
+  AdminHelpPage,
 } from './admin/pages'
 
 // 페이지 전환 시 스크롤을 상단으로 이동
@@ -250,11 +252,13 @@ function App() {
           <Route path="faqs" element={<FAQManagementPage />} />
           <Route path="qna" element={<QnAManagementPage />} />
           <Route path="reviews" element={<ReviewManagementPage />} />
+          <Route path="coupons" element={<CouponManagementPage />} />
           <Route path="settings/shipping" element={<ShippingSettingsPage />} />
           <Route path="settings/tiers" element={<TierSettingsPage />} />
           <Route path="settings/modals" element={<ModalManagementPage />} />
           <Route path="settings/banner" element={<BannerSettingsPage />} />
           <Route path="home-sections" element={<HomeSectionManagementPage />} />
+          <Route path="help" element={<AdminHelpPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

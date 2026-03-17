@@ -16,44 +16,64 @@ window.addEventListener('unhandledrejection', (event) => {
 async function initAuthAndRender() {
   const hash = window.location.hash
 
-  // 1. OAuth 콜백 처리 (URL에 토큰이 있는 경우)
-  if (hash && hash.includes('access_token')) {
-    console.log('[Main] OAuth 콜백 감지, 세션 설정')
-
+  // 1. OAuth 콜백 처리 (URL에 해시가 있는 경우)
+  if (hash && hash.length > 1) {
     const params = new URLSearchParams(hash.substring(1))
+
+    // 에러 응답 처리
+    const error = params.get('error')
+    const errorDescription = params.get('error_description')
+    if (error) {
+      console.error('[Main] OAuth 에러:', error, errorDescription)
+      // 해시 제거 후 로그인 페이지로 이동
+      window.location.replace('/login?error=' + encodeURIComponent(errorDescription || error))
+      return
+    }
+
     const accessToken = params.get('access_token')
     const refreshToken = params.get('refresh_token')
 
     if (accessToken && refreshToken) {
-      // 세션 데이터를 로컬 스토리지에 직접 저장
-      const storageKey = `sb-${import.meta.env.VITE_SUPABASE_URL.split('//')[1].split('.')[0]}-auth-token`
+      console.log('[Main] OAuth 콜백 감지, 세션 설정')
 
-      // JWT 디코딩 (base64)
-      const tokenParts = accessToken.split('.')
-      const payload = JSON.parse(atob(tokenParts[1]))
+      try {
+        // 세션 데이터를 로컬 스토리지에 직접 저장
+        const storageKey = `sb-${import.meta.env.VITE_SUPABASE_URL.split('//')[1].split('.')[0]}-auth-token`
 
-      const sessionData = {
-        access_token: accessToken,
-        refresh_token: refreshToken,
-        expires_at: payload.exp,
-        expires_in: payload.exp - Math.floor(Date.now() / 1000),
-        token_type: 'bearer',
-        user: {
-          id: payload.sub,
-          aud: payload.aud,
-          role: payload.role,
-          email: payload.email,
-          app_metadata: payload.app_metadata || {},
-          user_metadata: payload.user_metadata || {},
+        // JWT 디코딩 (base64)
+        const tokenParts = accessToken.split('.')
+        const payload = JSON.parse(atob(tokenParts[1]))
+
+        const sessionData = {
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          expires_at: payload.exp,
+          expires_in: payload.exp - Math.floor(Date.now() / 1000),
+          token_type: 'bearer',
+          user: {
+            id: payload.sub,
+            aud: payload.aud,
+            role: payload.role,
+            email: payload.email,
+            app_metadata: payload.app_metadata || {},
+            user_metadata: payload.user_metadata || {},
+          }
         }
+
+        localStorage.setItem(storageKey, JSON.stringify(sessionData))
+        console.log('[Main] 세션 저장 완료')
+      } catch (err) {
+        console.error('[Main] 토큰 파싱 에러:', err)
       }
 
-      localStorage.setItem(storageKey, JSON.stringify(sessionData))
-      console.log('[Main] 세션 저장 완료')
+      // URL 해시 제거 후 새로고침
+      window.location.replace(window.location.pathname)
+      return
     }
 
-    // URL 해시 제거 후 새로고침
-    window.location.replace(window.location.pathname)
+    // 해시가 있지만 토큰이 없는 경우 (잘못된 콜백) - 해시만 제거
+    console.log('[Main] 해시 제거:', hash)
+    window.location.replace(window.location.pathname + window.location.search)
     return
   }
 

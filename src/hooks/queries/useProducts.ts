@@ -9,7 +9,12 @@ import {
 import type { AdminProduct } from '../../admin/types/admin'
 
 export function useProducts() {
-  return useQuery({ queryKey: ['products'], queryFn: fetchProducts })
+  return useQuery({
+    queryKey: ['products'],
+    queryFn: fetchProducts,
+    staleTime: 0, // 항상 fresh 데이터 요청
+    gcTime: 0, // 캐시 완전 비활성화
+  })
 }
 
 export function useProduct(id: string) {

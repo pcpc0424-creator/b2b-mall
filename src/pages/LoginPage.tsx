@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react'
 import { useStore } from '../store'
 import { Button, Input, Card, CardContent } from '../components/ui'
@@ -9,6 +9,7 @@ import { SocialProvider } from '../types'
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const { login } = useStore()
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -21,6 +22,16 @@ export function LoginPage() {
 
   // 로그인 후 원래 페이지로 돌아가기
   const from = (location.state as any)?.from?.pathname || '/'
+
+  // OAuth 에러 메시지 처리
+  useEffect(() => {
+    const errorMsg = searchParams.get('error')
+    if (errorMsg) {
+      setErrors({ general: `소셜 로그인 실패: ${decodeURIComponent(errorMsg)}` })
+      // URL에서 에러 파라미터 제거
+      window.history.replaceState({}, '', '/login')
+    }
+  }, [searchParams])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target

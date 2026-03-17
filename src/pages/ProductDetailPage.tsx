@@ -888,24 +888,22 @@ export function ProductDetailPage() {
 
       {/* 상품 상세 설명 & 이미지 */}
       {(productSettings.description || productSettings.detailImages.length > 0) && (
-        <Animated animation="fade-up" delay={250}>
-          <section className="mb-12">
-            {productSettings.description && (
-              <div
-                className="prose prose-sm max-w-none mb-6"
-                dangerouslySetInnerHTML={{ __html: productSettings.description }}
-              />
-            )}
-            {productSettings.detailImages.map((img, index) => (
-              <img
-                key={index}
-                src={img}
-                alt={`${product.name} 상세 이미지 ${index + 1}`}
-                className="w-full mb-4 rounded-lg"
-              />
-            ))}
-          </section>
-        </Animated>
+        <section className="mb-12">
+          {productSettings.description && (
+            <div
+              className="prose prose-sm max-w-none mb-6"
+              dangerouslySetInnerHTML={{ __html: productSettings.description }}
+            />
+          )}
+          {productSettings.detailImages.map((img, index) => (
+            <img
+              key={index}
+              src={img}
+              alt={`${product.name} 상세 이미지 ${index + 1}`}
+              className="w-full mb-4 rounded-lg"
+            />
+          ))}
+        </section>
       )}
 
       {/* Product Reviews */}

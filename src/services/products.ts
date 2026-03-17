@@ -86,13 +86,9 @@ export async function fetchProductById(id: string): Promise<AdminProduct | null>
     .from('products')
     .select('*')
     .eq('id', id)
-    .single()
+    .maybeSingle()
 
-  if (error) {
-    // PGRST116: 결과가 없을 때
-    if (error.code === 'PGRST116') return null
-    throw error
-  }
+  if (error) throw error
 
   return data ? toProduct(data) : null
 }

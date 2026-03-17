@@ -50,6 +50,15 @@ export {
   useRegisterCoupon,
   useClaimAllCoupons,
   useMarkCouponUsed,
+  useAdminCoupons,
+  useCreateCoupon,
+  useUpdateCoupon,
+  useDeleteCoupon,
+  useIssueCouponToUsers,
+  useIssueCouponToAllUsers,
+  useIssuedCoupons,
+  useIssuedCouponsByCouponId,
+  useRevokeUserCoupon,
 } from './useCoupons'
 
 export {

@@ -94,53 +94,61 @@ export function DashboardPage() {
       {/* Stats Cards */}
       <Animated animation="fade-up" delay={100}>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card className="card-hover">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-primary-600" />
+        <Link to="/orders">
+          <Card className="card-hover cursor-pointer hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-primary-600" />
+                </div>
               </div>
-            </div>
-            <p className="text-sm text-neutral-500">총 주문금액</p>
-            <p className="text-2xl font-bold text-neutral-900">{formatPrice(totalAmount)}</p>
-          </CardContent>
-        </Card>
+              <p className="text-sm text-neutral-500">총 주문금액</p>
+              <p className="text-2xl font-bold text-neutral-900">{formatPrice(totalAmount)}</p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="card-hover">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 rounded-full bg-secondary-100 flex items-center justify-center">
-                <ShoppingBag className="w-5 h-5 text-secondary-600" />
+        <Link to="/orders">
+          <Card className="card-hover cursor-pointer hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-full bg-secondary-100 flex items-center justify-center">
+                  <ShoppingBag className="w-5 h-5 text-secondary-600" />
+                </div>
               </div>
-            </div>
-            <p className="text-sm text-neutral-500">주문 건수</p>
-            <p className="text-2xl font-bold text-neutral-900">{formatNumber(totalOrders)}건</p>
-          </CardContent>
-        </Card>
+              <p className="text-sm text-neutral-500">주문 건수</p>
+              <p className="text-2xl font-bold text-neutral-900">{formatNumber(totalOrders)}건</p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="card-hover">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 rounded-full bg-accent-100 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-accent-600" />
+        <Link to="/orders">
+          <Card className="card-hover cursor-pointer hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-full bg-accent-100 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-accent-600" />
+                </div>
               </div>
-            </div>
-            <p className="text-sm text-neutral-500">평균 주문금액</p>
-            <p className="text-2xl font-bold text-neutral-900">{formatPrice(avgOrderValue)}</p>
-          </CardContent>
-        </Card>
+              <p className="text-sm text-neutral-500">평균 주문금액</p>
+              <p className="text-2xl font-bold text-neutral-900">{formatPrice(avgOrderValue)}</p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="card-hover">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                <Package className="w-5 h-5 text-purple-600" />
+        <Link to="/orders?status=shipped">
+          <Card className="card-hover cursor-pointer hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Package className="w-5 h-5 text-purple-600" />
+                </div>
               </div>
-            </div>
-            <p className="text-sm text-neutral-500">배송 중</p>
-            <p className="text-2xl font-bold text-neutral-900">{shippingCount}건</p>
-          </CardContent>
-        </Card>
+              <p className="text-sm text-neutral-500">배송 중</p>
+              <p className="text-2xl font-bold text-neutral-900">{shippingCount}건</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
       </Animated>
 

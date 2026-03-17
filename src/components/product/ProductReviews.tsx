@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Star, ThumbsUp, CheckCircle, ChevronDown, ChevronUp, X, Loader2, Store } from 'lucide-react'
 import { Button, Badge, Card } from '../ui'
 import { cn } from '../../lib/utils'
@@ -301,11 +302,11 @@ function ReviewWriteModal({
     )
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-      <Card className="w-full max-w-xl bg-white rounded-xl shadow-2xl">
+  const modalContent = (
+    <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
+      <Card className="w-full max-w-xl bg-white rounded-xl shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 sticky top-0 bg-white">
           <h3 className="text-xl font-bold text-neutral-900">리뷰 작성</h3>
           <button
             onClick={onClose}
@@ -393,4 +394,6 @@ function ReviewWriteModal({
       </Card>
     </div>
   )
+
+  return createPortal(modalContent, document.body)
 }

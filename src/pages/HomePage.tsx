@@ -163,7 +163,7 @@ export function HomePage() {
                         <h2 className="text-lg md:text-3xl font-bold text-white mb-2 md:mb-3 line-clamp-2">{promo.title}</h2>
                         <p className="text-xs md:text-base text-neutral-200 mb-3 md:mb-5 line-clamp-2">{promo.description}</p>
                         <div className="flex gap-2">
-                          <Link to={`/promotion/${promo.id}`}>
+                          <Link to={`/promotions/${promo.id}`}>
                             <Button size="sm" className="btn-hover text-[10px] md:text-sm px-3 py-1.5 md:px-4 md:py-2">
                               <Zap className="w-3 h-3 md:w-4 md:h-4 mr-1" />
                               자세히 보기
@@ -694,21 +694,23 @@ export function HomePage() {
           </Animated>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {visiblePromotions.slice(0, 4).map((promo) => (
-              <Card key={promo.id} hover className="overflow-hidden">
-                <img src={promo.image} alt={promo.title} className="w-full h-32 object-cover" />
-                <CardContent>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant={promo.discount >= 30 ? 'error' : 'primary'} size="sm">
-                      {promo.discount}% OFF
-                    </Badge>
-                    {promo.type === 'exclusive' && (
-                      <Badge variant="warning" size="sm">등급전용</Badge>
-                    )}
-                  </div>
-                  <h3 className="font-medium text-neutral-900">{promo.title}</h3>
-                  <p className="text-sm text-neutral-500 mt-1">{promo.description}</p>
-                </CardContent>
-              </Card>
+              <Link key={promo.id} to={`/promotions/${promo.id}`}>
+                <Card hover className="overflow-hidden">
+                  <img src={promo.image} alt={promo.title} className="w-full h-32 object-cover" />
+                  <CardContent>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant={promo.discount >= 30 ? 'error' : 'primary'} size="sm">
+                        {promo.discount}% OFF
+                      </Badge>
+                      {promo.type === 'exclusive' && (
+                        <Badge variant="warning" size="sm">등급전용</Badge>
+                      )}
+                    </div>
+                    <h3 className="font-medium text-neutral-900">{promo.title}</h3>
+                    <p className="text-sm text-neutral-500 mt-1">{promo.description}</p>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         </div>

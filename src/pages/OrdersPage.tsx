@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Package, ChevronDown, ChevronUp, Truck, CheckCircle, Clock, XCircle, Search, RefreshCw, Loader2, AlertTriangle } from 'lucide-react'
 import { Card, Button } from '../components/ui'
 import { Animated } from '../hooks'
@@ -44,10 +44,33 @@ const statusFilters = [
 export function OrdersPage() {
   const { user } = useStore()
   const { data: orders = [], isLoading, error } = useUserOrders(user?.id)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    const urlStatus = searchParams.get('status')
+    return urlStatus && statusFilters.some(f => f.id === urlStatus) ? urlStatus : 'all'
+  })
   const [searchTerm, setSearchTerm] = useState('')
+
+  // URL 파라미터 변경 시 필터 동기화
+  useEffect(() => {
+    const urlStatus = searchParams.get('status')
+    if (urlStatus && statusFilters.some(f => f.id === urlStatus)) {
+      setStatusFilter(urlStatus)
+    }
+  }, [searchParams])
+
+  // 필터 변경 시 URL 업데이트
+  const handleStatusFilterChange = (filterId: string) => {
+    setStatusFilter(filterId)
+    if (filterId === 'all') {
+      searchParams.delete('status')
+    } else {
+      searchParams.set('status', filterId)
+    }
+    setSearchParams(searchParams)
+  }
   const [cancelTarget, setCancelTarget] = useState<Order | null>(null)
   const [isCancelling, setIsCancelling] = useState(false)
   const updateOrderStatus = useUpdateOrderStatus()
@@ -139,7 +162,7 @@ export function OrdersPage() {
             {statusFilters.map((filter) => (
               <button
                 key={filter.id}
-                onClick={() => setStatusFilter(filter.id)}
+                onClick={() => handleStatusFilterChange(filter.id)}
                 className={cn(
                   'px-4 py-2 rounded-full text-sm font-medium transition-colors',
                   statusFilter === filter.id

@@ -18,6 +18,8 @@ import {
   Bell,
   HelpCircle,
   Star,
+  Ticket,
+  BookOpen,
 } from 'lucide-react'
 import { useAdminStore } from '../../store/adminStore'
 import { cn } from '../../../lib/utils'
@@ -32,11 +34,13 @@ const menuItems = [
   { path: '/admin/faqs', icon: HelpCircle, label: 'FAQ 관리' },
   { path: '/admin/qna', icon: MessageCircle, label: 'Q&A 관리' },
   { path: '/admin/reviews', icon: Star, label: '리뷰 관리' },
+  { path: '/admin/coupons', icon: Ticket, label: '쿠폰 관리' },
   { path: '/admin/home-sections', icon: LayoutGrid, label: '홈 섹션 관리' },
   { path: '/admin/settings/banner', icon: Image, label: '배너 이미지' },
   { path: '/admin/settings/modals', icon: MessageSquare, label: '팝업 모달' },
   { path: '/admin/settings/tiers', icon: Crown, label: '등급 설정' },
   { path: '/admin/settings/shipping', icon: Truck, label: '배송비 설정' },
+  { path: '/admin/help', icon: BookOpen, label: '사용 설명서' },
 ]
 
 export function AdminSidebar() {
@@ -96,7 +100,7 @@ export function AdminSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="p-2 space-y-1">
+      <nav className="p-2 space-y-1 overflow-y-auto pb-28" style={{ maxHeight: 'calc(100vh - 60px)' }}>
         {menuItems.map((item) => (
           <NavLink
             key={item.path}
@@ -121,7 +125,7 @@ export function AdminSidebar() {
       </nav>
 
       {/* User Info & Logout */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-neutral-800">
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-neutral-800 bg-neutral-900">
         {(!isSidebarCollapsed || window.innerWidth < 1024) && adminUser && (
           <div className="mb-3 px-2">
             <p className="text-sm font-medium text-white truncate">{adminUser.name}</p>
