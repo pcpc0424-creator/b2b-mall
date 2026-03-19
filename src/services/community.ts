@@ -21,6 +21,7 @@ function toNotice(row: DbRow): Notice {
     isImportant: row.is_important,
     viewCount: row.view_count,
     createdAt: new Date(row.created_at),
+    images: row.images || [],
   }
 }
 
@@ -50,6 +51,7 @@ export async function createNotice(input: {
   content: string
   category: 'notice' | 'event' | 'update' | 'important'
   isImportant: boolean
+  images?: string[]
 }): Promise<Notice> {
   const { data, error } = await supabasePublic
     .from('notices')
@@ -59,6 +61,7 @@ export async function createNotice(input: {
       category: input.category,
       is_important: input.isImportant,
       view_count: 0,
+      images: input.images || [],
     })
     .select('*')
     .single()
@@ -72,12 +75,14 @@ export async function updateNotice(id: string, input: {
   content?: string
   category?: 'notice' | 'event' | 'update' | 'important'
   isImportant?: boolean
+  images?: string[]
 }): Promise<Notice> {
   const updates: DbRow = {}
   if (input.title !== undefined) updates.title = input.title
   if (input.content !== undefined) updates.content = input.content
   if (input.category !== undefined) updates.category = input.category
   if (input.isImportant !== undefined) updates.is_important = input.isImportant
+  if (input.images !== undefined) updates.images = input.images
 
   const { data, error } = await supabasePublic
     .from('notices')

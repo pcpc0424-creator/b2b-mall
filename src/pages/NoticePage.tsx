@@ -202,6 +202,19 @@ export function NoticePage() {
                         <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-line">
                           {notice.content}
                         </p>
+                        {/* 첨부 이미지 */}
+                        {notice.images && notice.images.length > 0 && (
+                          <div className="mt-4 space-y-3">
+                            {notice.images.map((img, idx) => (
+                              <img
+                                key={idx}
+                                src={img}
+                                alt={`${notice.title} 첨부이미지 ${idx + 1}`}
+                                className="max-w-full rounded-lg border border-neutral-200"
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

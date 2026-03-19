@@ -129,6 +129,27 @@ export function ProductDetailPage() {
     return getCurrentOptionStock(selectedOptions)
   }, [isAllOptionsSelected, selectedOptions, getCurrentOptionStock, product])
 
+  // 특정 옵션값의 재고 확인 (해당 값을 포함하는 모든 variant의 재고 합산)
+  const getOptionValueStock = useCallback((optionName: string, optionValue: string): number => {
+    if (productVariants.length === 0) return product?.stock || 0
+
+    // 해당 옵션값을 포함하는 모든 variant 찾기
+    const matchingVariants = productVariants.filter(v =>
+      v.isActive && v.optionCombination[optionName] === optionValue
+    )
+
+    if (matchingVariants.length === 0) {
+      // 비활성화된 variant만 있는 경우도 체크
+      const allMatchingVariants = productVariants.filter(v =>
+        v.optionCombination[optionName] === optionValue
+      )
+      if (allMatchingVariants.length > 0) return 0
+      return product?.stock || 0
+    }
+
+    return matchingVariants.reduce((sum, v) => sum + v.stock, 0)
+  }, [productVariants, product])
+
   // 옵션 선택 토글 (이미지 옵션용)
   const toggleOption = useCallback((optionId: string, value: string) => {
     setSelectedOptions(prev => {
@@ -472,7 +493,9 @@ export function ProductDetailPage() {
             {/* 상품 옵션들 */}
             {productOptions.map((option) => {
               const adminOption = adminOptionsMap.find(ao => ao.id === option.id)
-              const hasImages = productSettings.showOptionImages && adminOption?.values.some(v => v.image)
+              // 개별 옵션의 showImages 우선, 없으면 글로벌 showOptionImages 사용
+              const optionShowImages = adminOption?.showImages !== undefined ? adminOption.showImages : productSettings.showOptionImages
+              const hasImages = optionShowImages && adminOption?.values.some(v => v.image)
 
               return (
                 <div key={option.id}>
@@ -486,19 +509,24 @@ export function ProductDetailPage() {
                       {option.values.map((value) => {
                         const optionValue = adminOption?.values.find(v => v.value === value)
                         const isSelected = selectedOptions[option.id] === value
+                        const valueStock = getOptionValueStock(option.name, value)
+                        const isSoldOut = valueStock <= 0
 
                         return (
                           <button
                             key={value}
                             type="button"
-                            onClick={() => toggleOption(option.id, value)}
+                            onClick={() => !isSoldOut && toggleOption(option.id, value)}
+                            disabled={isSoldOut}
                             className={cn(
                               'relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-all',
-                              isSelected
-                                ? 'border-primary-600 ring-2 ring-primary-200'
-                                : 'border-neutral-200 hover:border-neutral-400'
+                              isSoldOut
+                                ? 'border-neutral-200 opacity-50 cursor-not-allowed'
+                                : isSelected
+                                  ? 'border-primary-600 ring-2 ring-primary-200'
+                                  : 'border-neutral-200 hover:border-neutral-400'
                             )}
-                            title={`${value}${isSelected ? ' (클릭하여 선택 해제)' : ''}`}
+                            title={isSoldOut ? `${value} (품절)` : `${value}${isSelected ? ' (클릭하여 선택 해제)' : ''}`}
                           >
                             {optionValue?.image ? (
                               <img src={optionValue.image} alt={value} className="w-full h-full object-cover" />
@@ -507,7 +535,12 @@ export function ProductDetailPage() {
                                 {value.substring(0, 2)}
                               </div>
                             )}
-                            {isSelected && (
+                            {isSoldOut && (
+                              <div className="absolute inset-0 bg-neutral-900/40 flex items-center justify-center">
+                                <span className="text-[10px] font-bold text-white bg-red-500 px-1.5 py-0.5 rounded">품절</span>
+                              </div>
+                            )}
+                            {isSelected && !isSoldOut && (
                               <div className="absolute inset-0 bg-primary-600/10 flex items-center justify-center">
                                 <div className="w-5 h-5 bg-primary-600 rounded-full flex items-center justify-center">
                                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -534,8 +567,12 @@ export function ProductDetailPage() {
                           const priceModifier = optionValue?.priceModifier || 0
                           const priceText = priceModifier > 0 ? ` (+${formatPrice(priceModifier)})` :
                                            priceModifier < 0 ? ` (${formatPrice(priceModifier)})` : ''
+                          const valueStock = getOptionValueStock(option.name, value)
+                          const isSoldOut = valueStock <= 0
                           return (
-                            <option key={value} value={value}>{value}{priceText}</option>
+                            <option key={value} value={value} disabled={isSoldOut}>
+                              {value}{priceText}{isSoldOut ? ' (품절)' : ''}
+                            </option>
                           )
                         })}
                       </select>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import {
   Bell,
   Plus,
@@ -10,9 +10,12 @@ import {
   RefreshCw,
   Eye,
   Loader2,
+  Image as ImageIcon,
+  Upload,
 } from 'lucide-react'
 import { Button, Card, CardContent, Input, Badge } from '../../components/ui'
 import { useNotices, useCreateNotice, useUpdateNotice, useDeleteNotice } from '../../hooks/queries/useCommunity'
+import { uploadBase64Image } from '../../services/storage'
 import { Notice } from '../../types'
 import { cn } from '../../lib/utils'
 
@@ -30,6 +33,7 @@ interface NoticeFormData {
   content: string
   category: NoticeCategory
   isImportant: boolean
+  images: string[]
 }
 
 const initialFormData: NoticeFormData = {
@@ -37,6 +41,7 @@ const initialFormData: NoticeFormData = {
   content: '',
   category: 'notice',
   isImportant: false,
+  images: [],
 }
 
 export function NoticeManagementPage() {
@@ -49,6 +54,8 @@ export function NoticeManagementPage() {
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null)
   const [formData, setFormData] = useState<NoticeFormData>(initialFormData)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [isUploading, setIsUploading] = useState(false)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   const categories = [
     { id: 'all', label: '전체' },
@@ -81,8 +88,43 @@ export function NoticeManagementPage() {
       content: notice.content,
       category: notice.category as NoticeCategory,
       isImportant: notice.isImportant,
+      images: notice.images || [],
     })
     setIsModalOpen(true)
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setIsUploading(true)
+    try {
+      const newImages: string[] = []
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        if (!file.type.startsWith('image/')) continue
+
+        const reader = new FileReader()
+        const base64 = await new Promise<string>((resolve) => {
+          reader.onload = (ev) => resolve(ev.target?.result as string)
+          reader.readAsDataURL(file)
+        })
+        newImages.push(base64)
+      }
+      setFormData(prev => ({ ...prev, images: [...prev.images, ...newImages] }))
+    } catch {
+      alert('이미지 업로드에 실패했습니다.')
+    } finally {
+      setIsUploading(false)
+      if (imageInputRef.current) imageInputRef.current.value = ''
+    }
+  }
+
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -93,14 +135,23 @@ export function NoticeManagementPage() {
     }
 
     try {
+      // base64 이미지를 Supabase Storage에 업로드
+      const uploadedImages: string[] = []
+      for (const img of formData.images) {
+        const url = await uploadBase64Image('notices', img)
+        uploadedImages.push(url)
+      }
+
+      const submitData = { ...formData, images: uploadedImages }
+
       if (editingNotice) {
         await updateNotice.mutateAsync({
           id: editingNotice.id,
-          ...formData,
+          ...submitData,
         })
         alert('공지사항이 수정되었습니다.')
       } else {
-        await createNotice.mutateAsync(formData)
+        await createNotice.mutateAsync(submitData)
         alert('공지사항이 등록되었습니다.')
       }
       setIsModalOpen(false)
@@ -369,6 +420,59 @@ export function NoticeManagementPage() {
                   className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                   required
                 />
+              </div>
+
+              {/* Images */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  이미지 첨부
+                </label>
+
+                {/* 이미지 미리보기 */}
+                {formData.images.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
+                    {formData.images.map((img, index) => (
+                      <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border border-neutral-200">
+                        <img src={img} alt={`첨부 ${index + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 업로드 버튼 */}
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-neutral-300 rounded-lg text-sm text-neutral-600 hover:border-primary-400 hover:text-primary-600 transition-colors w-full justify-center"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      업로드 중...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      이미지 추가 (여러 장 선택 가능)
+                    </>
+                  )}
+                </button>
               </div>
 
               {/* Actions */}

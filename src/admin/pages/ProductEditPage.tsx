@@ -1107,6 +1107,11 @@ export function ProductEditPage() {
                   showOptionImages={showOptionImages}
                   onNameChange={(name) => handleOptionNameChange(option.id, name)}
                   onRequiredChange={(required) => handleOptionRequiredChange(option.id, required)}
+                  onShowImagesChange={(showImages) => {
+                    setOptions(options.map(opt =>
+                      opt.id === option.id ? { ...opt, showImages } : opt
+                    ))
+                  }}
                   onAddValue={(value) => handleAddOptionValue(option.id, value)}
                   onRemoveValue={(valueId) => handleRemoveOptionValue(option.id, valueId)}
                   onPriceModifierChange={(valueId, modifier) =>
@@ -1437,6 +1442,7 @@ interface OptionItemProps {
   showOptionImages: boolean
   onNameChange: (name: string) => void
   onRequiredChange: (required: boolean) => void
+  onShowImagesChange: (showImages: boolean) => void
   onAddValue: (value: string) => void
   onRemoveValue: (valueId: string) => void
   onPriceModifierChange: (valueId: string, modifier: number) => void
@@ -1450,12 +1456,15 @@ function OptionItem({
   showOptionImages,
   onNameChange,
   onRequiredChange,
+  onShowImagesChange,
   onAddValue,
   onRemoveValue,
   onPriceModifierChange,
   onImageChange,
   onRemove,
 }: OptionItemProps) {
+  // 개별 옵션의 이미지 표시 여부 (옵션별 설정 우선, 없으면 글로벌 설정)
+  const optionShowImages = option.showImages !== undefined ? option.showImages : showOptionImages
   const [newValue, setNewValue] = useState('')
   const lastAddTime = useRef(0)
 
@@ -1505,6 +1514,19 @@ function OptionItem({
           />
           <span className="text-xs sm:text-sm text-neutral-600">필수</span>
         </label>
+        {/* 이미지 표시 토글 */}
+        <label className="flex items-center gap-1.5 flex-shrink-0 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={optionShowImages}
+            onChange={(e) => onShowImagesChange(e.target.checked)}
+            className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span className="text-xs sm:text-sm text-neutral-600 flex items-center gap-1">
+            <ImageIcon className="w-3 h-3" />
+            <span className="hidden sm:inline">이미지</span>
+          </span>
+        </label>
         <Button
           type="button"
           variant="ghost"
@@ -1520,13 +1542,13 @@ function OptionItem({
       <div className="p-3 sm:p-4">
         <div className={cn(
           'gap-2 mb-3 sm:mb-4',
-          showOptionImages ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4' : 'flex flex-wrap'
+          optionShowImages ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4' : 'flex flex-wrap'
         )}>
           {option.values.map((value) => (
             <OptionValueTag
               key={value.id}
               value={value}
-              showImage={showOptionImages}
+              showImage={optionShowImages}
               onRemove={() => onRemoveValue(value.id)}
               onPriceChange={(modifier) => onPriceModifierChange(value.id, modifier)}
               onImageChange={(image) => onImageChange(value.id, image)}

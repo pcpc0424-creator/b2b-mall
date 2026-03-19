@@ -131,6 +131,7 @@ export interface Notice {
   isImportant: boolean
   createdAt: Date
   viewCount: number
+  images?: string[]
 }
 
 export interface Review {

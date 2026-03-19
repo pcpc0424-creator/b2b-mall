@@ -8,7 +8,7 @@ export function Footer() {
         <div className="flex flex-col md:flex-row justify-between gap-6">
           {/* Company Info */}
           <div>
-            <h2 className="text-lg font-bold text-white mb-2">가성비연구소</h2>
+            <h2 className="text-lg font-bold text-white mb-2">정담</h2>
             <p className="text-sm text-neutral-400">
               전문 도매 쇼핑몰
             </p>
@@ -47,7 +47,7 @@ export function Footer() {
         <div className="border-t border-neutral-800 mt-4 pt-4">
           <div className="text-xs text-neutral-500 space-y-1">
             <p>
-              <span className="text-neutral-400">상호명:</span> 가성비연구소 |{' '}
+              <span className="text-neutral-400">상호명:</span> 정담 |{' '}
               <span className="text-neutral-400">대표:</span> 김선애 |{' '}
               <span className="text-neutral-400">사업자등록번호:</span> 597-06-02858
             </p>
@@ -59,7 +59,7 @@ export function Footer() {
               <span className="text-neutral-400">이메일:</span> lee0608min@naver.com
             </p>
             <p className="text-neutral-600 mt-2">
-              © 2026 가성비연구소. All rights reserved.
+              © 2026 정담. All rights reserved.
             </p>
           </div>
         </div>

@@ -24,6 +24,7 @@ export interface ProductOptionAdmin {
   values: OptionValue[]
   required: boolean
   displayOrder: number
+  showImages?: boolean      // 이 옵션에 이미지 표시 여부
 }
 
 export interface OptionValue {
