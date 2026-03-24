@@ -158,17 +158,25 @@ export function AdminDashboard() {
             {orders.slice(0, 5).map((order) => {
               const statusLabel: Record<string, string> = { pending: '대기', confirmed: '확인', preparing: '준비', shipped: '배송', delivered: '완료', cancelled: '취소', refunded: '환불' }
               const statusVariant: Record<string, 'warning' | 'primary' | 'secondary' | 'success' | 'error'> = { pending: 'warning', confirmed: 'primary', preparing: 'secondary', shipped: 'secondary', delivered: 'success', cancelled: 'error', refunded: 'error' }
+              const itemSummary = order.items.length > 0
+                ? order.items.length === 1
+                  ? order.items[0].productName
+                  : `${order.items[0].productName} 외 ${order.items.length - 1}건`
+                : '-'
               return (
-                <div key={order.id} className="flex items-center justify-between py-2 border-b border-neutral-100 last:border-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-primary-600">{order.orderNumber}</span>
-                    <span className="text-sm text-neutral-500">{order.user.name}</span>
+                <div key={order.id} className="py-2 border-b border-neutral-100 last:border-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-neutral-900 truncate">{itemSummary}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-sm font-medium">{formatPrice(order.totalAmount)}</span>
+                      <Badge variant={statusVariant[order.status] || 'secondary'} size="sm">
+                        {statusLabel[order.status] || order.status}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{formatPrice(order.totalAmount)}</span>
-                    <Badge variant={statusVariant[order.status] || 'secondary'} size="sm">
-                      {statusLabel[order.status] || order.status}
-                    </Badge>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-primary-600">{order.orderNumber}</span>
+                    <span className="text-xs text-neutral-500">{order.user.name}</span>
                   </div>
                 </div>
               )

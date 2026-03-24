@@ -169,15 +169,23 @@ export function OrderManagementPage() {
           return (
             <Card key={order.id}>
               <CardContent className="p-3 overflow-hidden">
-                {/* 첫째 줄: 주문번호 + 날짜 + 상태 */}
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-primary-600">{order.orderNumber}</span>
-                    <span className="text-xs text-neutral-400">{new Date(order.createdAt).toLocaleDateString('ko-KR')}</span>
-                  </div>
+                {/* 첫째 줄: 상품명 + 상태 */}
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-neutral-900 truncate">
+                    {order.items.length > 0
+                      ? order.items.length === 1
+                        ? order.items[0].productName
+                        : `${order.items[0].productName} 외 ${order.items.length - 1}건`
+                      : '-'}
+                  </span>
                   <Badge variant={config.variant} size="sm">{config.label}</Badge>
                 </div>
-                {/* 둘째 줄: 고객명 + 금액 + 상세버튼 */}
+                {/* 둘째 줄: 주문번호 + 날짜 */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs text-primary-600">{order.orderNumber}</span>
+                  <span className="text-xs text-neutral-400">{new Date(order.createdAt).toLocaleDateString('ko-KR')}</span>
+                </div>
+                {/* 고객명 + 금액 + 상세버튼 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-sm text-neutral-900 truncate">{order.user.name}</span>

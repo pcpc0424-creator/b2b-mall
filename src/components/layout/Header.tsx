@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import {
   Search, ShoppingCart, User, Menu, ChevronRight, X,
   Package, Leaf, Pill, Sparkles, Shirt, ChefHat,
-  Refrigerator, Monitor, Dumbbell, PawPrint, Ticket
+  Refrigerator, Monitor, Dumbbell, PawPrint, Ticket,
+  Baby, ToyBrick, Palette
 } from 'lucide-react'
 import { useStore, getTierLabel, getTierColor } from '../../store'
 import { useCategories } from '../../hooks/queries'
@@ -13,7 +14,8 @@ import { cn } from '../../lib/utils'
 // Icon mapping for categories
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Package, Leaf, Pill, Sparkles, Shirt, ChefHat,
-  Refrigerator, Monitor, Dumbbell, PawPrint
+  Refrigerator, Monitor, Dumbbell, PawPrint,
+  Baby, ToyBrick, Palette
 }
 
 export function Header() {
