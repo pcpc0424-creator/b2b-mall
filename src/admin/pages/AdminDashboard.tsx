@@ -209,7 +209,7 @@ export function AdminDashboard() {
                     <span className="text-xs text-neutral-500">{product.sku}</span>
                   </div>
                 </div>
-                <span className="text-sm font-medium">{formatPrice(product.prices?.retail || 0)}</span>
+                <span className="text-sm font-medium">{formatPrice(product.prices?.member || 0)}</span>
               </div>
             ))}
             {products.length === 0 && (

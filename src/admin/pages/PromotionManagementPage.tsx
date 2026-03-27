@@ -662,7 +662,7 @@ export function PromotionManagementPage() {
                           <p className="text-xs text-neutral-500">SKU: {product.sku || '-'}</p>
                         </div>
                         <span className="text-sm font-medium text-neutral-700 flex-shrink-0">
-                          {product.prices?.retail?.toLocaleString()}원
+                          {product.prices?.member?.toLocaleString()}원
                         </span>
                       </button>
                     )

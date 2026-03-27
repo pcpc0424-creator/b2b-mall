@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Filter, ChevronDown } from 'lucide-react'
-import { useProducts, useCategories } from '../hooks/queries'
+import { useProducts, useCategories, useHomeSections } from '../hooks/queries'
 import { ProductCard } from '../components/product'
 import { Button, Select, Badge, Card, CardContent } from '../components/ui'
 import { cn } from '../lib/utils'
@@ -13,6 +13,7 @@ export function ProductListPage() {
   const [searchParams] = useSearchParams()
   const { data: products = [] } = useProducts()
   const { data: categories = [] } = useCategories()
+  const { data: homeSections = [] } = useHomeSections()
   const { user } = useStore()
   const userTier = user?.tier || 'member'
 
@@ -61,9 +62,22 @@ export function ProductListPage() {
   }
 
   // Filter products
+  const sortParam = searchParams.get('sort')
+  const sectionTypeMap: Record<string, string> = { best: 'best', new: 'new', sale: 'sale' }
+  const activeSectionType = sortParam ? sectionTypeMap[sortParam] : null
+
   let filteredProducts = categoryId
     ? products.filter(p => p.categoryId === parseInt(categoryId))
     : products
+
+  // sort=best/new/sale인 경우 관리자가 설정한 상품만 표시
+  if (activeSectionType) {
+    const sectionProductIds = homeSections
+      .filter(s => s.sectionType === activeSectionType)
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map(s => s.productId)
+    filteredProducts = filteredProducts.filter(p => sectionProductIds.includes(p.id))
+  }
 
   if (selectedFilters.subcategory !== 'all') {
     filteredProducts = filteredProducts.filter(p => p.subcategory === selectedFilters.subcategory)
