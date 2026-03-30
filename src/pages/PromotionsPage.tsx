@@ -65,7 +65,7 @@ export function PromotionsPage() {
                       )}
                       <Badge variant="primary" size="sm">
                         <Tag className="w-3 h-3 mr-1" />
-                        {promo.discount}% 할인
+                        {promo.discount} 할인
                       </Badge>
                     </div>
                     <h3 className="text-lg font-bold">{promo.title}</h3>

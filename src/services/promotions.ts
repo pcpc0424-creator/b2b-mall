@@ -16,7 +16,7 @@ export function toPromotion(row: DbRow): AdminPromotion {
     title: row.title,
     description: row.description,
     image: row.image,
-    discount: row.discount ?? 0,
+    discount: String(row.discount ?? ''),
     startDate: new Date(row.start_date as string || Date.now()),
     endDate: new Date(row.end_date as string || Date.now()),
     targetTiers: row.target_tiers ?? [],

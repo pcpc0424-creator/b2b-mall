@@ -100,7 +100,7 @@ export interface Promotion {
   title: string
   description: string
   image: string
-  discount: number
+  discount: string
   startDate: Date
   endDate: Date
   targetTiers: UserTier[]

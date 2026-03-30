@@ -699,8 +699,8 @@ export function HomePage() {
                   <img src={promo.image} alt={promo.title} className="w-full h-32 object-cover" />
                   <CardContent>
                     <div className="flex items-center gap-2 mb-2">
-                      <Badge variant={promo.discount >= 30 ? 'error' : 'primary'} size="sm">
-                        {promo.discount}% OFF
+                      <Badge variant={parseInt(promo.discount) >= 30 ? 'error' : 'primary'} size="sm">
+                        {promo.discount} OFF
                       </Badge>
                       {promo.type === 'exclusive' && (
                         <Badge variant="warning" size="sm">등급전용</Badge>

@@ -74,7 +74,7 @@ export function PromotionDetailPage() {
               )}
               <Badge variant="primary">
                 <Tag className="w-3 h-3 mr-1" />
-                {promotion.discount}% 할인
+                {promotion.discount} 할인
               </Badge>
             </div>
             <h1 className="text-2xl md:text-4xl font-bold mb-2">{promotion.title}</h1>
@@ -105,7 +105,7 @@ export function PromotionDetailPage() {
               <>
                 <li className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-primary-600 rounded-full" />
-                  최대 {promotion.discount}% 할인 적용
+                  {promotion.discount} 할인 적용
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-primary-600 rounded-full" />
@@ -140,7 +140,7 @@ export function PromotionDetailPage() {
                   className="animate-fade-in"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <ProductCard product={product} promotionDiscount={promotion.discount} />
+                  <ProductCard product={product} promotionDiscount={parseFloat(promotion.discount) || undefined} />
                 </div>
               ))}
             </div>

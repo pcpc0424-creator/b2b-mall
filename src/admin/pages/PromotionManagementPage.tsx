@@ -65,7 +65,7 @@ export function PromotionManagementPage() {
       title: '',
       description: '',
       image: '',
-      discount: 10,
+      discount: '10%',
       startDate: new Date(),
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       targetTiers: ['guest', 'member', 'premium', 'vip'],
@@ -279,7 +279,7 @@ export function PromotionManagementPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-neutral-500">
-                    <span>{promo.discount}% 할인</span>
+                    <span>{promo.discount} 할인</span>
                     <span>·</span>
                     <span>{formatDate(promo.startDate)} ~ {formatDate(promo.endDate)}</span>
                   </div>
@@ -415,14 +415,13 @@ export function PromotionManagementPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">할인율 (%)</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">할인율</label>
                   <input
-                    type="number"
+                    type="text"
                     value={editingPromo.discount}
-                    onChange={(e) => setEditingPromo({ ...editingPromo, discount: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => setEditingPromo({ ...editingPromo, discount: e.target.value })}
                     className="w-full px-3 py-2 border border-neutral-200 rounded-lg"
-                    min={0}
-                    max={100}
+                    placeholder="예: 최대50%~, 30%, 10~20%"
                   />
                 </div>
                 <div>
