@@ -54,11 +54,17 @@ export const useStore = create<AppState>()(
   logout: async () => {
     // 상태 초기화
     set({ user: null, isLoggedIn: false, cart: [], appliedCoupon: null })
-    // Supabase 세션 삭제 후 페이지 새로고침 (클라이언트 상태 완전 초기화)
+    // Supabase 세션 삭제 (scope: 'local'로 네트워크 에러와 무관하게 로컬 세션 확실히 삭제)
     try {
-      await supabase.auth.signOut()
+      await supabase.auth.signOut({ scope: 'local' })
     } catch {
-      // 에러 무시
+      // signOut 실패 시 수동으로 Supabase localStorage 키 제거
+      const keys = Object.keys(localStorage)
+      keys.forEach(key => {
+        if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          localStorage.removeItem(key)
+        }
+      })
     }
     // 페이지 새로고침으로 Supabase 클라이언트 완전 초기화
     window.location.href = '/'

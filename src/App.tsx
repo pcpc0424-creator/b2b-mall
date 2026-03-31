@@ -89,6 +89,8 @@ function App() {
   }, [])
 
   // Supabase Auth 상태 변경 리스너
+  const authInProgress = useRef(false)
+
   useEffect(() => {
     let isActive = true // cleanup 시 비동기 작업 무시용 플래그
 
@@ -98,64 +100,73 @@ function App() {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[App] Auth 이벤트:', event, '세션:', session ? '있음' : '없음')
 
-      // INITIAL_SESSION: 페이지 로드 시 세션 복원 완료
-      // SIGNED_IN: 로그인 완료
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-        if (session?.user) {
-          console.log('[App] 세션 사용자:', session.user.email)
-          // 세션이 있으면 프로필 로드 (별도 비동기 처리)
-          try {
-            const result = await getCurrentUser()
-            // cleanup 후에는 상태 업데이트 하지 않음
-            if (!isActive) return
-
-            console.log('[App] getCurrentUser 결과:', result)
-            if (result.user) {
-              login(result.user)
-              // 장바구니 동기화 (중복 실행 방지)
-              if (!cartSyncInProgress.current) {
-                cartSyncInProgress.current = true
-                try {
-                  const localCart = useStore.getState().cart
-                  const mergedCart = await mergeCartsOnLogin(localCart)
-                  if (isActive) {
-                    setCart(mergedCart)
-                  }
-                } catch (err) {
-                  console.warn('장바구니 동기화 중 오류:', err)
-                } finally {
-                  cartSyncInProgress.current = false
-                }
-              }
-            } else if (result.error) {
-              setAuthError(result.error)
-            } else {
-              // user가 null이고 error도 없는 경우 - 디버깅용
-              console.error('로그인 실패: 사용자 정보를 가져올 수 없습니다.', result)
-              setAuthError('로그인 처리 중 오류가 발생했습니다. 다시 시도해주세요.')
-            }
-          } catch (err) {
-            // AbortError는 React StrictMode에서 정상적으로 발생할 수 있음 (무시)
-            if (err instanceof Error && err.name === 'AbortError') {
-              console.log('[App] Auth 요청이 취소됨 (StrictMode 또는 빠른 전환)')
-              return
-            }
-            if (!isActive) return
-            console.error('로그인 오류:', err)
-            setAuthError('로그인 처리 중 오류가 발생했습니다.')
-          }
-        } else if (event === 'INITIAL_SESSION') {
-          // 세션 없음 - store 정리
-          if (!isActive) return
-          const storeState = useStore.getState()
-          if (storeState.isLoggedIn) {
-            logout()
-          }
-        }
-      } else if (event === 'SIGNED_OUT') {
-        // 로그아웃 시 상태 전체 초기화 (장바구니 포함)
+      // SIGNED_OUT: 로그아웃 시 상태 전체 초기화
+      if (event === 'SIGNED_OUT') {
         if (!isActive) return
+        authInProgress.current = false
         useStore.setState({ user: null, isLoggedIn: false, cart: [], appliedCoupon: null })
+        return
+      }
+
+      // INITIAL_SESSION 또는 SIGNED_IN: 세션이 있으면 프로필 로드
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        if (!session?.user) {
+          console.log('[App] 세션 없음 - 무시')
+          return
+        }
+
+        // 이미 처리 중이면 스킵 (INITIAL_SESSION + SIGNED_IN 중복 방지)
+        if (authInProgress.current) {
+          console.log('[App] 이미 인증 처리 중 - 스킵')
+          return
+        }
+
+        // 이미 같은 유저로 로그인된 상태면 스킵
+        const currentUser = useStore.getState().user
+        if (currentUser?.id === session.user.id && useStore.getState().isLoggedIn) {
+          console.log('[App] 이미 로그인된 사용자 - 스킵')
+          return
+        }
+
+        authInProgress.current = true
+        console.log('[App] 세션 사용자:', session.user.email)
+
+        try {
+          // session을 직접 전달 (getSession() 재호출 방지)
+          const result = await getCurrentUser(session)
+          if (!isActive) return
+
+          console.log('[App] getCurrentUser 결과:', result.user ? '성공' : '실패')
+          if (result.user) {
+            login(result.user)
+            // 장바구니 동기화 (중복 실행 방지)
+            if (!cartSyncInProgress.current) {
+              cartSyncInProgress.current = true
+              try {
+                const localCart = useStore.getState().cart
+                const mergedCart = await mergeCartsOnLogin(localCart)
+                if (isActive) {
+                  setCart(mergedCart)
+                }
+              } catch (err) {
+                console.warn('장바구니 동기화 중 오류:', err)
+              } finally {
+                cartSyncInProgress.current = false
+              }
+            }
+          } else if (result.error) {
+            setAuthError(result.error)
+          }
+        } catch (err) {
+          if (err instanceof Error && err.name === 'AbortError') {
+            console.log('[App] Auth 요청이 취소됨')
+            return
+          }
+          if (!isActive) return
+          console.error('로그인 오류:', err)
+        } finally {
+          authInProgress.current = false
+        }
       }
     })
 

@@ -928,7 +928,7 @@ export function ProductDetailPage() {
         <section className="mb-12">
           {productSettings.description && (
             <div
-              className="prose prose-sm max-w-none mb-6"
+              className="prose prose-sm max-w-none mb-6 [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_video]:max-w-full [&_video]:h-auto [&_video]:rounded-lg [&_iframe]:max-w-full [&_iframe]:rounded-lg"
               dangerouslySetInnerHTML={{ __html: productSettings.description }}
             />
           )}

@@ -331,6 +331,34 @@ function tryLocalStorageLogin(email: string, password: string): any | null {
   }
 }
 
+// ── 인앱 브라우저 감지 ───────────────────────────────────
+
+function isInAppBrowser(): boolean {
+  const ua = navigator.userAgent || navigator.vendor || ''
+  // 카카오톡, 네이버, 인스타그램, 페이스북, 라인 등 인앱 브라우저 감지
+  return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line/i.test(ua)
+}
+
+function openInExternalBrowser(url: string): boolean {
+  const ua = navigator.userAgent || ''
+
+  // 안드로이드: intent scheme으로 Chrome 열기
+  if (/android/i.test(ua)) {
+    const intentUrl = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`
+    window.location.href = intentUrl
+    return true
+  }
+
+  // iOS: Safari로 열기 (location.href로 충분)
+  if (/iPhone|iPad|iPod/i.test(ua)) {
+    // iOS 인앱 브라우저에서 Safari로 열기
+    window.location.href = url
+    return true
+  }
+
+  return false
+}
+
 // ── 소셜 로그인 (Supabase OAuth) ───────────────────────
 
 export async function loginWithSocial(
@@ -338,6 +366,19 @@ export async function loginWithSocial(
 ): Promise<SocialLoginResponse> {
   if (provider === 'email') {
     return { success: false, error: '이메일 로그인은 loginWithEmail을 사용하세요.' }
+  }
+
+  // Google 로그인 시 인앱 브라우저 감지
+  if (provider === 'google' && isInAppBrowser()) {
+    const currentUrl = window.location.href
+    const opened = openInExternalBrowser(currentUrl)
+    if (opened) {
+      return { success: false, error: '외부 브라우저에서 다시 시도해주세요.' }
+    }
+    return {
+      success: false,
+      error: 'Google 로그인은 인앱 브라우저에서 지원되지 않습니다.\n우측 상단 메뉴(⋮)에서 "외부 브라우저로 열기"를 선택해주세요.'
+    }
   }
 
   const { error } = await supabase.auth.signInWithOAuth({
@@ -358,34 +399,41 @@ export async function loginWithSocial(
 
 // ── 현재 세션 사용자 조회 ──────────────────────────────
 
-export async function getCurrentUser(): Promise<GetCurrentUserResponse> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+// session 파라미터를 직접 받도록 변경 (onAuthStateChange 안에서 getSession() 재호출 금지)
+export async function getCurrentUser(
+  session?: { user: { id: string; email?: string; user_metadata?: Record<string, unknown>; app_metadata?: Record<string, unknown>; created_at?: string } } | null
+): Promise<GetCurrentUserResponse> {
+  // session이 전달되지 않은 경우에만 getSession() 호출 (폴백)
+  if (session === undefined) {
+    const { data } = await supabase.auth.getSession()
+    session = data.session
+  }
 
   if (!session?.user) {
     console.log('[Auth] 세션 없음')
     return { user: null }
   }
 
-  console.log('[Auth] 세션 사용자 ID:', session.user.id, '이메일:', session.user.email)
+  const userId = session.user.id
+  const userEmail = session.user.email
+  console.log('[Auth] 세션 사용자 ID:', userId, '이메일:', userEmail)
 
   // 먼저 members 테이블에서 raw 데이터 조회 (supabasePublic 사용 - RLS 우회)
   // ID로 조회 시도
   let { data: memberData, error: memberError } = await supabasePublic
     .from('members')
     .select('*')
-    .eq('id', session.user.id)
+    .eq('id', userId)
     .single()
 
   console.log('[Auth] ID로 조회 결과:', memberData ? '찾음' : '없음', memberError?.message || '')
 
   // ID로 못 찾으면 이메일로 조회 시도
-  if (!memberData && session.user.email) {
+  if (!memberData && userEmail) {
     const { data: memberByEmail } = await supabasePublic
       .from('members')
       .select('*')
-      .eq('email', session.user.email.toLowerCase())
+      .eq('email', userEmail.toLowerCase())
       .single()
 
     if (memberByEmail) {
@@ -393,15 +441,15 @@ export async function getCurrentUser(): Promise<GetCurrentUserResponse> {
       // 기존 회원의 ID를 Supabase Auth ID로 업데이트
       await supabasePublic
         .from('members')
-        .update({ id: session.user.id })
-        .eq('email', session.user.email.toLowerCase())
+        .update({ id: userId })
+        .eq('email', userEmail.toLowerCase())
 
-      memberData = { ...memberByEmail, id: session.user.id }
+      memberData = { ...memberByEmail, id: userId }
     }
   }
 
   const meta = session.user.user_metadata || {}
-  const provider = session.user.app_metadata?.provider || 'email'
+  const provider = (session.user.app_metadata?.provider as string) || 'email'
 
   // 탈퇴 회원이 다시 로그인한 경우 → pending_approval 상태로 변경 (관리자 승인 필요)
   if (memberData?.status === 'withdrawn') {
@@ -411,10 +459,10 @@ export async function getCurrentUser(): Promise<GetCurrentUserResponse> {
         status: 'pending_approval',
         rejoined_at: new Date().toISOString(),
       })
-      .eq('id', session.user.id)
+      .eq('id', userId)
 
     // 로그아웃 처리 (승인 대기 상태)
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'local' })
     return {
       user: null,
       status: 'withdrawn',
@@ -424,7 +472,7 @@ export async function getCurrentUser(): Promise<GetCurrentUserResponse> {
 
   // 승인 대기 상태인 경우 → 로그아웃
   if (memberData?.status === 'pending_approval') {
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'local' })
     return {
       user: null,
       status: 'pending_approval',
@@ -435,14 +483,14 @@ export async function getCurrentUser(): Promise<GetCurrentUserResponse> {
   // 프로필이 없는 경우 → 신규 생성
   if (!memberData) {
     await upsertMemberProfile({
-      id: session.user.id,
-      email: session.user.email,
+      id: userId,
+      email: userEmail,
       name:
-        meta.nickname ||
-        meta.full_name ||
-        meta.name ||
-        meta.preferred_username ||
-        session.user.email?.split('@')[0] ||
+        (meta.nickname as string) ||
+        (meta.full_name as string) ||
+        (meta.name as string) ||
+        (meta.preferred_username as string) ||
+        userEmail?.split('@')[0] ||
         '회원',
       phone: meta.phone,
       tier: 'member',
@@ -456,7 +504,7 @@ export async function getCurrentUser(): Promise<GetCurrentUserResponse> {
     })
   }
 
-  const user = await fetchMemberProfile(session.user.id)
+  const user = await fetchMemberProfile(userId)
   return { user }
 }
 

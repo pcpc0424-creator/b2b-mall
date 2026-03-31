@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Save, ArrowLeft, Plus, X, GripVertical, Trash2, Upload, Image as ImageIcon, Bold, Italic, List, Link as LinkIcon, AlignLeft, AlignCenter } from 'lucide-react'
+import { RichTextEditor } from '../components/RichTextEditor'
 import { useProducts, useCreateProduct, useUpdateProduct, useCategories } from '../../hooks/queries'
 import { uploadBase64Image } from '../../services/storage'
 import { Button, Card, CardContent, Input, Badge } from '../../components/ui'
@@ -888,86 +889,11 @@ export function ProductEditPage() {
             <h2 className="text-base sm:text-lg font-bold text-neutral-900 mb-3 sm:mb-4">상품 상세 설명</h2>
             <p className="text-xs sm:text-sm text-neutral-500 mb-4">상품 상세 페이지에 표시될 설명을 작성하세요.</p>
 
-            {/* 간단한 툴바 */}
-            <div className="flex flex-wrap gap-1 p-2 bg-neutral-50 border border-neutral-200 rounded-t-lg">
-              <button
-                type="button"
-                onClick={() => {
-                  const textarea = document.getElementById('description-textarea') as HTMLTextAreaElement
-                  const start = textarea.selectionStart
-                  const end = textarea.selectionEnd
-                  const selectedText = description.substring(start, end)
-                  const newText = description.substring(0, start) + `<b>${selectedText}</b>` + description.substring(end)
-                  setDescription(newText)
-                }}
-                className="p-2 hover:bg-neutral-200 rounded"
-                title="굵게"
-              >
-                <Bold className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const textarea = document.getElementById('description-textarea') as HTMLTextAreaElement
-                  const start = textarea.selectionStart
-                  const end = textarea.selectionEnd
-                  const selectedText = description.substring(start, end)
-                  const newText = description.substring(0, start) + `<i>${selectedText}</i>` + description.substring(end)
-                  setDescription(newText)
-                }}
-                className="p-2 hover:bg-neutral-200 rounded"
-                title="기울임"
-              >
-                <Italic className="w-4 h-4" />
-              </button>
-              <div className="w-px h-6 bg-neutral-300 mx-1 self-center" />
-              <button
-                type="button"
-                onClick={() => {
-                  setDescription(prev => prev + '\n<ul>\n  <li>항목 1</li>\n  <li>항목 2</li>\n</ul>')
-                }}
-                className="p-2 hover:bg-neutral-200 rounded"
-                title="목록"
-              >
-                <List className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setDescription(prev => prev + '\n<p style="text-align: center;">가운데 정렬 텍스트</p>')
-                }}
-                className="p-2 hover:bg-neutral-200 rounded"
-                title="가운데 정렬"
-              >
-                <AlignCenter className="w-4 h-4" />
-              </button>
-              <div className="w-px h-6 bg-neutral-300 mx-1 self-center" />
-              <button
-                type="button"
-                onClick={() => detailFileInputRef.current?.click()}
-                className="p-2 hover:bg-neutral-200 rounded"
-                title="이미지 추가"
-              >
-                <ImageIcon className="w-4 h-4" />
-              </button>
-              <input
-                ref={detailFileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => handleImageUpload(e.target.files, true)}
-                className="hidden"
-              />
-            </div>
-
-            {/* 설명 텍스트 영역 */}
-            <textarea
-              id="description-textarea"
+            {/* WYSIWYG 에디터 */}
+            <RichTextEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="상품에 대한 상세 설명을 입력하세요. HTML 태그를 사용할 수 있습니다.&#10;&#10;예시:&#10;<h3>상품 특징</h3>&#10;<p>프리미엄 품질의 상품입니다.</p>&#10;<ul>&#10;  <li>특징 1</li>&#10;  <li>특징 2</li>&#10;</ul>"
-              rows={10}
-              className="w-full px-4 py-3 border border-neutral-200 border-t-0 rounded-b-lg text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-primary-500"
+              onChange={setDescription}
+              placeholder="상품에 대한 상세 설명을 입력하세요. 글자 크기, 색상, 이미지, 동영상을 자유롭게 추가할 수 있습니다."
             />
 
             {/* 상세 이미지 업로드 */}
@@ -1043,7 +969,7 @@ export function ProductEditPage() {
                 <div className="p-4 bg-white border border-neutral-200 rounded-lg max-h-96 overflow-y-auto">
                   {description && (
                     <div
-                      className="prose prose-sm max-w-none mb-4"
+                      className="prose prose-sm max-w-none mb-4 [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_video]:max-w-full [&_video]:h-auto [&_video]:rounded-lg [&_iframe]:max-w-full [&_iframe]:rounded-lg"
                       dangerouslySetInnerHTML={{ __html: description }}
                     />
                   )}

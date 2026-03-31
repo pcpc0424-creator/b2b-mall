@@ -80,12 +80,12 @@ export function LoginPage() {
     try {
       const result = await loginWithSocial(provider)
       if (!result.success) {
-        alert(result.error || `${getProviderName(provider)} 로그인에 실패했습니다.`)
+        setErrors({ general: result.error || `${getProviderName(provider)} 로그인에 실패했습니다.` })
         setSocialLoading(null)
       }
       // 성공 시 OAuth 리다이렉트 → App.tsx의 onAuthStateChange가 처리
     } catch (error) {
-      alert('소셜 로그인 중 오류가 발생했습니다.')
+      setErrors({ general: '소셜 로그인 중 오류가 발생했습니다.' })
       setSocialLoading(null)
     }
   }
@@ -150,7 +150,7 @@ export function LoginPage() {
 
             {/* 일반 오류 메시지 */}
             {errors.general && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 whitespace-pre-line">
                 {errors.general}
               </div>
             )}
