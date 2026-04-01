@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Search, ShoppingCart, User, Menu, ChevronRight, X,
   Package, Leaf, Pill, Sparkles, Shirt, ChefHat,
@@ -23,8 +23,17 @@ export function Header() {
   const { data: categories = [] } = useCategories()
   const [searchQuery, setSearchQuery] = useState('')
   const [mobileCommunityOpen, setMobileCommunityOpen] = useState(false)
+  const navigate = useNavigate()
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
+
+  const handleSearch = () => {
+    const q = searchQuery.trim()
+    if (!q) return
+    navigate(`/products?search=${encodeURIComponent(q)}`)
+    setSearchQuery('')
+    setMegaMenuOpen(false)
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-neutral-200">
@@ -77,10 +86,14 @@ export function Header() {
                 placeholder="SKU 또는 상품명 검색"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleSearch()}
                 icon={<Search className="w-4 h-4" />}
                 className="pr-20"
               />
-              <button className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded hover:bg-primary-700 transition-colors">
+              <button
+                onClick={handleSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded hover:bg-primary-700 transition-colors"
+              >
                 검색
               </button>
             </div>
@@ -136,10 +149,14 @@ export function Header() {
                       placeholder="SKU 또는 상품명 검색"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleSearch()}
                       icon={<Search className="w-4 h-4" />}
                       className="pr-16"
                     />
-                    <button className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded hover:bg-primary-700 transition-colors">
+                    <button
+                      onClick={handleSearch}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded hover:bg-primary-700 transition-colors"
+                    >
                       검색
                     </button>
                   </div>

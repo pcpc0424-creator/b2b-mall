@@ -49,9 +49,11 @@ export function ProductListPage() {
   }, [searchParams])
 
   const category = categoryId ? categories.find(c => c.id === parseInt(categoryId)) : null
+  const searchKeyword = searchParams.get('search')?.trim().toLowerCase() || ''
 
   // URL의 sort 파라미터에 따른 페이지 제목
   const getPageTitle = () => {
+    if (searchKeyword) return `'${searchParams.get('search')?.trim()}' 검색 결과`
     const sortParam = searchParams.get('sort')
     switch (sortParam) {
       case 'best': return '베스트연구실'
@@ -69,6 +71,14 @@ export function ProductListPage() {
   let filteredProducts = categoryId
     ? products.filter(p => p.categoryId === parseInt(categoryId))
     : products
+
+  // 검색어 필터링 (상품명, SKU)
+  if (searchKeyword) {
+    filteredProducts = filteredProducts.filter(p =>
+      p.name.toLowerCase().includes(searchKeyword) ||
+      (p.sku && p.sku.toLowerCase().includes(searchKeyword))
+    )
+  }
 
   // sort=best/new/sale인 경우 관리자가 설정한 상품만 표시
   if (activeSectionType) {
